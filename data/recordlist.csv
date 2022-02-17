@@ -1,0 +1,388 @@
+Species,Scientific Name,Status,Breeding,Reporting,Occurrence
+Fulvous Whistling-Duck,Dendrocygna bicolor,,,V,
+Snow Goose,Anser caerulescens,,,,"3A-5C, 9A-1D"
+Ross's Goose,Anser rossii,,,,"3C-4A, 10A-11D"
+Greater White-fronted Goose,Anser albifrons,,,,10B-5B
+Pink-footed Goose,Anser brachyrhynchus,,,V,
+Brant,Branta bernicla,,,,"4D-5D, 10A-11D"
+Barnacle Goose,Branta leucopsis,,,V,
+Cackling Goose,Branta hutchinsii,,,,10A-4C
+Canada Goose,Branta canadensis,,*,,1A-12D
+Mute Swan,Cygnus olor,I,*,N,1A-12D
+Trumpeter Swan,Cygnus buccinator,,,V,
+Tundra Swan,Cygnus columbianus,,,,"3C-4C, 10A-12D"
+Wood Duck,Aix sponsa,,*,,3A-12C+
+Garganey,Spatula querquedula,,,V,
+Blue-winged Teal,Spatula discors,,*,,3C-10D
+Northern Shoveler,Spatula clypeata,,*,N,"3C-5C, 8C-11A"
+Gadwall,Mareca strepera,,*,N,3A-12C+
+Eurasian Wigeon,Mareca penelope,,,,"3C-5D, 10C-11A"
+American Wigeon,Mareca americana,,*,N,3A-11D+
+Mallard,Anas platyrhynchos,,*,,1A-12D
+American Black Duck,Anas rubripes,,*,,1A-12D
+Northern Pintail,Anas acuta,,*,N,3A-12C+
+Green-winged Teal,Anas crecca,,*,N,3A-12B+
+Canvasback,Aythya valisineria,,,,10D-4D
+Redhead,Aythya americana,,,,9C-5A
+Ring-necked Duck,Aythya collaris,,*,N,2D-12B+
+Tufted Duck,Aythya fuligula,,,C,12B-4B
+Greater Scaup,Aythya marila,,,,9D-5A+
+Lesser Scaup,Aythya affinis,,,,9D-5A+
+King Eider,Somateria spectabilis,,,V,
+Common Eider,Somateria mollissima,,,,"4B-5D, 9C-2D"
+Harlequin Duck,Histrionicus histrionicus,,,C,10D-5B
+Surf Scoter,Melanitta perspicillata,,,,9D-5C
+White-winged Scoter,Melanitta deglandi,,,,8D-5D
+Black Scoter,Melanitta americana,,,,9D-5C
+Long-tailed Duck,Clangula hyemalis,,,,10A-5C
+Bufflehead,Bucephala albeola,,,,10C-5C
+Common Goldeneye,Bucephala clangula,,*,,1A-12D
+Barrow's Goldeneye,Bucephala islandica,,,,11A-4C
+Hooded Merganser,Lophodytes cucullatus,,*,,3C-12D+
+Common Merganser,Mergus merganser,,*,,1A-12D
+Red-breasted Merganser,Mergus serrator,,*,N,10B-5C
+Ruddy Duck,Oxyura jamaicensis,,,,"4A-4C, 10C-11D"
+Northern Bobwhite,Colinus virginianus,I,,,1A-12D
+Wild Turkey,Meleagris gallopavo,,*,,1A-12D
+Ruffed Grouse,Bonasa umbellus,,*,,1A-12D
+Spruce Grouse,Falcipennis canadensis,,*,K,1A-12D
+Willow Ptarmigan,Lagopus lagopus,,,V,
+Gray Partridge,Perdix perdix,I,*,V,
+Ring-necked Pheasant,Phasianus colchicus,I,*,N,1A-12D
+Pied-billed Grebe,Podilymbus podiceps,,*,N,3B-11D+
+Horned Grebe,Podiceps auritus,,,,9D-5A
+Red-necked Grebe,Podiceps grisegena,,,,9A-5C
+Eared Grebe,Podiceps nigricollis,,,V,
+Western/Clark's Grebe,Aechmophorus spp.,,,V,
+Rock Pigeon,Columba livia,I,*,,1A-12D
+Band-tailed Pigeon,Patagioenas fasciata,,,V,
+Eurasian Collared-Dove,Streptopelia decaocto,I,,V,
+Passenger Pigeon,Ectopistes migratorius,X,*,V,
+White-winged Dove,Zenaida asiatica,,,V,
+Mourning Dove,Zenaida macroura,,*,,1A-12D
+Yellow-billed Cuckoo,Coccyzus americanus,,*,,5C-9D
+Black-billed Cuckoo,Coccyzus erythropthalmus,,*,,5C-9D
+Common Nighthawk,Chordeiles minor,,*,N,5C-9B
+Eastern Whip-poor-will,Antrostomus vociferus,,*,N,5A-9A
+Chimney Swift,Chaetura pelagica,,*,,4D-9C
+Ruby-throated Hummingbird,Archilochus colubris,,*,,5A-10A
+Rufous Hummingbird,Selasphorus rufus,,,V,
+Clapper Rail,Rallus crepitans,,,V,
+Virginia Rail,Rallus limicola,,*,,4C-10B
+Sora,Porzana carolina,,*,N,4C-10A
+Common Gallinule,Gallinula galeata,,*,,4D-10A
+American Coot,Fulica americana,,,N,"3D-5C, 10A-12C+"
+Yellow Rail,Coturnicops noveboracensis,,,V,
+Sandhill Crane,Antigone canadensis,,*,N,4B-11A
+American Avocet,Recurvirostra americana,,,V,
+Black-bellied Plover,Pluvialis squatarola,,,,"4D-6B, 8B-11A"
+American Golden-Plover,Pluvialis dominica,,,,8C-10D
+Pacific Golden-Plover,Pluvialis fulva,H,,V,
+Killdeer,Charadrius vociferus,,*,,3A-11B
+Semipalmated Plover,Charadrius semipalmatus,,,,"5B-6C, 7D-10B"
+Piping Plover,Charadrius melodus,,,V,
+Upland Sandpiper,Bartramia longicauda,,*,N,4D-8D
+Whimbrel,Numenius phaeopus,,,,7C-10A
+Black-tailed Godwit,Limosa limosa,,,V,
+Hudsonian Godwit,Limosa haemastica,,,,8D-11C
+Marbled Godwit,Limosa fedoa,,,V,
+Ruddy Turnstone,Arenaria interpres,,,,"5C-6B, 7B-10D"
+Red Knot,Calidris canutus,,,C,"5C-6B, 8A-10D"
+Ruff,Calidris pugnax,,,V,
+Stilt Sandpiper,Calidris himantopus,,,,7B-10C
+Curlew Sandpiper,Calidris ferruginea,,,V,
+Sanderling,Calidris alba,,,,8A-10C
+Dunlin,Calidris alpina,,,,"4D-6B, 9B-11B"
+Purple Sandpiper,Calidris maritima,,,,10C-11C
+Baird's Sandpiper,Calidris bairdii,,,,8A-9D
+Least Sandpiper,Calidris minutilla,,,,"5B-5D, 7B-10A"
+White-rumped Sandpiper,Calidris fuscicollis,,,,"5C-5D, 8B-11A"
+Buff-breasted Sandpiper,Calidris subruficollis,,,,8B-9D
+Pectoral Sandpiper,Calidris melanotos,,,,"4A-5C, 7D-11A"
+Semipalmated Sandpiper,Calidris pusilla,,,,"5B-6A, 7B-10C"
+Western Sandpiper,Calidris mauri,,,V,
+Short-billed Dowitcher,Limnodromus griseus,,,,"5B-6A, 7C-10A"
+Long-billed Dowitcher,Limnodromus scolopaceus,,,,8D-10D
+American Woodcock,Scolopax minor,,*,,3C-11A+
+Wilson's Snipe,Gallinago delicata,,*,,3D-11A+
+Spotted Sandpiper,Actitis macularius,,*,,4D-10C
+Solitary Sandpiper,Tringa solitaria,,,,"4D-5D, 7B-10B"
+Lesser Yellowlegs,Tringa flavipes,,,,"4D-5D, 7B-10D"
+Willet,Tringa semipalmata,,,,"5D, 7B-10D"
+Greater Yellowlegs,Tringa melanoleuca,,,,"4B-5D, 7B-11B"
+Wilson's Phalarope,Phalaropus tricolor,,,C,"5B-6A, 7D-9B"
+Red-necked Phalarope,Phalaropus lobatus,,,,"5B-6A, 8B-10A"
+Red Phalarope,Phalaropus fulicarius,,,,"5B-6B, 8D-11D"
+Pomarine Jaeger,Stercorarius pomarinus,,,C,8D-11C
+Parasitic Jaeger,Stercorarius parasiticus,,,C,8D-11C
+Long-tailed Jaeger,Stercorarius longicaudus,,,C,8D-11A
+Dovekie,Alle alle,,,V,
+Common Murre,Uria aalge,,,V,
+Thick-billed Murre,Uria lomvia,,,V,
+Black Guillemot,Cepphus grylle,,,V,
+Ancient Murrelet,Synthliboramphus antiquus,,,V,
+Atlantic Puffin,Fratercula arctica,,,V,
+Black-legged Kittiwake,Rissa tridactyla,,,C,8A-11C
+Ivory Gull,Pagophila eburnea,,,V,
+Sabine's Gull,Xema sabini,,,C,9A-10D
+Bonaparte's Gull,Chroicocephalus philadelphia,,,,"4B-5D, 7C-12C"
+Black-headed Gull,Chroicocephalus ridibundus,,,C,10B-11A
+Little Gull,Hydrocoloeus minutus,,,,7B-12B
+Laughing Gull,Leucophaeus atricilla,,,V,
+Franklin's Gull,Leucophaeus pipixcan,,,V,
+Black-tailed Gull,Larus crassirostris,,,V,
+Ring-billed Gull,Larus delawarensis,,*,,1A-12D
+Herring Gull,Larus argentatus,,*,,1A-12D
+Iceland Gull,Larus glaucoides,,,,11A-4A
+Lesser Black-backed Gull,Larus fuscus,,,C,9C-4C
+Slaty-backed Gull,Larus schistisagus,,,V,
+Glaucous Gull,Larus hyperboreus,,,,12A-4B
+Great Black-backed Gull,Larus marinus,,*,,1A-12D
+Sooty Tern,Onychoprion fuscatus,,,V,
+Caspian Tern,Hydroprogne caspia,,*,N,4B-10A
+Black Tern,Chlidonias niger,,*,N,4D-9A
+White-winged Tern,Chlidonias leucopterus,,,V,
+Common Tern,Sterna hirundo,,*,N,4D-10A
+Arctic Tern,Sterna paradisaea,,,V,
+Forster's Tern,Sterna forsteri,,*,V,
+White-tailed Tropicbird,Phaethon lepturus,,,V,
+Red-throated Loon,Gavia stellata,,,,"4A-5D, 10B-12C"
+Arctic Loon,Gavia arctica,H,,V,
+Pacific Loon,Gavia pacifica,,,V,
+Common Loon,Gavia immer,,*,,4A-1D
+Wilson's Storm-Petrel,Oceanites oceanicus,,,V,
+Leach's Storm-Petrel,Hydrobates leucorhous,,,V,
+Band-rumped Storm-Petrel,Hydrobates castro,,,V,
+Northern Fulmar,Fulmarus glacialis,,,V,
+Cory's Shearwater,Calonectris diomedea,,,V,
+Great Shearwater,Ardenna gravis,,,V,
+Wood Stork,Mycteria americana,,,V,
+Brown Booby,Sula leucogaster,,,V,
+Northern Gannet,Morus bassanus,,,C,9C-12C
+Anhinga,Anhinga anhinga,H,,V,
+Great Cormorant,Phalacrocorax carbo,,,,"4C-5C, 9A-12D"
+Double-crested Cormorant,Phalacrocorax auritus,,*,,3D-12A+
+American White Pelican,Pelecanus erythrorhynchos,,,V,
+Brown Pelican,Pelecanus occidentalis,,,V,
+American Bittern,Botaurus lentiginosus,,*,,4B-10C
+Least Bittern,Ixobrychus exilis,,*,N,5C-8D
+Great Blue Heron,Ardea herodias,,*,,3B-12D
+Great Egret,Ardea alba,,*,N,4B-10C
+Snowy Egret,Egretta thula,,*,N,4C-9D
+Little Blue Heron,Egretta caerulea,,,,"4C-5C, 7A-9C"
+Tricolored Heron,Egretta tricolor,,,V,
+Cattle Egret,Bubulcus ibis,,*,N,4C-9D
+Green Heron,Butorides virescens,,*,,4C-10C
+Black-crowned Night-Heron,Nycticorax nycticorax,,*,N,4B-10B
+Yellow-crowned Night-Heron,Nyctanassa violacea,,,V,
+White Ibis,Eudocimus albus,H,,V,
+Glossy Ibis,Plegadis falcinellus,,,,"4B-5C, 7C-10B"
+Black Vulture,Coragyps atratus,,,N,3B-11A
+Turkey Vulture,Cathartes aura,,*,,3B-11A+
+Osprey,Pandion haliaetus,,*,,4A-11B
+Swallow-tailed Kite,Elanoides forficatus,,,V,
+Golden Eagle,Aquila chrysaetos,,,,"3D-4D, 10A-11B+"
+Northern Harrier,Circus hudsonius,,*,,3B-1A+
+Sharp-shinned Hawk,Accipiter striatus,,*,,1A-12D
+Cooper's Hawk,Accipiter cooperii,,*,,1A-12D
+Northern Goshawk,Accipiter gentilis,,*,,1A-12D
+Bald Eagle,Haliaeetus leucocephalus,,*,N,1A-12D
+Red-shouldered Hawk,Buteo lineatus,,*,,3C-11A+
+Broad-winged Hawk,Buteo platypterus,,*,,3D-10C
+Swainson's Hawk,Buteo swainsoni,,,V,
+Red-tailed Hawk,Buteo jamaicensis,,*,,1A-12D
+Rough-legged Hawk,Buteo lagopus,,,,10A-5A
+Barn Owl,Tyto alba,,*,V,
+Eastern Screech-Owl,Megascops asio,,*,,1A-12D
+Great Horned Owl,Bubo virginianus,,*,,1A-12D
+Snowy Owl,Bubo scandiacus,,,,11A-4D
+Northern Hawk Owl,Surnia ulula,,,,11B-4A
+Barred Owl,Strix varia,,*,,1A-12D
+Great Gray Owl,Strix nebulosa,,,V,
+Long-eared Owl,Asio otus,,*,N,1A-12D
+Short-eared Owl,Asio flammeus,,*,N,1A-12D
+Boreal Owl,Aegolius funereus,,,V,
+Northern Saw-whet Owl,Aegolius acadicus,,*,,1A-12D
+Belted Kingfisher,Megaceryle alcyon,,*,,3C-12D+
+Lewis's Woodpecker,Melanerpes lewis,,,V,
+Red-headed Woodpecker,Melanerpes erythrocephalus,,*,N,1A-12D
+Red-bellied Woodpecker,Melanerpes carolinus,,*,,1A-12D
+Yellow-bellied Sapsucker,Sphyrapicus varius,,*,,4A-10C+
+American Three-toed Woodpecker,Picoides dorsalis,,*,V,
+Black-backed Woodpecker,Picoides arcticus,,*,,1A-12D
+Downy Woodpecker,Dryobates pubescens,,*,,1A-12D
+Hairy Woodpecker,Dryobates villosus,,*,,1A-12D
+Northern Flicker,Colaptes auratus,,*,,3B-11D+
+Pileated Woodpecker,Dryocopus pileatus,,*,,1A-12D
+American Kestrel,Falco sparverius,,*,,3A-12D+
+Merlin,Falco columbarius,,*,,4A-12D
+Gyrfalcon,Falco rusticolus,,,V,
+Peregrine Falcon,Falco peregrinus,,*,N,3D-10D+
+Prairie Falcon,Falco mexicanus,,,V,
+Olive-sided Flycatcher,Contopus cooperi,,*,,5C-9B
+Eastern Wood-Pewee,Contopus virens,,*,,5C-9D
+Yellow-bellied Flycatcher,Empidonax flaviventris,,*,,5C-9C
+Acadian Flycatcher,Empidonax virescens,,,V,
+Alder Flycatcher,Empidonax alnorum,,*,,5B-9C
+Willow Flycatcher,Empidonax traillii,,*,,5B-9C
+Least Flycatcher,Empidonax minimus,,*,,5A-9D
+Eastern Phoebe,Sayornis phoebe,,*,,3D-10C+
+Say's Phoebe,Sayornis saya,,,V,
+Great Crested Flycatcher,Myiarchus crinitus,,*,,5A-9C
+Western Kingbird,Tyrannus verticalis,,,V,
+Eastern Kingbird,Tyrannus tyrannus,,*,,4D-9C
+Scissor-tailed Flycatcher,Tyrannus forficatus,,,V,
+Fork-tailed Flycatcher,Tyrannus savana,,,V,
+Loggerhead Shrike,Lanius ludovicianus,E,*,V,
+Northern Shrike,Lanius borealis,,,,10D-4B
+White-eyed Vireo,Vireo griseus,,,,"4D-7A, 9B-1A"
+Yellow-throated Vireo,Vireo flavifrons,,*,,5A-9C
+Cassin's Vireo,Vireo cassinii,,,V,
+Blue-headed Vireo,Vireo solitarius,,*,,4C-10C
+Philadelphia Vireo,Vireo philadelphicus,,*,N,5B-10A
+Warbling Vireo,Vireo gilvus,,*,,5A-9D
+Red-eyed Vireo,Vireo olivaceus,,*,,5A-10B
+Canada Jay,Perisoreus canadensis,,*,N,1A-12D
+Steller's Jay,Cyanocitta stelleri,H,,V,
+Blue Jay,Cyanocitta cristata,,*,,1A-12D
+American Crow,Corvus brachyrhynchos,,*,,1A-12D
+Fish Crow,Corvus ossifragus,,*,B,1A-12D
+Common Raven,Corvus corax,,*,,1A-12D
+Horned Lark,Eremophila alpestris,,*,,1A-12D
+Bank Swallow,Riparia riparia,,*,,4D-9C
+Tree Swallow,Tachycineta bicolor,,*,,3D-10C
+Northern Rough-winged Swallow,Stelgidopteryx serripennis,,*,,4C-9C
+Purple Martin,Progne subis,,*,,4C-9A
+Barn Swallow,Hirundo rustica,,*,,4C-10A
+Cliff Swallow,Petrochelidon pyrrhonota,,*,,4C-9D
+Cave Swallow,Petrochelidon fulva,,,V,
+Black-capped Chickadee,Poecile atricapillus,,*,,1A-12D
+Boreal Chickadee,Poecile hudsonicus,,*,,1A-12D
+Tufted Titmouse,Baeolophus bicolor,,*,,1A-12D
+Red-breasted Nuthatch,Sitta canadensis,,*,,1A-12D
+White-breasted Nuthatch,Sitta carolinensis,,*,,1A-12D
+Brown Creeper,Certhia americana,,*,,1A-12D
+House Wren,Troglodytes aedon,,*,,4D-10B
+Winter Wren,Troglodytes hyemalis,,*,,4A-11D+
+Sedge Wren,Cistothorus platensis,,*,N,5B-10C
+Marsh Wren,Cistothorus palustris,,*,,4C-10C
+Carolina Wren,Thryothorus ludovicianus,,*,,1A-12D
+Bewick's Wren,Thryomanes bewickii,,,V,
+Blue-gray Gnatcatcher,Polioptila caerulea,,*,,4D-9A
+Golden-crowned Kinglet,Regulus satrapa,,*,,1A-12D
+Ruby-crowned Kinglet,Regulus calendula,,*,,4B-11C
+Northern Wheatear,Oenanthe oenanthe,,,V,
+Eastern Bluebird,Sialia sialis,,*,,1A-12D
+Mountain Bluebird,Sialia currucoides,,,V,
+Townsend's Solitaire,Myadestes townsendi,,,V,
+Veery,Catharus fuscescens,,*,,5A-9C
+Gray-cheeked Thrush,Catharus minimus,,,V,
+Bicknell's Thrush,Catharus bicknelli,,*,,5B-10A
+Swainson's Thrush,Catharus ustulatus,,*,,5B-10C
+Hermit Thrush,Catharus guttatus,,*,,4B-11B+
+Wood Thrush,Hylocichla mustelina,,*,,4D-10B
+American Robin,Turdus migratorius,,*,,1A-12D
+Varied Thrush,Ixoreus naevius,,,V,
+Gray Catbird,Dumetella carolinensis,,*,,5A-10D+
+Brown Thrasher,Toxostoma rufum,,*,,4D-10B+
+Northern Mockingbird,Mimus polyglottos,,*,,1A-12D
+European Starling,Sturnus vulgaris,I,*,,1A-12D
+Bohemian Waxwing,Bombycilla garrulus,,,,11A-4D
+Cedar Waxwing,Bombycilla cedrorum,,*,,1A-12D
+House Sparrow,Passer domesticus,I,*,,1A-12D
+American Pipit,Anthus rubescens,,,,"4A-5B, 9A-11C"
+Evening Grosbeak,Coccothraustes vespertinus,,*,,1A-12D
+Pine Grosbeak,Pinicola enucleator,,,,10D-4A
+House Finch,Haemorhous mexicanus,I,*,,1A-12D
+Purple Finch,Haemorhous purpureus,,*,,1A-12D
+Common Redpoll,Acanthis flammea,,,,11B-4D
+Hoary Redpoll,Acanthis hornemanni,,,,11C-4C
+Red Crossbill,Loxia curvirostra,,*,N,1A-12D
+White-winged Crossbill,Loxia leucoptera,,*,,1A-12D
+Pine Siskin,Spinus pinus,,*,,1A-12D
+American Goldfinch,Spinus tristis,,*,,1A-12D
+Lapland Longspur,Calcarius lapponicus,,,,10B-3D
+Smith's Longspur,Calcarius pictus,H,,V,
+Snow Bunting,Plectrophenax nivalis,,,,10C-3D
+Grasshopper Sparrow,Ammodramus savannarum,,*,N,5A-9A
+Lark Sparrow,Chondestes grammacus,,,V,
+Lark Bunting,Calamospiza melanocorys,,,V,
+Chipping Sparrow,Spizella passerina,,*,,4A-11D
+Clay-colored Sparrow,Spizella pallida,,*,N,4D-10C
+Field Sparrow,Spizella pusilla,,*,,4A-11B
+Fox Sparrow,Passerella iliaca,,,,"3B-4D, 9D-12A"
+American Tree Sparrow,Spizelloides arborea,,,,10B-5A
+Dark-eyed Junco,Junco hyemalis,,*,,1A-12D
+White-crowned Sparrow,Zonotrichia leucophrys,,,,"4D-5C, 9C-11A+"
+Golden-crowned Sparrow,Zonotrichia atricapilla,,,V,
+Harris's Sparrow,Zonotrichia querula,,,V,
+White-throated Sparrow,Zonotrichia albicollis,,*,,4B-11C+
+Vesper Sparrow,Pooecetes gramineus,,*,,4A-11A
+LeConte's Sparrow,Ammospiza leconteii,,,V,
+Nelson's Sparrow,Ammospiza nelsoni,,,,"5C, 9D-10C"
+Henslow's Sparrow,Centronyx henslowii,E,*,V,
+Savannah Sparrow,Passerculus sandwichensis,,*,,4A-11C+
+Song Sparrow,Melospiza melodia,,*,,3B-11A+
+Lincoln's Sparrow,Melospiza lincolnii,,*,,5A-10D
+Swamp Sparrow,Melospiza georgiana,,*,,4B-11C+
+Green-tailed Towhee,Pipilo chlorurus,,,V,
+Spotted Towhee,Pipilo maculatus,,,V,
+Eastern Towhee,Pipilo erythrophthalmus,,*,,4C-10C+
+Yellow-breasted Chat,Icteria virens,,,,5C-10B
+Yellow-headed Blackbird,Xanthocephalus xanthocephalus,,,V,
+Bobolink,Dolichonyx oryzivorus,,*,,5A-9D
+Eastern Meadowlark,Sturnella magna,,*,,3C-11B
+Western Meadowlark,Sturnella neglecta,,,V,
+Orchard Oriole,Icterus spurius,,*,,5A-7D
+Bullock's Oriole,Icterus bullockii,,,V,
+Baltimore Oriole,Icterus galbula,,*,,5A-10A
+Red-winged Blackbird,Agelaius phoeniceus,,*,,2C-12D+
+Brown-headed Cowbird,Molothrus ater,,*,,2D-12D+
+Rusty Blackbird,Euphagus carolinus,,*,N,3C-11B+
+Brewer's Blackbird,Euphagus cyanocephalus,,,V,
+Common Grackle,Quiscalus quiscula,,*,,3A-12C
+Ovenbird,Seiurus aurocapilla,,*,,4D-10A
+Worm-eating Warbler,Helmitheros vermivorum,,,V,
+Louisiana Waterthrush,Parkesia motacilla,,*,,4C-8B
+Northern Waterthrush,Parkesia noveboracensis,,*,,4D-9C
+Golden-winged Warbler,Vermivora chrysoptera,,*,,5B-8D
+Blue-winged Warbler,Vermivora cyanoptera,,*,,5A-8D
+Black-and-white Warbler,Mniotilta varia,,*,,4C-10A
+Prothonotary Warbler,Protonotaria citrea,,,V,
+Tennessee Warbler,Leiothlypis peregrina,,*,N,5B-10A
+Orange-crowned Warbler,Leiothlypis celata,,,,"5A-5D, 9C-10C "
+Nashville Warbler,Leiothlypis ruficapilla,,*,,5A-10B
+Connecticut Warbler,Oporornis agilis,,,,8D-10B
+Mourning Warbler,Geothlypis philadelphia,,*,,5B-10A
+Kentucky Warbler,Geothlypis formosa,,,V,
+Common Yellowthroat,Geothlypis trichas,,*,,4D-10D+
+Hooded Warbler,Setophaga citrina,,*,N,5A-8D
+American Redstart,Setophaga ruticilla,,*,,5A-10A
+Cape May Warbler,Setophaga tigrina,,*,N,5B-9D
+Cerulean Warbler,Setophaga cerulea,,*,N,5C-8B
+Northern Parula,Setophaga americana,,*,,5A-9D
+Magnolia Warbler,Setophaga magnolia,,*,,5A-10A
+Bay-breasted Warbler,Setophaga castanea,,*,N,5B-9D
+Blackburnian Warbler,Setophaga fusca,,*,,5A-9D
+Yellow Warbler,Setophaga petechia,,*,,4D-9D
+Chestnut-sided Warbler,Setophaga pensylvanica,,*,,5A-9D
+Blackpoll Warbler,Setophaga striata,,*,,5B-10C
+Black-throated Blue Warbler,Setophaga caerulescens,,*,,5A-10A
+Palm Warbler,Setophaga palmarum,,*,N,4B-11A
+Pine Warbler,Setophaga pinus,,*,,4B-9D+
+Yellow-rumped Warbler,Setophaga coronata,,*,,4B-11C+
+Yellow-throated Warbler,Setophaga dominica,,,V,
+Prairie Warbler,Setophaga discolor,,*,,5A-9B
+Black-throated Green Warbler,Setophaga virens,,*,,4D-10B
+Canada Warbler,Cardellina canadensis,,*,,5B-9D
+Wilson's Warbler,Cardellina pusilla,,*,N,5B-9D
+Summer Tanager,Piranga rubra,,,V,
+Scarlet Tanager,Piranga olivacea,,*,,5A-10A
+Western Tanager,Piranga ludoviciana,,,V,
+Northern Cardinal,Cardinalis cardinalis,,*,,1A-12D
+Rose-breasted Grosbeak,Pheucticus ludovicianus,,*,,4D-10B
+Black-headed Grosbeak,Pheucticus melanocephalus,,,V,
+Blue Grosbeak,Passerina caerulea,,,V,
+Indigo Bunting,Passerina cyanea,,*,,5B-10A
+Painted Bunting,Passerina ciris,,,V,
+Dickcissel,Spiza americana,,,,"5C-7A, 8D-12C"
