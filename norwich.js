@@ -1,26 +1,26 @@
 #!/usr/bin/env node
-'use strict'
 
 const meow = require('meow')
-const main = require('./index')
 const _ = require('lodash')
-const helpers = require('./helpers')
 const fs = require('fs').promises
+const moment = require('moment')
+const main = require('./index')
+const helpers = require('./helpers')
 const hotspots = require('./hotspots')
 
 const cli = meow(`
   Usage
-    $ node cli.js <input> [opts]
+    $ node cli.js --input=<input> [opts]
 
   Arguments
     norwich       Output for the Norwich quest
 
   Options
+    --all       Only use checklists that counted all species
+    --complete  Filter by complete checklists only
     --input, -i The input file
     --year      Limit results to a given year
-    --list, -l  List all of the species
-    --complete  Filter by complete checklists only
-    --verbose   Adds extra logging
+    --town      Select which town to make the table for
 
   Examples
     $ node cli.js
@@ -33,13 +33,17 @@ const cli = meow(`
     year: {
       type: 'string'
     },
-    list: {
+    all: {
       type: 'boolean',
-      alias: 'l'
+      alias: 'a'
     },
-    verbose: {
-      alias: 'v',
-      type: 'boolean'
+    complete: {
+      type: 'boolean',
+      alias: 'c'
+    },
+    town: {
+      type: 'string',
+      alias: 't'
     }
   }
 })
@@ -54,18 +58,22 @@ async function getNorwichHotspots () {
 }
 
 // Only usefulf for the Norwich County Quest account
-async function norwich (input) {
-  const opts = {
-    year: 2022,
+async function norwich (opts) {
+  Object.assign(opts, {
+    year: opts.year || moment().format('YYYY'),
     state: 'Vermont',
-    town: 'Norwich',
-    all: false,
-    complete: false,
+    town: opts.town || 'Norwich',
+    all: opts.all || false,
+    complete: opts.complete || false
     // output: `data/vt_town_counts.json`,
-    input
-  }
+  })
   const dateFormat = helpers.parseDateFormat('day')
-  let data = main.orderByDate(main.durationFilter(main.completeChecklistFilter(main.dateFilter(main.locationFilter(await main.getData(opts.input), opts), opts), opts), opts), opts)
+  let data = main.orderByDate(
+    main.durationFilter(
+      main.completeChecklistFilter(
+        main.dateFilter(
+          main.locationFilter(
+            await main.getData(opts.input), opts), opts), opts), opts), opts)
   data = main.countUniqueSpecies(data.filter(x => x.Town === opts.town.toUpperCase()), dateFormat)
 
   if (opts.output) {
@@ -78,6 +86,7 @@ async function norwich (input) {
 
   let str = ''
   let i = 1
+  const checklistIds = new Set()
   _.sortBy(main.createPeriodArray(data), 'Date').forEach((e) => {
     e.Species.forEach((checklist) => {
       const location = (norwichHotspots[checklist['Location ID']])
@@ -90,14 +99,17 @@ async function norwich (input) {
   <td class="column-4"><a href="https://ebird.org/vt/checklist/${checklist['Submission ID']}">${e.Date}</a></td>
 </tr>`
       str += newStr
+      checklistIds.add(checklist['Submission ID'])
       i++
     })
   })
+  console.log(`Total amount of checklists: ${checklistIds.size}`)
+  console.log()
   console.log(str)
 }
 
 async function run () {
-  await norwich(cli.flags.input)
+  await norwich(cli.flags)
 }
 
 run()
