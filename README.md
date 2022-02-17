@@ -6,7 +6,11 @@ Tools for doing stuff with eBird data.
 
 Run:
 
-`npm i
-npm run norwich`
+```sh
+git clone https://github.com/RichardLitt/ebird-ext
+cd ebird-ext
+npm install
+npm run norwich
+```
 
 To gather the output of the data: `npm run norwich > output.txt`
