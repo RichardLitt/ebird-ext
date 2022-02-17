@@ -30,52 +30,31 @@ const cli = meow(`
       type: 'string',
       alias: 'i'
     },
-    country: {
-      type: 'string'
-    },
-    county: {
-      type: 'string'
-    },
-    state: {
-      type: 'string'
-    },
     year: {
-      type: 'string'
-    },
-    town: {
       type: 'string'
     },
     list: {
       type: 'boolean',
       alias: 'l'
     },
-    towns: {
-      type: 'string'
-    },
-    regions: {
-      type: 'string'
-    },
     verbose: {
       alias: 'v',
       type: 'boolean'
-    },
-    withinDistance: {
-      type: 'string'
     }
   }
 })
 
 async function getNorwichHotspots () {
-  let data = await hotspots.hotspotsForTown({ town: 'Norwich'})
-  let norwichHotspots = {}
+  const data = await hotspots.hotspotsForTown({ town: 'Norwich' })
+  const norwichHotspots = {}
   data.forEach(x => {
-      norwichHotspots[x.locId] = x.locName
+    norwichHotspots[x.locId] = x.locName
   })
   return norwichHotspots
 }
 
 // Only usefulf for the Norwich County Quest account
-async function norwich(input) {
+async function norwich (input) {
   const opts = {
     year: 2022,
     state: 'Vermont',
@@ -93,18 +72,18 @@ async function norwich(input) {
     fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(data), 'utf8')
   }
 
-  function isEven(n) { return n % 2 === 0 }
+  function isEven (n) { return n % 2 === 0 }
 
-  let norwichHotspots = await getNorwichHotspots()
+  const norwichHotspots = await getNorwichHotspots()
 
   let str = ''
   let i = 1
   _.sortBy(main.createPeriodArray(data), 'Date').forEach((e) => {
     e.Species.forEach((checklist) => {
-      let location = (norwichHotspots[checklist['Location ID']]) ?
-        `<a href="https://ebird.org/vt/hotspot/${checklist['Location ID']}">${checklist.Location}</a>`
+      const location = (norwichHotspots[checklist['Location ID']])
+        ? `<a href="https://ebird.org/vt/hotspot/${checklist['Location ID']}">${checklist.Location}</a>`
         : checklist.Location
-      let newStr = `<tr class="row-${i+1} ${(isEven(i+1) ? 'even' : 'odd')}">
+      const newStr = `<tr class="row-${i + 1} ${(isEven(i + 1) ? 'even' : 'odd')}">
   <td class="column-1">${i}</td>
   <td class="column-2">${checklist['Common Name']}</td>
   <td class="column-3">${location}</td>
