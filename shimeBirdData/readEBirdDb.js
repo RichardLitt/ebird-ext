@@ -1,9 +1,8 @@
 // This function reads only the eBird database files, requestable from eBird.
-
 const fs = require('fs')
 const csv = require('csv-parse')
-const Town_boundaries = require('./geojson/vt_towns.json')
-const Vermont_regions = require('./geojson/Polygon_VT_Biophysical_Regions.json')
+const Town_boundaries = require('../geojson/vt_towns.json')
+const Vermont_regions = require('../geojson/Polygon_VT_Biophysical_Regions.json')
 // const VermontSubspecies = require('./data/vermont_records_subspecies.json')
 const GeoJsonGeometriesLookup = require('geojson-geometries-lookup')
 const turf = require('turf')
@@ -12,7 +11,7 @@ const centerOfMass = require('@turf/center-of-mass')
 const nearestPoint = require('@turf/nearest-point')
 const vermontTowns = new GeoJsonGeometriesLookup(Town_boundaries)
 const vermontRegions = new GeoJsonGeometriesLookup(Vermont_regions)
-const eBird = require('./')
+const eBird = require('../')
 const _ = require('lodash')
 const parser = csv({
   delimiter: '\t',
@@ -20,7 +19,7 @@ const parser = csv({
   skip_empty_lines: true,
   relax_column_count: true, // this will cause a blow up if removed
   relax: true, // this should allow for the double quotes in individual columns, specifically field notes
-  from: 2, // ?
+  from: 2, // Skip first line
   quote: '"', // this also helps to prevent errors on quotes
   ltrim: true,
   rtrim: true,
@@ -29,10 +28,12 @@ const parser = csv({
     'LAST EDITED DATE',
     'TAXONOMIC ORDER',
     'CATEGORY',
+    'TAXON CONCEPT ID',
     'COMMON NAME',
     'SCIENTIFIC NAME',
     'SUBSPECIES COMMON NAME',
     'SUBSPECIES SCIENTIFIC NAME',
+    'EXOTIC CODE',
     'OBSERVATION COUNT',
     'BREEDING CODE',
     'BREEDING CATEGORY',
@@ -45,12 +46,12 @@ const parser = csv({
     'COUNTY',
     'COUNTY CODE',
     'IBA CODE',
-    'BCR CODEUSFWS CODE',
+    'BCR CODE',
+    'USFWS CODE',
     'ATLAS BLOCK',
     'LOCALITY',
     'LOCALITY ID',
     'LOCALITY TYPE',
-    'WTF IS P',
     'LATITUDE',
     'LONGITUDE',
     'OBSERVATION DATE',
@@ -150,26 +151,26 @@ function addStringstoCommonName (input) {
   }
 }
 
-// TODO This isn't working asynchronously and I can't figure out why right now.
-const filepaths = [
-  // '/Users/richard/Downloads/ebd_US-VT_relNov-2021/counties/001.txt',
-  // '/Users/richard/Downloads/ebd_US-VT_relNov-2021/counties/003.txt',
-  // '/Users/richard/Downloads/ebd_US-VT_relNov-2021/counties/005.txt',
-  // '/Users/richard/Downloads/ebd_US-VT_relNov-2021/counties/007.txt',
-  // '/Users/richard/Downloads/ebd_US-VT_relNov-2021/counties/009.txt',
-  // '/Users/richard/Downloads/ebd_US-VT_relNov-2021/counties/011.txt',
-  // '/Users/richard/Downloads/ebd_US-VT_relNov-2021/counties/013.txt',
-  // '/Users/richard/Downloads/ebd_US-VT_relNov-2021/counties/015.txt',
-  // '/Users/richard/Downloads/ebd_US-VT_relNov-2021/counties/017.txt',
-  // '/Users/richard/Downloads/ebd_US-VT_relNov-2021/counties/019.txt',
-  // '/Users/richard/Downloads/ebd_US-VT_relNov-2021/counties/021.txt',
-  // '/Users/richard/Downloads/ebd_US-VT_relNov-2021/counties/023.txt',
-  // '/Users/richard/Downloads/ebd_US-VT_relNov-2021/counties/025.txt',
-  '/Users/richard/Downloads/ebd_US-VT_relNov-2021/counties/027.txt'
-]
+// const filepaths = [
+// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/001.txt',
+// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/003.txt',
+// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/005.txt',
+// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/007.txt',
+// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/009.txt',
+// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/011.txt',
+// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/013.txt',
+// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/015.txt',
+// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/017.txt',
+// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/019.txt',
+// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/021.txt',
+// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/023.txt',
+// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/025.txt',
+// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/027.txt'
+// ]
 
 async function analyzeFiles () {
-  const files = filepaths
+  // TODO Don't use bash maybe
+  const files = [process.argv[2]]
 
   for (const file of files) {
     const string = file.match(/0\d\d\.txt/g)[0].match(/\d+/g)[0]
@@ -242,10 +243,10 @@ async function runFile (filepath, string) {
         // console.log(row)
         // if (row['WTF IS P'] !== 'P') {
         // console.log(row['LOCALITY ID'])
-        row.LOCALITY = row['LOCALITY ID']
-        row['LOCALITY ID'] = row['LOCALITY TYPE']
-        row['LOCALITY TYPE'] = row['WTF IS P']
-        delete row['WTF IS P']
+        // row.LOCALITY = row['LOCALITY ID']
+        // row['LOCALITY ID'] = row['LOCALITY TYPE']
+        // row['LOCALITY TYPE'] = row['WTF IS P']
+        // delete row['WTF IS P']
         // } else {
         // console.log('Not deleting p', row['LOCALITY ID'])
         // }
@@ -278,7 +279,7 @@ async function runFile (filepath, string) {
             Latitude: newCoords.geometry.coordinates[1]
           }
           point = getContainer(map, coordinates)
-          console.log('Previously undefined point:', point)
+          // console.log('Previously undefined point:', point)
         }
 
         const species = {
@@ -373,7 +374,7 @@ async function runFile (filepath, string) {
             boundaryIds[t].averageBirdsOverBirders = (boundaryIds[t].speciesCount / boundaryIds[t].observersCount).toFixed(2)
             boundaryIds[t].averageChecklistsToBirds = (boundaryIds[t].checklists / boundaryIds[t].speciesCount).toFixed(2)
           })
-          console.log('Total count: ', _.sum(totalCount))
+          // console.log('Total count: ', _.sum(totalCount))
           console.log('CSV file successfully processed')
           fs.writeFile(`vtRegion-${string}.json`, JSON.stringify(boundaryIds), 'utf8', (err) => {
             if (err) {
