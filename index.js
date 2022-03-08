@@ -572,6 +572,7 @@ function pointLookup(geojson, geojsonLookup, data) {
   // If, for some reason, the point is on a border and the map I have discards it, but eBird doesn't - just discard it.
   // This can be fixed by using nearest neighbor approaches, but those tend to have a high computational load, and they require
   // mapping libraries that need window, which just stinks.
+  // TODO Use turf for this, seems to work just fine.
   return
 }
 
