@@ -9,6 +9,7 @@ const Papa = require('papaparse')
 const main = require('./index')
 const helpers = require('./helpers')
 const difference = require('compare-latlong')
+const f= require('./filters')
 
 // Get new hotspots lists
 // curl --location -g --request GET 'https://api.ebird.org/v2/ref/hotspot/US-VT' > data/hotspots.csv
@@ -33,7 +34,7 @@ async function csvToJsonHotspots (opts) {
 
 async function hotspotsForTown(opts) {
   let hotspots = JSON.parse(await fs.readFile('data/hotspots.json', 'utf8'))
-  return main.locationFilter(hotspots.map(x => {
+  return f.locationFilter(hotspots.map(x => {
     x.Latitude = x.lat
     x.Longitude = x.lng
     x.State = 'Vermont'
@@ -108,7 +109,7 @@ async function townHotspots(opts) {
   if (!opts.state) { opts.state = 'Vermont'}
 
   // LocationFilter really shouldn't be used on these, as they're not checklists, but it works (for now...)
-  let data = main.locationFilter(VermontHotspots.map(x => {
+  let data = f.locationFilter(VermontHotspots.map(x => {
     // Otherwise it messes up and writes over the region
     x.County = main.eBirdCountyIds[Number(x.Region.split('US-VT-')[1])]
     return x

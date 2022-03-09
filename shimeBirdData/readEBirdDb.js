@@ -12,6 +12,7 @@ const nearestPoint = require('@turf/nearest-point')
 const vermontTowns = new GeoJsonGeometriesLookup(Town_boundaries)
 const vermontRegions = new GeoJsonGeometriesLookup(Vermont_regions)
 const eBird = require('../')
+const f = require('../filters')
 const _ = require('lodash')
 const parser = csv({
   delimiter: '\t',
@@ -286,7 +287,7 @@ async function runFile (filepath, string) {
           'Scientific Name': row['SCIENTIFIC NAME'],
           'Common Name': row['COMMON NAME']
         }
-        const isSpecies = eBird.removeSpuh([species]).length
+        const isSpecies = f.removeSpuh([species]).length
         const commonName = addStringstoCommonName(species['Common Name'])
 
         if (isSpecies) {

@@ -93,6 +93,7 @@ async function findIntersection (data) {
   return intersection
 }
 
+// Note - note the same as f.removeSpuh
 function removeSpuh (arr, reverse) {
   const newArr = []
   for (var i in arr) {
