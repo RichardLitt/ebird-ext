@@ -1,22 +1,46 @@
 const fs = require('fs')
 const banding = require('../bandingCodes')
+const helpers = require('../helpers')
 
-const files = [
-  require('./vtRegion-001.json'),
-  require('./vtRegion-003.json'),
-  require('./vtRegion-005.json'),
-  require('./vtRegion-007.json'),
-  require('./vtRegion-009.json'),
-  require('./vtRegion-011.json'),
-  require('./vtRegion-013.json'),
-  require('./vtRegion-015.json'),
-  require('./vtRegion-017.json'),
-  require('./vtRegion-019.json'),
-  require('./vtRegion-021.json'),
-  require('./vtRegion-023.json'),
-  require('./vtRegion-025.json'),
-  require('./vtRegion-027.json')
-]
+let files
+
+const areas = process.argv[2]
+
+if (areas === 'towns') {
+  files = [
+    require('./vtTown-001.json'),
+    require('./vtTown-003.json'),
+    require('./vtTown-005.json'),
+    require('./vtTown-007.json'),
+    require('./vtTown-009.json'),
+    require('./vtTown-011.json'),
+    require('./vtTown-013.json'),
+    require('./vtTown-015.json'),
+    require('./vtTown-017.json'),
+    require('./vtTown-019.json'),
+    require('./vtTown-021.json'),
+    require('./vtTown-023.json'),
+    require('./vtTown-025.json'),
+    require('./vtTown-027.json')
+  ]
+} else if (areas === 'regions') {
+  files = [
+    require('./vtRegion-001.json'),
+    require('./vtRegion-003.json'),
+    require('./vtRegion-005.json'),
+    require('./vtRegion-007.json'),
+    require('./vtRegion-009.json'),
+    require('./vtRegion-011.json'),
+    require('./vtRegion-013.json'),
+    require('./vtRegion-015.json'),
+    require('./vtRegion-017.json'),
+    require('./vtRegion-019.json'),
+    require('./vtRegion-021.json'),
+    require('./vtRegion-023.json'),
+    require('./vtRegion-025.json'),
+    require('./vtRegion-027.json')
+  ]
+}
 
 const newFile = {}
 
@@ -52,18 +76,18 @@ Object.keys(newFile).forEach(town => {
 // )
 // const townIntersection = getTownIntersection(townSightings)
 
-fs.writeFile('../data/townsightings.json', JSON.stringify(townSightings), (e) => {
+fs.writeFile(`../data/${helpers.capitalizeFirstLetters(areas)}Sightings.json`, JSON.stringify(townSightings), (e) => {
   if (e) {
     console.log(e)
   } else {
-    console.log('Successfully wrote to townsightings.json.')
+    console.log(`Successfully wrote to ${helpers.capitalizeFirstLetters(areas)}Sightings.json.`)
   }
 })
 
-fs.writeFile('./vtTownData.json', JSON.stringify(newFile), (e) => {
+fs.writeFile(`./vt${helpers.capitalizeFirstLetters(areas)}Data.json`, JSON.stringify(newFile), (e) => {
   if (e) {
     console.log(e)
   } else {
-    console.log('Successfully wrote to vtTownData.json.')
+    console.log(`Successfully wrote to ./vt${helpers.capitalizeFirstLetters(areas)}Data.json.`)
   }
 })

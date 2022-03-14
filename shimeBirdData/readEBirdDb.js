@@ -1,18 +1,9 @@
 // This function reads only the eBird database files, requestable from eBird.
 const fs = require('fs')
 const csv = require('csv-parse')
-const Town_boundaries = require('../geojson/vt_towns.json')
-const Vermont_regions = require('../geojson/Polygon_VT_Biophysical_Regions.json')
-// const VermontSubspecies = require('./data/vermont_records_subspecies.json')
-const GeoJsonGeometriesLookup = require('geojson-geometries-lookup')
-const turf = require('turf')
-const center = require('@turf/center')
-const centerOfMass = require('@turf/center-of-mass')
-const nearestPoint = require('@turf/nearest-point')
-const vermontTowns = new GeoJsonGeometriesLookup(Town_boundaries)
-const vermontRegions = new GeoJsonGeometriesLookup(Vermont_regions)
 const eBird = require('../')
 const f = require('../filters')
+const helpers = require('../helpers')
 const _ = require('lodash')
 const parser = csv({
   delimiter: '\t',
@@ -77,25 +68,14 @@ const parser = csv({
   ]
 })
 
-const centers = Town_boundaries.features.map(feature => {
-  let center
-  // This center of West Haven is in New York.
-  if (feature.properties.town === 'West Haven'.toUpperCase()) {
-    center = centerOfMass.default(feature)
-  // TODO Unfortunately, the enclaves are broken. All Rutland counts are in Rutland City.
-  } else if (feature.properties.town.includes('Rutland'.toUpperCase())) {
-    center = turf.center(feature)
-    // console.log(feature.properties.town, center.geometry.coordinates.reverse())
-  } else {
-    center = turf.center(feature)
-  }
-  center.properties = feature.properties
-  return center
-})
+const files = [process.argv[3]]
+const areas = process.argv[2] // 'regions' or 'towns'
 
-// console.log(Town_boundaries)
-
-// const centroid = turf.centroid(Town_boundaries)
+if (areas !== 'towns' && areas !== 'regions') {
+  console.log('Specify towns or regions please.')
+  console.log('Example: node readEBirdDb.js regions /Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/test-050.txt')
+  process.exit(1)
+}
 
 // Necessary because we remove all quotes from the files before piping them in
 function addStringstoCommonName (input) {
@@ -152,27 +132,7 @@ function addStringstoCommonName (input) {
   }
 }
 
-// const filepaths = [
-// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/001.txt',
-// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/003.txt',
-// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/005.txt',
-// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/007.txt',
-// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/009.txt',
-// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/011.txt',
-// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/013.txt',
-// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/015.txt',
-// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/017.txt',
-// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/019.txt',
-// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/021.txt',
-// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/023.txt',
-// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/025.txt',
-// '/Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/027.txt'
-// ]
-
 async function analyzeFiles () {
-  // TODO Don't use bash maybe
-  const files = [process.argv[2]]
-
   for (const file of files) {
     const string = file.match(/0\d\d\.txt/g)[0].match(/\d+/g)[0]
     console.log(`Analyzing ${file}.`)
@@ -180,14 +140,6 @@ async function analyzeFiles () {
     console.log(`Analyzed ${file}.`)
   }
 }
-
-analyzeFiles()
-
-// filepaths.forEach(async filepath => {
-//   const string = filepath.match(/0\d\d\.txt/g)[0].match(/\d+/g)[0]
-//   await runFile(filepath, string)
-//   console.log(`Analyzed ${filepath}.`)
-// })
 
 // TODO Make a mapping to these fields for some exports
 function shimData (row) {
@@ -222,66 +174,20 @@ async function runFile (filepath, string) {
   return new Promise(function (resolve, reject) {
     const boundaries = {}
     const boundaryIds = {}
-    const map = 'towns' // or 'regions'
-
-    // Goal: We want to be able to read the database of .csv files and automatically identify
-    // for a given town or county, what birds were seen. This will require using geojson and other
-    // algorithms in src/ebird-ext...
-    // our first pass will text-match county, outputting a file of $COUNTY_NAME.json with an array of birds
-    // second pass will do a town via Lat/Long and output a $TOWN.json with the data
-    // each of the above files will also have the record GUIDs from the CSV file to avoid future re-import when we jam this :poop: in a DB
-
-    // Point Lookup - this is the thing we should be able to do
-
-    // Ideally, we would have an object for each town which shows what species were seen in that town.
-    // This should match the result of: node cli.js towns --input=MyEBirdData.csv
-
     const shimmedRows = []
+
+    // Note: If you need to make a log file, this is how you do it.
+    // const dirty = fs.createWriteStream('dirty_entries.txt', { flags: 'a' })
 
     fs.createReadStream(filepath)
       .pipe(parser)
-      .on('data', (row) => { // this is directly on the file's readstream
-        // console.log(row)
-        // if (row['WTF IS P'] !== 'P') {
-        // console.log(row['LOCALITY ID'])
-        // row.LOCALITY = row['LOCALITY ID']
-        // row['LOCALITY ID'] = row['LOCALITY TYPE']
-        // row['LOCALITY TYPE'] = row['WTF IS P']
-        // delete row['WTF IS P']
-        // } else {
-        // console.log('Not deleting p', row['LOCALITY ID'])
-        // }
-
-        let coordinates = {
+      .on('data', (row) => {
+        const coordinates = {
           Longitude: row.LONGITUDE,
           Latitude: row.LATITUDE
         }
 
-        function getContainer (map, coordinates) {
-          let point
-          if (map === 'towns') {
-            point = eBird.pointLookup(Town_boundaries, vermontTowns, coordinates)
-          } else if (map === 'regions') {
-            point = eBird.pointLookup(Vermont_regions, vermontRegions, coordinates)
-          }
-          return point
-        }
-
-        let point = getContainer(map, coordinates)
-
-        // If it is on a river or across a border or something, get the nearest town
-        if (point === undefined) {
-          // Only check towns in the relevant county
-          const county = Number(row['COUNTY CODE'].split('-')[2])
-          const countyCenters = centers.filter(f => f.properties.county === county)
-          const newCoords = nearestPoint.default(turf.point([row.LONGITUDE, row.LATITUDE]), turf.featureCollection(countyCenters))
-          coordinates = {
-            Longitude: newCoords.geometry.coordinates[0],
-            Latitude: newCoords.geometry.coordinates[1]
-          }
-          point = getContainer(map, coordinates)
-          // console.log('Previously undefined point:', point)
-        }
+        const point = eBird.getPoint(areas, coordinates, Number(row['COUNTY CODE'].split('-')[2]))
 
         const species = {
           'Scientific Name': row['SCIENTIFIC NAME'],
@@ -313,7 +219,6 @@ async function runFile (filepath, string) {
             observers: {},
             spuhs: []
           }
-          // console.log(row)
         }
         if (!boundaryIds[point].years) {
           boundaryIds[point].years = [year]
@@ -377,12 +282,12 @@ async function runFile (filepath, string) {
           })
           // console.log('Total count: ', _.sum(totalCount))
           console.log('CSV file successfully processed')
-          fs.writeFile(`vtRegion-${string}.json`, JSON.stringify(boundaryIds), 'utf8', (err) => {
+          fs.writeFile(`vt${helpers.capitalizeFirstLetters(areas)}-${string}.json`, JSON.stringify(boundaryIds), 'utf8', (err) => {
             if (err) {
               console.log(err)
               reject(err)
             } else {
-              console.log('File written successfully.')
+              console.log(`vt${helpers.capitalizeFirstLetters(areas)}-${string}.json written successfully.`)
               resolve()
             }
           })
@@ -397,8 +302,8 @@ async function runFile (filepath, string) {
             }
           })
         }
-        // console.log(JSON.stringify(counties))
-        // console.log(boundaryIds)
       })
   })
 }
+
+analyzeFiles()

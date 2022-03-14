@@ -1,7 +1,7 @@
 const fetch = require('node-fetch')
 const VermontHotspots = require('./data/hotspots.json')
 const Town_boundaries = require('./geojson/vt_towns.json')
-const BerlinPond = {}//require('./montpelier.json')
+const BerlinPond = {} //require('./montpelier.json')
 const _ = require('lodash')
 const fs = require('fs').promises
 const moment = require('moment')
