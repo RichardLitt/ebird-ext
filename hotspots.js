@@ -27,13 +27,13 @@ async function csvToJsonHotspots (opts) {
     input = Papa.parse(input, { header: true })
   }
   await fs.writeFile('data/hotspots.json', JSON.stringify(input.data))
-  await fs.writeFile('data/novisits-hotspots.json', JSON.stringify(input.data.filter(x => !x["Last visited"])))
-  let list = input.data.map(x => x.Name).join('\n')
+  await fs.writeFile('data/novisits-hotspots.json', JSON.stringify(input.data.filter(x => !x['Last visited'])))
+  const list = input.data.map(x => x.Name).join('\n')
   await fs.writeFile('data/hotspotsList.md', list)
 }
 
-async function hotspotsForTown(opts) {
-  let hotspots = JSON.parse(await fs.readFile('data/hotspots.json', 'utf8'))
+async function hotspotsForTown (opts) {
+  const hotspots = JSON.parse(await fs.readFile('data/hotspots.json', 'utf8'))
   return f.locationFilter(hotspots.map(x => {
     x.Latitude = x.lat
     x.Longitude = x.lng
@@ -43,9 +43,9 @@ async function hotspotsForTown(opts) {
 }
 
 // Show which hotspots you haven't birded in
-async function unbirdedHotspots(opts) {
+async function unbirdedHotspots (opts) {
   let data
-  if (!opts.state) { opts.state = 'Vermont'}
+  if (!opts.state) { opts.state = 'Vermont' }
   if (opts.input) {
     data = await main.getData(opts.input)
   }
@@ -54,30 +54,30 @@ async function unbirdedHotspots(opts) {
 
   // If the opts are not this year
   if (opts.currentYear) {
-    let year = moment().year()
+    const year = moment().year()
     // Return all of the ones we haven't gone to
     hotspots = hotspots.filter(x => {
       if (x['Last visited']) {
-        let visitedthisYear = moment(x['Last visited'], helpers.momentFormat(x['Last visited'])).format('YYYY') === year.toString()
+        const visitedthisYear = moment(x['Last visited'], helpers.momentFormat(x['Last visited'])).format('YYYY') === year.toString()
         return !visitedthisYear
       } else {
         return true
       }
-   })
+    })
   }
 
   // If the opts are not this year
   if (opts.sinceYear) {
-    let year = opts.sinceYear
+    const year = opts.sinceYear
     // Return all of the ones we haven't gone to
     hotspots = hotspots.filter(x => {
       if (x['Last visited']) {
-        let visitedthisYear = moment(x['Last visited'], helpers.momentFormat(x['Last visited'])).format('YYYY') > year
+        const visitedthisYear = moment(x['Last visited'], helpers.momentFormat(x['Last visited'])).format('YYYY') > year
         return !visitedthisYear
       } else {
         return false
       }
-   })
+    })
   }
 
   if (data) {
@@ -90,9 +90,9 @@ async function unbirdedHotspots(opts) {
 
   // .filter(x => x.Region === 'US-VT-023')
   // Print out the most unrecent in your county, basically
-  console.log(hotspots.sort((a,b) => {
+  console.log(hotspots.sort((a, b) => {
     if (a['Last visited'] && b['Last visited']) {
-      let check = moment(a['Last visited']).diff(moment(b['Last visited']))
+      const check = moment(a['Last visited']).diff(moment(b['Last visited']))
       return check
     } else {
       // Not really sure how to deal with this, doesn't seem to work well.
@@ -105,8 +105,8 @@ async function unbirdedHotspots(opts) {
 }
 
 // Show which hotspots are in which towns
-async function townHotspots(opts) {
-  if (!opts.state) { opts.state = 'Vermont'}
+async function townHotspots (opts) {
+  if (!opts.state) { opts.state = 'Vermont' }
 
   // LocationFilter really shouldn't be used on these, as they're not checklists, but it works (for now...)
   let data = f.locationFilter(VermontHotspots.map(x => {

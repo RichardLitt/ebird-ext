@@ -17,20 +17,20 @@ const f = require('./filters.js')
 
 // Why eBird uses this format I have no idea.
 const eBirdCountyIds = {
-  '1': 'Addison',
-  '3': 'Bennington',
-  '5': 'Caledonia',
-  '7': 'Chittenden',
-  '9': 'Essex',
-  '11': 'Franklin',
-  '13': 'Grand Isle',
-  '15': 'Lamoille',
-  '17': 'Orange',
-  '19': 'Orleans',
-  '21': 'Rutland',
-  '23': 'Washington',
-  '25': 'Windham',
-  '27': 'Windsor'
+  1: 'Addison',
+  3: 'Bennington',
+  5: 'Caledonia',
+  7: 'Chittenden',
+  9: 'Essex',
+  11: 'Franklin',
+  13: 'Grand Isle',
+  15: 'Lamoille',
+  17: 'Orange',
+  19: 'Orleans',
+  21: 'Rutland',
+  23: 'Washington',
+  25: 'Windham',
+  27: 'Windsor'
 }
 
 async function vt251 (input) {
@@ -480,6 +480,7 @@ async function isSpeciesSightingRare (opts) {
       Species: opts.species
     }
   }
+
   // TODO Add a way to get Breeding Codes
   opts.data = [{
     County: await getCountyForTown(opts.town),
