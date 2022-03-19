@@ -4,7 +4,6 @@ const VermontRecords = require('./data/vermont_records.json')
 const CountyBarcharts = require('./data/countyBarcharts.json')
 const VermontSubspecies = require('./data/vermont_records_subspecies.json')
 const GeoJsonGeometriesLookup = require('geojson-geometries-lookup')
-const vermontTowns = new GeoJsonGeometriesLookup(Town_boundaries)
 const vermontRegions = new GeoJsonGeometriesLookup(Vermont_regions)
 const fs = require('fs').promises
 const _ = require('lodash')
@@ -12,9 +11,10 @@ const Papa = require('papaparse')
 const moment = require('moment')
 const difference = require('compare-latlong')
 const appearsDuringExpectedDates = require('./appearsDuringExpectedDates.js')
-const provinces = require('provinces')
 const polygonCenter = require('geojson-polygon-center')
 const helpers = require('./helpers')
+const f = require('./filters.js')
+
 // Why eBird uses this format I have no idea.
 const eBirdCountyIds = {
   '1': 'Addison',
@@ -33,41 +33,6 @@ const eBirdCountyIds = {
   '27': 'Windsor'
 }
 
-
-function removeSpuh (arr, reverse) {
-  const newArr = []
-  for (var i in arr) {
-    if (arr[i]['Scientific Name'] &&
-      !arr[i]['Scientific Name'].includes('sp.') &&
-      !arr[i]['Scientific Name'].includes(' x ') && // Get rid of hybrids
-      !arr[i]['Scientific Name'].includes('hybrid') && // Get rid of Lawrence's and Brewster's Warblers
-      !arr[i]['Scientific Name'].includes('Domestic type') && // Get rid of Domestic types
-      !arr[i]['Scientific Name'].split(' ').slice(0, 2).join(' ').includes('/') && // No Genus-level splits
-      !reverse
-      // !arr[i]['Scientific Name'].includes('[') &&
-      // !arr[i]['Scientific Name'].match(/.* .* .*/g) &&
-      // !arr[i]['Scientific Name'].includes('/')
-    ) {
-      // Remove subspecies only entries
-      // For some reason, simply copying over the field before redefining it doesn't work.
-      // Probably due to JavaScript reference errors.
-      const specie = arr[i]
-      if (specie['Scientific Name'].split(' ').slice(2).length !== 0) {
-        arr[i]['Subspecies'] = _.clone(arr[i]['Scientific Name'])
-      }
-      specie['Scientific Name'] = specie['Scientific Name'].split(' ').slice(0, 2).join(' ')
-      newArr.push(specie)
-      // } else {
-      // Use this to find excluded entries
-      // console.log(arr[i]['Scientific Name'])
-    } else if (reverse) {
-      const specie = arr[i]
-      newArr.push(specie)
-    }
-  }
-  return _.uniq(newArr)
-}
-
 async function vt251 (input) {
   const opts = {
     year: 2022,
@@ -81,19 +46,6 @@ async function vt251 (input) {
   await towns(opts)
 }
 
-function removeSpuhFromCounties (countyBarcharts) {
-  const newObj = {}
-  Object.keys(CountyBarcharts).forEach(county => {
-    newObj[county] = removeSpuh(Object.keys(CountyBarcharts[county].species).map(s => {
-      const species = CountyBarcharts[county].species[s]
-      // ES6 probably has a better way of doing this.
-      species.name = s
-      return species
-    })).map(s => s.name)
-  })
-  return newObj
-}
-
 // Useful for when Rock Pigeon is being compared against other lists, or for times when a single sighting contains only subspecies
 function cleanCommonName (arr) {
   return arr.map(s => s.split('(')[0].trim())
@@ -103,91 +55,10 @@ async function getData (input) {
   if (fs) {
     input = await fs.readFile(input, 'utf8')
     input = Papa.parse(input, { header: true })
-    return removeSpuh(input.data)
+    return f.removeSpuh(input.data)
   }
 
-  return removeSpuh(input)
-}
-
-
-function createPeriodArray (data) {
-  const periodArray = []
-  for (const period in data) {
-    periodArray.push({
-      Date: period,
-      SpeciesTotal: removeSpuh(_.uniqBy(data[period], 'Scientific Name')).length,
-      Species: removeSpuh(_.uniqBy(data[period], 'Scientific Name'))
-    })
-  }
-  return _.sortBy(periodArray, 'SpeciesTotal').reverse()
-}
-
-function locationFilter (list, opts) {
-  const filterList = ['Country', 'State', 'Region', 'County', 'Town']
-  const intersection = _.intersection(Object.keys(opts).map(x => helpers.capitalizeFirstLetters(x)), filterList)
-
-  return list.filter(checklist => {
-    if (!checklist.Latitude) {
-      // Some audio records appear to be totally empty locationalls
-      if (opts.verbose) {
-        console.log(`Checklist discarded: ${checklist['eBird Checklist URL']}.`)
-      }
-      return false
-    }
-    if (!checklist.State) {
-      let [country, state] = checklist['State/Province'].split('-')
-      if (state === 'VT') { // Just to speed things up a bit
-        checklist.State = 'Vermont'
-      } else if (['US', 'CA'].includes(country)) { // Enable for others
-        if (_.findIndex(provinces, {short: state}) !== -1) { // Note that this file is larger than needed, and has more countries
-          checklist.State = provinces[_.findIndex(provinces, {short: state})].name
-        }
-      }
-      checklist.Country = country
-    }
-    if (checklist.State === 'Vermont') {
-      // This option takes 25 seconds to do, every time, on my data
-      // Might be worth just not including.
-      let point = pointLookup(Vermont_regions, vermontRegions, checklist)
-      checklist.Region = point
-
-      // This one takes 3.5 seconds
-      checklist.Town = pointLookup(Town_boundaries, vermontTowns, checklist)
-    }
-
-    return intersection.every(filter => {
-      if (opts[filter.toLowerCase()] && checklist[filter]) {
-         return checklist[filter].toLowerCase() === opts[filter.toLowerCase()].toLowerCase()
-      }
-      return false
-    })
-  })
-}
-
-function dateFilter (list, opts) {
-  // TODO Make month and day work
-  if (!opts.year) {
-    return list
-  }
-  return list.filter(x => {
-    return moment(x.Date, helpers.momentFormat(x.Date)).format('YYYY') === opts.year.toString()
-  })
-}
-
-function durationFilter (list, opts) {
-  if (opts.duration && !parseInt(opts.duration)) {
-    console.log('Duration filter not a number!')
-    process.exit(1)
-  }
-  return (opts.duration) ? list.filter(x => parseInt(x['Duration (Min)']) >= opts.duration) : list
-}
-
-function completeChecklistFilter (list, opts) {
-  return (opts.complete) ? list.filter(x => parseInt(x['All Obs Reported']) === 1) : list
-}
-
-function orderByDate (arr) {
-  return _.orderBy(arr, (e) => moment(e.Date, helpers.momentFormat(e.Date)).format())
+  return f.removeSpuh(input)
 }
 
 async function biggestTime (timespan, opts) {
@@ -205,12 +76,12 @@ async function biggestTime (timespan, opts) {
     }
   })
 
-  return createPeriodArray(dataByDate)[0]
+  return f.createPeriodArray(dataByDate)[0]
 }
 
 async function firstTimes (timespan, opts) {
   const dateFormat = helpers.parseDateFormat(timespan)
-  const data = orderByDate(await getData(opts.input)) // Sort by the date, instead
+  const data = f.orderByDate(await getData(opts.input)) // Sort by the date, instead
   const dataByDate = {}
   const speciesIndex = {}
 
@@ -228,13 +99,13 @@ async function firstTimes (timespan, opts) {
     }
   })
 
-  return createPeriodArray(dataByDate)[0]
+  return f.createPeriodArray(dataByDate)[0]
 }
 
 async function firstTimeList (opts) {
   // TODO Fix
   // const dateFormat = helpers.parseDateFormat('day')
-  // const data = orderByDate(dateFilter(locationFilter(await getData(opts.input), opts), opts))
+  // const data = f.orderByDate(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts))
   // const dataByDate = {}
   // const speciesIndex = {}
   //
@@ -242,7 +113,7 @@ async function firstTimeList (opts) {
   //
   // let i = 1
   // // TODO Doesn't work for MyEBirdData for some reason
-  // _.sortBy(createPeriodArray(dataByDate), 'Date').forEach((e) => {
+  // _.sortBy(f.createPeriodArray(dataByDate), 'Date').forEach((e) => {
   //   e.Species.forEach((specie) => {
   //     console.log(`${i} | ${specie['Common Name']} - ${specie['Scientific Name']} | ${(specie.County) ? specie.County + ', ' : ''}${specie['State/Province']} | ${e.Date}`)
   //     i++
@@ -288,7 +159,7 @@ async function towns (opts) {
     opts.state = 'Vermont'
   }
   const dateFormat = helpers.parseDateFormat('day')
-  let data = orderByDate(durationFilter(completeChecklistFilter(dateFilter(locationFilter(await getData(opts.input), opts), opts), opts), opts), opts)
+  let data = f.orderByDate(f.durationFilter(f.completeChecklistFilter(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts), opts), opts)
   var speciesSeenInVermont = []
   _.forEach(countUniqueSpecies(data, dateFormat), (o) => {
     var mapped = _.map(o, 'Common Name')
@@ -300,8 +171,8 @@ async function towns (opts) {
     towns.forEach(t => {
       let i = 0
       t.species = []
-      _.sortBy(createPeriodArray(speciesByDate), 'Date').forEach((e) => {
       const speciesByDate = countUniqueSpecies(data.filter(x => x.Town === t.town), dateFormat)
+      _.sortBy(f.createPeriodArray(speciesByDate), 'Date').forEach((e) => {
         e.Species.forEach((species) => {
           t.species.push(species['Common Name'])
           i++
@@ -324,7 +195,7 @@ async function towns (opts) {
 
     let i = 1
     // TODO Doesn't work for MyEBirdData for some reason
-    _.sortBy(createPeriodArray(data), 'Date').forEach((e) => {
+    _.sortBy(f.createPeriodArray(data), 'Date').forEach((e) => {
       e.Species.forEach((specie) => {
         console.log(`${i} | ${specie['Common Name']} - ${specie['Scientific Name']} | ${opts.town}, ${(specie.County) ? specie.County + ', ' : ''}${specie.State} | ${e.Date}`)
         i++
@@ -338,13 +209,13 @@ As this is set up, it will currently return only the first time I saw species in
 async function counties (opts) {
   opts.state = 'Vermont'
   const dateFormat = helpers.parseDateFormat('day')
-  let data = orderByDate(dateFilter(locationFilter(await getData(opts.input), opts), opts), opts)
+  const data = f.orderByDate(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts)
 
-  const countySpecies = removeSpuhFromCounties(CountyBarcharts)
+  const countySpecies = f.removeSpuhFromCounties(CountyBarcharts)
 
   const counties = Object.keys(CountyBarcharts).map(county => {
     const speciesByDate = countUniqueSpecies(data.filter(x => x.County === county), dateFormat)
-    const species = _.sortBy(createPeriodArray(speciesByDate), 'Date').map(period => {
+    const species = _.sortBy(f.createPeriodArray(speciesByDate), 'Date').map(period => {
       return period.Species.map(species => species['Common Name'])
     }).flat()
     return {
@@ -436,7 +307,7 @@ As this is set up, it will currently return only the first time I saw species in
 async function regions (opts) {
   opts.state = 'Vermont'
   const dateFormat = helpers.parseDateFormat('day')
-  let data = orderByDate(dateFilter(locationFilter(await getData(opts.input), opts), opts), opts)
+  const data = f.orderByDate(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts)
 
   function getRegions (geojson) {
     const regions = []
@@ -449,7 +320,7 @@ async function regions (opts) {
     let i = 0
     r.species = []
     r.speciesByDate = countUniqueSpecies(data.filter(x => x.Region === r.region), dateFormat)
-    _.sortBy(createPeriodArray(r.speciesByDate), 'Date').forEach((e) => {
+    _.sortBy(f.createPeriodArray(r.speciesByDate), 'Date').forEach((e) => {
       e.Species.forEach((specie) => {
         r.species.push(specie['Common Name'])
         i++
@@ -475,13 +346,13 @@ async function radialSearch (opts) {
   // TODO Get a list of all species ever seen in Vermont, here.
   var speciesSeenInVermont = []
   opts.state = 'Vermont'
-  _.forEach(countUniqueSpecies(dateFilter(locationFilter(data, opts), opts), dateFormat), (o) => {
+  _.forEach(countUniqueSpecies(f.dateFilter(f.locationFilter(data, opts), opts), dateFormat), (o) => {
     var mapped = _.map(o, 'Common Name')
     speciesSeenInVermont.push(mapped)
   })
   speciesSeenInVermont = _.flatten(speciesSeenInVermont)
 
-  data = orderByDate(data, opts).filter((d) => {
+  data = f.orderByDate(data, opts).filter((d) => {
     const distance = difference.distance(lat, long, d.Latitude, d.Longitude, 'M')
     return distance <= radius
   })
@@ -490,7 +361,7 @@ async function radialSearch (opts) {
 
   areaResults.species = []
   areaResults.speciesByDate = countUniqueSpecies(data, dateFormat)
-  _.sortBy(createPeriodArray(areaResults.speciesByDate), 'Date').forEach((e) => {
+  _.sortBy(f.createPeriodArray(areaResults.speciesByDate), 'Date').forEach((e) => {
     e.Species.forEach((specie) => {
       areaResults.species.push(specie['Common Name'])
       i++
@@ -508,7 +379,7 @@ async function quadBirds (opts) {
     const contents = await getData(file)
     data = data.concat(contents)
   }))
-  data = orderByDate(dateFilter(locationFilter(data, opts), opts))
+  data = f.orderByDate(f.dateFilter(f.locationFilter(data, opts), opts))
   const speciesIndex = {}
   let completionDates = []
 
@@ -545,7 +416,7 @@ async function quadBirds (opts) {
     }
   })
 
-  completionDates = orderByDate(completionDates)
+  completionDates = f.orderByDate(completionDates)
 
   if (opts.list) {
     for (const species in completionDates) {
@@ -571,7 +442,6 @@ function pointLookup (geojson, geojsonLookup, data) {
   // This can be fixed by using nearest neighbor approaches, but those tend to have a high computational load, and they require
   // mapping libraries that need window, which just stinks.
   // TODO Use turf for this, seems to work just fine.
-  return
 }
 
 // - Get scientific name for a given bird
@@ -632,7 +502,7 @@ async function rare (opts) {
   opts.state = 'Vermont'
   // Use only data from this year, from Vermont
   if (!opts.manual) {
-    data = orderByDate(dateFilter(locationFilter(await getData(opts.input), opts), opts), opts).reverse()
+    data = f.orderByDate(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts).reverse()
   } else {
     // This will correctly flag as 'Unknown'
     if (opts.data) {
@@ -728,10 +598,10 @@ async function subspecies (opts) {
   }
 
   // const dateFormat = helpers.parseDateFormat('day')
-  data = orderByDate(dateFilter(locationFilter(data, opts), opts), opts)
-  data = removeSpuh(data, true)
-  let species = _.uniq(removeSpuh(data).map(x => x['Scientific Name']))
+  data = f.orderByDate(f.dateFilter(f.locationFilter(data, opts), opts), opts)
+  data = f.removeSpuh(data, true)
   const allIdentifications = _.uniq(data.map(x => x["Scientific Name"]))
+  const species = _.uniq(f.removeSpuh(data).map(x => x['Scientific Name']))
 
   // Counting species as the sole means of a life list is silly, because it
   // doesn't account for species diversity and changing taxonomies well enough
@@ -863,7 +733,7 @@ async function subspecies (opts) {
 
 /* Return a unique list of checklists IDs */
 async function checklists (opts) {
-  let data = orderByDate(durationFilter(completeChecklistFilter(dateFilter(locationFilter(await getData(opts.input), opts), opts), opts), opts), opts)
+  let data = f.orderByDate(f.durationFilter(f.completeChecklistFilter(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts), opts), opts)
   // Intentionally not returning a URL to make this simpler, and to avoid another flag
   data = _.uniqBy(data.map(x => {
     return {
@@ -880,14 +750,14 @@ async function checklists (opts) {
 
 /* Used when updating the 251 page */
 async function getLastDate (opts) {
-    let data = orderByDate(durationFilter(completeChecklistFilter(dateFilter(locationFilter(await getData(opts.input), opts), opts), opts), opts), opts)
+  let data = f.orderByDate(f.durationFilter(f.completeChecklistFilter(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts), opts), opts)
   data = moment.max(_.uniq(data.map(x => moment(x.Date, 'YYYY-MM-DD'))))
   console.log(moment(data).format('MMMM Do, YYYY'))
 }
 
-async function countTheBirds(opts) {
-  let data = dateFilter(locationFilter(await getData(opts.input), opts), opts)
-  let sum = _.sumBy(data, o => {
+async function countTheBirds (opts) {
+  const data = f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts)
+  const sum = _.sumBy(data, o => {
     if (_.isInteger(parseInt(o.Count))) {
       return parseInt(o.Count)
     }
@@ -942,9 +812,8 @@ async function datesSpeciesObserved (opts) {
   }).map(x => `${x[0]}: ${365 - x[1]}`).slice(0, 20))
 }
 
-
 async function daylistTargets (opts) {
-  let data = locationFilter(await getData(opts.input), opts)
+  const data = f.locationFilter(await getData(opts.input), opts)
 
   // Should probably have a bigger wanring on it.
   const speciesList = data.filter(x => x['State/Province'] === 'US-VT').map(x => x['Common Name']).filter((v, i, a) => a.indexOf(v) === i)
@@ -1007,8 +876,6 @@ module.exports = {
   radialSearch,
   rare,
   regions,
-  removeSpuh,
-  removeSpuhFromCounties,
   towns,
   counties,
   winterFinch,
@@ -1023,15 +890,9 @@ module.exports = {
 
   // Functions
   getData,
-  locationFilter,
   eBirdCountyIds,
-  getAllTowns
-  ,datesSpeciesObserved
-  ,daylistTargets
-  ,orderByDate
-  ,durationFilter
-  ,completeChecklistFilter
-  ,dateFilter
-  ,countUniqueSpecies
-  ,createPeriodArray
+  getAllTowns,
+  datesSpeciesObserved,
+  daylistTargets,
+  countUniqueSpecies
 }

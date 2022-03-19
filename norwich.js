@@ -7,6 +7,7 @@ const moment = require('moment')
 const main = require('./index')
 const helpers = require('./helpers')
 const hotspots = require('./hotspots')
+const f = require('./filters')
 
 const cli = meow(`
   Usage
@@ -68,11 +69,11 @@ async function norwich (opts) {
     // output: `data/vt_town_counts.json`,
   })
   const dateFormat = helpers.parseDateFormat('day')
-  let data = main.orderByDate(
-    main.durationFilter(
-      main.completeChecklistFilter(
-        main.dateFilter(
-          main.locationFilter(
+  let data = f.orderByDate(
+    f.durationFilter(
+      f.completeChecklistFilter(
+        f.dateFilter(
+          f.locationFilter(
             await main.getData(opts.input), opts), opts), opts), opts), opts)
   data = main.countUniqueSpecies(data.filter(x => x.Town === opts.town.toUpperCase()), dateFormat)
 
@@ -87,7 +88,7 @@ async function norwich (opts) {
   let str = ''
   let i = 1
   const checklistIds = new Set()
-  _.sortBy(main.createPeriodArray(data), 'Date').forEach((e) => {
+  _.sortBy(f.createPeriodArray(data), 'Date').forEach((e) => {
     e.Species.forEach((checklist) => {
       const location = (norwichHotspots[checklist['Location ID']])
         ? `<a href="https://ebird.org/vt/hotspot/${checklist['Location ID']}">${checklist.Location}</a>`
