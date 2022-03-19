@@ -68,15 +68,14 @@ function removeSpuh (arr, reverse) {
   return _.uniq(newArr)
 }
 
-
-async function vt251(input) {
+async function vt251 (input) {
   const opts = {
     year: 2022,
     state: 'Vermont',
     all: true,
     complete: true,
     duration: 5,
-    output: `data/vt_town_counts.json`,
+    output: 'data/vt_town_counts.json',
     input
   }
   await towns(opts)
@@ -301,8 +300,8 @@ async function towns (opts) {
     towns.forEach(t => {
       let i = 0
       t.species = []
-      let speciesByDate = countUniqueSpecies(data.filter(x => x.Town === t.town), dateFormat)
       _.sortBy(createPeriodArray(speciesByDate), 'Date').forEach((e) => {
+      const speciesByDate = countUniqueSpecies(data.filter(x => x.Town === t.town), dateFormat)
         e.Species.forEach((species) => {
           t.species.push(species['Common Name'])
           i++
@@ -315,7 +314,6 @@ async function towns (opts) {
       fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(towns), 'utf8')
     }
     return towns
-
   } else if (opts.town) {
     // Turn on to find checklists in that town console.log(_.uniq(data.map((item, i) => `${item['Submission ID']}`)))
     data = countUniqueSpecies(data.filter(x => x.Town === opts.town.toUpperCase()), dateFormat)
@@ -328,7 +326,7 @@ async function towns (opts) {
     // TODO Doesn't work for MyEBirdData for some reason
     _.sortBy(createPeriodArray(data), 'Date').forEach((e) => {
       e.Species.forEach((specie) => {
-        console.log(`${i} | ${specie['Common Name']} - ${specie['Scientific Name']} | ${opts.town}, ${(specie.County) ? specie.County + ', ' : ''}${specie['State']} | ${e.Date}`)
+        console.log(`${i} | ${specie['Common Name']} - ${specie['Scientific Name']} | ${opts.town}, ${(specie.County) ? specie.County + ', ' : ''}${specie.State} | ${e.Date}`)
         i++
       })
     })
@@ -347,8 +345,8 @@ async function counties (opts) {
   const counties = Object.keys(CountyBarcharts).map(county => {
     const speciesByDate = countUniqueSpecies(data.filter(x => x.County === county), dateFormat)
     const species = _.sortBy(createPeriodArray(speciesByDate), 'Date').map(period => {
-        return period.Species.map(species => species['Common Name'])
-      }).flat()
+      return period.Species.map(species => species['Common Name'])
+    }).flat()
     return {
       county,
       collectiveTotal: countySpecies[county].length,
@@ -362,8 +360,8 @@ async function counties (opts) {
   counties.forEach(c => newObj[c.county] = c)
 
   function countyTicks () {
-    let total = Object.keys(newObj).reduce((prev, cur) => {
-      return prev + newObj[cur].speciesTotal;
+    const total = Object.keys(newObj).reduce((prev, cur) => {
+      return prev + newObj[cur].speciesTotal
     }, 0)
     console.log(`Total ticks: ${total}.`)
   }
@@ -385,7 +383,7 @@ async function counties (opts) {
 }
 
 async function winterFinch (opts) {
-  function sortedList(list, orderedList) {
+  function sortedList (list, orderedList) {
     list = list.map(species => species.split(' (')[0])
     return list.sort((a, b) => orderedList.indexOf(a) - orderedList.indexOf(b))
   }
@@ -467,9 +465,9 @@ async function regions (opts) {
 
 async function radialSearch (opts) {
   const dateFormat = helpers.parseDateFormat('day')
-  let radius = opts.distance || 10 // miles
-  let lat = opts.coordinates[0]
-  let long = opts.coordinates[1]
+  const radius = opts.distance || 10 // miles
+  const lat = opts.coordinates[0]
+  const long = opts.coordinates[1]
   console.log(dateFormat, lat, long)
   let data = await getData(opts.input)
 
@@ -484,11 +482,11 @@ async function radialSearch (opts) {
   speciesSeenInVermont = _.flatten(speciesSeenInVermont)
 
   data = orderByDate(data, opts).filter((d) => {
-    let distance = difference.distance(lat, long, d.Latitude, d.Longitude, 'M')
+    const distance = difference.distance(lat, long, d.Latitude, d.Longitude, 'M')
     return distance <= radius
   })
   let i = 0
-  let areaResults = {}
+  const areaResults = {}
 
   areaResults.species = []
   areaResults.speciesByDate = countUniqueSpecies(data, dateFormat)
@@ -554,19 +552,19 @@ async function quadBirds (opts) {
       console.log(`${completionDates[species].Date}: ${completionDates[species].species['Common Name']}.`)
     }
   }
-  console.log(`You ${(!opts.year || opts.year.toString() === moment().format('YYYY')) ? `have seen` : `saw`}, photographed, and recorded a total of ${completionDates.length} species${(opts.year) ? ` in ${opts.year}` : ''}.`)
+  console.log(`You ${(!opts.year || opts.year.toString() === moment().format('YYYY')) ? 'have seen' : 'saw'}, photographed, and recorded a total of ${completionDates.length} species${(opts.year) ? ` in ${opts.year}` : ''}.`)
 }
 
-function pointLookup(geojson, geojsonLookup, data) {
+function pointLookup (geojson, geojsonLookup, data) {
   let point
   if (data.type === 'Point') {
     point = data
   } else {
-    point = {type: "Point", coordinates: [data.Longitude, data.Latitude]}
+    point = { type: 'Point', coordinates: [data.Longitude, data.Latitude] }
   }
-  let containerArea = geojsonLookup.getContainers(point)
+  const containerArea = geojsonLookup.getContainers(point)
   if (containerArea.features[0]) {
-    let props = containerArea.features[0].properties
+    const props = containerArea.features[0].properties
     return (props.town) ? props.town : props.name
   }
   // If, for some reason, the point is on a border and the map I have discards it, but eBird doesn't - just discard it.
@@ -585,7 +583,7 @@ async function getSpeciesObjGivenName (str) {
 
 async function getCountyForTown (town) {
   const mapping = Town_boundaries.features.map(obj => obj.properties)
-  let res = mapping.find(t => t.town === town.toUpperCase())
+  const res = mapping.find(t => t.town === town.toUpperCase())
   return (res) ? eBirdCountyIds[res.county] : undefined
 }
 
@@ -593,8 +591,8 @@ async function getLatLngCenterofTown (town) {
   if (typeof town !== 'string') {
     throw new Error('Town must be a string to get a LatLng coördinate.')
   }
-  let polygon = Town_boundaries.features.find(x => x.properties.town === town.toUpperCase())
-  let center = polygonCenter(polygon.geometry)
+  const polygon = Town_boundaries.features.find(x => x.properties.town === town.toUpperCase())
+  const center = polygonCenter(polygon.geometry)
   return center
 }
 
@@ -609,24 +607,24 @@ async function isSpeciesSightingRare (opts) {
   if (!species) {
     species = {
       'Scientific Name': undefined,
-      'Species': opts.species
+      Species: opts.species
     }
   }
   // TODO Add a way to get Breeding Codes
   opts.data = [{
-    'County': await getCountyForTown(opts.town),
-    'Date': opts.date,
-    'Region': await pointLookup(Vermont_regions, vermontRegions, await getLatLngCenterofTown(opts.town)),
+    County: await getCountyForTown(opts.town),
+    Date: opts.date,
+    Region: await pointLookup(Vermont_regions, vermontRegions, await getLatLngCenterofTown(opts.town)),
     'Scientific Name': species['Scientific Name'],
-    'Species': species.Species,
-    'Subspecies': opts.subspecies,
-    'Town': opts.town,
+    Species: species.Species,
+    Subspecies: opts.subspecies,
+    Town: opts.town,
     // These two are used only for display forms.
     'Common Name': species.Species,
-    'Location': helpers.capitalizeFirstLetters(opts.town)
+    Location: helpers.capitalizeFirstLetters(opts.town)
   }]
   opts.manual = true
-  return await rare(opts)
+  return rare(opts)
 }
 
 async function rare (opts) {
@@ -641,12 +639,12 @@ async function rare (opts) {
       data = opts.data
     } else {
       const spoof = [{
-        'County': 'Washington',
-        'Date': '2020-03-02',
-        'Region': 'Northern Piedmont',
+        County: 'Washington',
+        Date: '2020-03-02',
+        Region: 'Northern Piedmont',
         'Scientific Name': 'Martes martes',
-        'Species': 'Pine Marten',
-        'Town': 'Montpelier'
+        Species: 'Pine Marten',
+        Town: 'Montpelier'
       }]
       data = spoof
     }
@@ -655,20 +653,20 @@ async function rare (opts) {
   const speciesToReport = VermontRecords.map(x => x['Scientific Name'])
   // TODO Update needs JSON file
   const output = {
-    'Breeding': [],
-    'Vermont': [],
-    'Burlington': [],
-    'Champlain': [],
-    'NEK': [],
-    'Unknown': [],
-    'Subspecies': [],
-    'OutsideExpectedDates': []
+    Breeding: [],
+    Vermont: [],
+    Burlington: [],
+    Champlain: [],
+    NEK: [],
+    Unknown: [],
+    Subspecies: [],
+    OutsideExpectedDates: []
   }
   const ignoredBreedingCodes = ['S Singing Bird', 'H In Appropriate Habitat', 'F Flyover']
   data.forEach(e => {
-    let species = e['Scientific Name']
+    const species = e['Scientific Name']
     if (speciesToReport.includes(species)) {
-      let recordEntry = VermontRecords.find(x => x['Scientific Name'] === species)
+      const recordEntry = VermontRecords.find(x => x['Scientific Name'] === species)
       // TODO Document this. Could also check Observation Details or Checklist Comments
       if (!appearsDuringExpectedDates(e.Date, recordEntry.Occurrence)) {
         output.OutsideExpectedDates.push(e)
@@ -702,12 +700,12 @@ async function rare (opts) {
     }
 
     if (e.Subspecies) {
-      let species = VermontSubspecies.find(x => e['Scientific Name'] === x['Scientific Name'])
+      const species = VermontSubspecies.find(x => e['Scientific Name'] === x['Scientific Name'])
       if (species && species['Target Subspecies'].includes(e.Subspecies)) {
         e['Subspecies Notes'] = species
         output.Subspecies.push(e)
       } else if (species && !species['Vermont Subspecies'].includes(e.Subspecies)) {
-        if (species['Target Subspecies'][0] === "") {
+        if (species['Target Subspecies'][0] === '') {
           e['Subspecies Notes'] = species
           output.Subspecies.push(e)
         } else {
@@ -725,24 +723,24 @@ async function rare (opts) {
 async function subspecies (opts) {
   let data = opts.input
   if (fs) {
-    let input = await fs.readFile(opts.input, 'utf8')
+    const input = await fs.readFile(opts.input, 'utf8')
     data = Papa.parse(input, { header: true }).data
   }
 
   // const dateFormat = helpers.parseDateFormat('day')
   data = orderByDate(dateFilter(locationFilter(data, opts), opts), opts)
   data = removeSpuh(data, true)
-  let allIdentifications = _.uniq(data.map(x => x["Scientific Name"]))
   let species = _.uniq(removeSpuh(data).map(x => x['Scientific Name']))
+  const allIdentifications = _.uniq(data.map(x => x["Scientific Name"]))
 
   // Counting species as the sole means of a life list is silly, because it
   // doesn't account for species diversity and changing taxonomies well enough
   // Instead, just count any terminal leaf in the identification tree.
   function createLeavesList (species, allIdentifications) {
-    let leaves = _.clone(species)
+    const leaves = _.clone(species)
 
-    function removeNode(leaves, base) {
-      let baseIndex = leaves.indexOf(base)
+    function removeNode (leaves, base) {
+      const baseIndex = leaves.indexOf(base)
       if (baseIndex !== -1) {
         if (opts.verbose) {
           console.log(`Removing node: ${base}`)
@@ -751,7 +749,7 @@ async function subspecies (opts) {
       }
     }
 
-    function addLeaf(leaves, leaf) {
+    function addLeaf (leaves, leaf) {
       if (opts.verbose) {
         console.log(`Adding leaf: ${leaf}`)
       }
@@ -762,87 +760,86 @@ async function subspecies (opts) {
       // Don't count these for life lists, in general.
       .filter(x => !x.includes('Domestic'))
       .forEach(x => {
-      if (x.includes('sp.')) {
-        let genus = x.split(' ')[0].split('/')[0]
-        if (!leaves.join(' ').includes(genus)) {
-          // Worst offender. Will need a better way of doing this for other genera.
-          // These seem to be the only eird adjectival spuhs, though.
-          if (['Anatinae', 'Anatidae'].includes(genus)) {
-            const anatinae = ['Amazonetta', 'Sibirionetta', 'Spatula', 'Mareca', 'Lophonetta', 'Speculanas', 'Anas' ]
-            if (!anatinae.some(ducks => species.join(' ').includes(ducks))) {
-              console.log(`Unsure what to do with ${x} spuh identifation.`)
+        if (x.includes('sp.')) {
+          const genus = x.split(' ')[0].split('/')[0]
+          if (!leaves.join(' ').includes(genus)) {
+            // Worst offender. Will need a better way of doing this for other genera.
+            // These seem to be the only eird adjectival spuhs, though.
+            if (['Anatinae', 'Anatidae'].includes(genus)) {
+              const anatinae = ['Amazonetta', 'Sibirionetta', 'Spatula', 'Mareca', 'Lophonetta', 'Speculanas', 'Anas']
+              if (!anatinae.some(ducks => species.join(' ').includes(ducks))) {
+                console.log(`Unsure what to do with ${x} spuh identifation.`)
+              }
             }
           }
-        }
-      } else if (x.includes('/')) {
-        if (x.split('/')[1].split(' ').length === 2) {
-          let base1, base2
-          [base1, base2] = x.split('/')
-          if (!leaves.includes(base1) && !leaves.includes(base2)) {
-            addLeaf(leaves, x)
-          }
-        } else {
-          let base = x.split(' ').slice(0,-1).join(' ')
-          if (!leaves.join(' ').includes(base)) {
-            addLeaf(leaves, x)
-          } else {
-            // Anas platyrhyncos/rubripes
-            if (x.split(' ').slice(0,-1).length === 1) {
-              let species1 = x.split('/')[0]
-              let species2 = `${species1.split(' ')[0]} ${x.split('/')[1]}`
-              if (!leaves.includes(species1) && !leaves.includes(species2)) {
-                addLeaf(leaves, x)
-              }
-            } else {
-              removeNode(leaves, base)
+        } else if (x.includes('/')) {
+          if (x.split('/')[1].split(' ').length === 2) {
+            const [base1, base2] = x.split('/')
+            if (!leaves.includes(base1) && !leaves.includes(base2)) {
               addLeaf(leaves, x)
             }
+          } else {
+            const base = x.split(' ').slice(0, -1).join(' ')
+            if (!leaves.join(' ').includes(base)) {
+              addLeaf(leaves, x)
+            } else {
+              // Anas platyrhyncos/rubripes
+              if (x.split(' ').slice(0, -1).length === 1) {
+                const species1 = x.split('/')[0]
+                const species2 = `${species1.split(' ')[0]} ${x.split('/')[1]}`
+                if (!leaves.includes(species1) && !leaves.includes(species2)) {
+                  addLeaf(leaves, x)
+                }
+              } else {
+                removeNode(leaves, base)
+                addLeaf(leaves, x)
+              }
+            }
+          }
+        } else if (x.includes(' x ')) {
+          addLeaf(leaves, x)
+        } else if (x.includes('Feral')) {
+          // We want to count this one twice...
+          addLeaf(leaves, x)
+        } else if (x.includes('Group]')) {
+          removeNode(leaves, x.split('[')[0].trim())
+          addLeaf(leaves, x)
+        } else if (x.includes('(type')) {
+          removeNode(leaves, x.split('(')[0].trim())
+          addLeaf(leaves, x)
+        } else if (x.split(' ').length > 2) {
+          removeNode(leaves, x.split(' ').slice(0, 2).join(' '))
+          addLeaf(leaves, x)
+        } else {
+          if (opts.verbose) {
+            console.log(`Keeping species leaf: ${x}`)
           }
         }
-      } else if (x.includes(' x ')) {
-        addLeaf(leaves, x)
-      } else if (x.includes('Feral')) {
-        // We want to count this one twice...
-        addLeaf(leaves, x)
-      } else if (x.includes('Group]')) {
-        removeNode(leaves, x.split('[')[0].trim())
-        addLeaf(leaves, x)
-      } else if (x.includes('(type')) {
-        removeNode(leaves, x.split('(')[0].trim())
-        addLeaf(leaves, x)
-      } else if (x.split(' ').length > 2) {
-        removeNode(leaves, x.split(' ').slice(0,2).join(' '))
-        addLeaf(leaves, x)
-      } else {
-        if (opts.verbose) {
-          console.log(`Keeping species leaf: ${x}`)
-        }
-      }
-    })
+      })
 
     return _.uniq(leaves)
   }
 
-  let output = {
+  const output = {
     // Only species, filtered
     species,
     // Every identification type
     allIdentifications,
-    'spuhs': allIdentifications.filter(x => x.includes('sp.')),
+    spuhs: allIdentifications.filter(x => x.includes('sp.')),
     // Splits, both on genus, species, and subspecies levels
-    'slashes': allIdentifications.filter(x => x.includes('/')),
+    slashes: allIdentifications.filter(x => x.includes('/')),
     // Included as they're morphologically distinct and part of complexes
-    'hybrids': allIdentifications.filter(x => x.includes(' x ')),
+    hybrids: allIdentifications.filter(x => x.includes(' x ')),
     // Included as only example also has native stock
-    'feral': allIdentifications.filter(x => x.includes('Feral')),
+    feral: allIdentifications.filter(x => x.includes('Feral')),
     // Included for completeness
-    'domestic': allIdentifications.filter(x => x.includes('Domestic')),
+    domestic: allIdentifications.filter(x => x.includes('Domestic')),
     // Included as highest subspecies identification in eBird
-    'grouping': allIdentifications.filter(x => x.includes('Group]')),
+    grouping: allIdentifications.filter(x => x.includes('Group]')),
     // Included as being identical to subspecies
-    'types': allIdentifications.filter(x => x.includes('(type')),
+    types: allIdentifications.filter(x => x.includes('(type')),
     // All trinomial cases
-    'subspecies': allIdentifications.filter(x => {
+    subspecies: allIdentifications.filter(x => {
       if (!x.includes('sp.') &&
         !x.includes('/') &&
         !x.includes('Domestic') &&
@@ -851,13 +848,13 @@ async function subspecies (opts) {
         !x.includes('Group]') &&
         !x.includes('(type') &&
         x.split(' ').length > 2) {
-          return x
-        }
+        return x
+      }
       return false
     }),
     // All possible leaf nodes in a taxonomic identification tree, minus any
     // non-leaf nodes, including species identifications if subspecies identified
-    'leaves': createLeavesList(species, allIdentifications).sort()
+    leaves: createLeavesList(species, allIdentifications).sort()
   }
   console.log(output)
   // console.log(output.leaves.length)
@@ -884,8 +881,8 @@ async function checklists (opts) {
 /* Used when updating the 251 page */
 async function getLastDate (opts) {
     let data = orderByDate(durationFilter(completeChecklistFilter(dateFilter(locationFilter(await getData(opts.input), opts), opts), opts), opts), opts)
-    data = moment.max(_.uniq(data.map(x => moment(x.Date, 'YYYY-MM-DD'))))
-    console.log(moment(data).format('MMMM Do, YYYY'))
+  data = moment.max(_.uniq(data.map(x => moment(x.Date, 'YYYY-MM-DD'))))
+  console.log(moment(data).format('MMMM Do, YYYY'))
 }
 
 async function countTheBirds(opts) {
@@ -903,32 +900,32 @@ async function datesSpeciesObserved (opts) {
 //   console.log(`
 // You have not seen ${opts.id} on:`)
 
-  let data = await getData(opts.input)
+  const data = await getData(opts.input)
 
-  let speciesList = data.filter(x => x['State/Province'] === 'US-VT').map(x => x['Common Name']).filter((v, i, a) => a.indexOf(v) === i)
-  let speciesArray = []
+  const speciesList = data.filter(x => x['State/Province'] === 'US-VT').map(x => x['Common Name']).filter((v, i, a) => a.indexOf(v) === i)
+  const speciesArray = []
 
   speciesList.forEach(species => {
-    let observedDates = {}
-    let fullYearChart = {}
-    let unbirdedDates = {}
+    const observedDates = {}
+    const fullYearChart = {}
+    const unbirdedDates = {}
     let totalDates = 0
 
     // Create keys in observedDates for months
-    Array.from({length: 12}, (_, i) => (i+1).toString().padStart(2, '0')).forEach(key => observedDates[key] = [])
+    Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0')).forEach(key => observedDates[key] = [])
     // Filter and add all days observed to the chart
     data.filter(x => x['Common Name'] === species)
-    .forEach(x => {
-      let [month, day] = x.Date.split('-').slice(1)
-      if (observedDates[month].indexOf(Number(day)) === -1) {
-        observedDates[month].push(Number(day))
-      }
-    })
+      .forEach(x => {
+        const [month, day] = x.Date.split('-').slice(1)
+        if (observedDates[month].indexOf(Number(day)) === -1) {
+          observedDates[month].push(Number(day))
+        }
+      })
 
     // Create a full year chart, and then find days that weren't in days observed
     Object.keys(observedDates).forEach(month => {
-      fullYearChart[month.toString().padStart(2, '0')] = Array.from({length: moment().month(month-1).daysInMonth()}, (_, i) => i + 1)
-      unbirdedDates[month] = _.difference(fullYearChart[month], observedDates[month].sort((a,b) => a-b))
+      fullYearChart[month.toString().padStart(2, '0')] = Array.from({ length: moment().month(month - 1).daysInMonth() }, (_, i) => i + 1)
+      unbirdedDates[month] = _.difference(fullYearChart[month], observedDates[month].sort((a, b) => a - b))
       totalDates += unbirdedDates[month].length
     })
 
@@ -940,9 +937,9 @@ async function datesSpeciesObserved (opts) {
     // })
   })
 
-  console.log(speciesArray.sort(function(a, b) {
-      return a[1] - b[1];
-  }).map(x => `${x[0]}: ${365-x[1]}`).slice(0,20))
+  console.log(speciesArray.sort(function (a, b) {
+    return a[1] - b[1]
+  }).map(x => `${x[0]}: ${365 - x[1]}`).slice(0, 20))
 }
 
 
@@ -950,37 +947,37 @@ async function daylistTargets (opts) {
   let data = locationFilter(await getData(opts.input), opts)
 
   // Should probably have a bigger wanring on it.
-  let speciesList = data.filter(x => x['State/Province'] === 'US-VT').map(x => x['Common Name']).filter((v, i, a) => a.indexOf(v) === i)
-  let speciesArray = {}
+  const speciesList = data.filter(x => x['State/Province'] === 'US-VT').map(x => x['Common Name']).filter((v, i, a) => a.indexOf(v) === i)
+  const speciesArray = {}
 
   speciesList.forEach(species => {
-    let observedDates = {}
-    let fullYearChart = {}
-    let unbirdedDates = {}
+    const observedDates = {}
+    const fullYearChart = {}
+    const unbirdedDates = {}
 
     // Create keys in observedDates for months
-    Array.from({length: 12}, (_, i) => (i+1).toString().padStart(2, '0')).forEach(key => observedDates[key] = [])
+    Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0')).forEach(key => observedDates[key] = [])
     // Filter and add all days observed to the chart
     data.filter(x => x['Common Name'] === species)
-    .forEach(x => {
-      let [month, day] = x.Date.split('-').slice(1)
-      if (observedDates[month].indexOf(Number(day)) === -1) {
-        observedDates[month].push(Number(day))
-      }
-    })
+      .forEach(x => {
+        const [month, day] = x.Date.split('-').slice(1)
+        if (observedDates[month].indexOf(Number(day)) === -1) {
+          observedDates[month].push(Number(day))
+        }
+      })
 
     // Create a full year chart, and then find days that weren't in days observed
     Object.keys(observedDates).forEach(month => {
-      fullYearChart[month.toString().padStart(2, '0')] = Array.from({length: moment().month(month-1).daysInMonth()}, (_, i) => i + 1)
-      unbirdedDates[month] = _.difference(fullYearChart[month], observedDates[month].sort((a,b) => a-b))
+      fullYearChart[month.toString().padStart(2, '0')] = Array.from({ length: moment().month(month - 1).daysInMonth() }, (_, i) => i + 1)
+      unbirdedDates[month] = _.difference(fullYearChart[month], observedDates[month].sort((a, b) => a - b))
     })
 
     speciesArray[species] = unbirdedDates
   })
 
   if (opts.today) {
-    let month = moment().format('MM')
-    let date = Number(moment().format('DD'))
+    const month = moment().format('MM')
+    const date = Number(moment().format('DD'))
     Object.keys(speciesArray).forEach(species => {
       if (speciesArray[species][month].indexOf(date) === -1) {
         console.log(species)
@@ -989,16 +986,15 @@ async function daylistTargets (opts) {
   }
 }
 
-
 // async function today (opts) {
-  // I want to know:
-  // - Was today a big day?
-  // - Did I get new world birds today?
-  // - Did I get new country birds today?
-  // - Did I get new state birds today?
-  // - Did I get new county birds today?
-  // - Did I get new photo birds today?
-  // - Did I get new audio birds today?
+// I want to know:
+// - Was today a big day?
+// - Did I get new world birds today?
+// - Did I get new country birds today?
+// - Did I get new state birds today?
+// - Did I get new county birds today?
+// - Did I get new photo birds today?
+// - Did I get new audio birds today?
 // }
 
 // Switch this for CLI testing
