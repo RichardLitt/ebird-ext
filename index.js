@@ -1,19 +1,22 @@
-const Town_boundaries = require('./geojson/vt_towns.json')
-const Vermont_regions = require('./geojson/Polygon_VT_Biophysical_Regions.json')
+const townBoundaries = require('./geojson/vt_towns.json')
+let vermontRegions = require('./geojson/Polygon_VT_Biophysical_Regions.json')
 const VermontRecords = require('./data/vermont_records.json')
 const CountyBarcharts = require('./data/countyBarcharts.json')
 const VermontSubspecies = require('./data/vermont_records_subspecies.json')
 const GeoJsonGeometriesLookup = require('geojson-geometries-lookup')
-const vermontRegions = new GeoJsonGeometriesLookup(Vermont_regions)
+const vermontTowns = new GeoJsonGeometriesLookup(townBoundaries)
+vermontRegions = new GeoJsonGeometriesLookup(vermontRegions)
 const fs = require('fs').promises
 const _ = require('lodash')
 const Papa = require('papaparse')
 const moment = require('moment')
 const difference = require('compare-latlong')
 const appearsDuringExpectedDates = require('./appearsDuringExpectedDates.js')
-const polygonCenter = require('geojson-polygon-center')
 const helpers = require('./helpers')
-const f = require('./filters.js')
+const f = require('./filters')
+const turf = require('turf')
+const centerOfMass = require('@turf/center-of-mass')
+const nearestPoint = require('@turf/nearest-point')
 
 // Why eBird uses this format I have no idea.
 const eBirdCountyIds = {
@@ -32,6 +35,9 @@ const eBirdCountyIds = {
   25: 'Windham',
   27: 'Windsor'
 }
+
+// Used more than once.
+const townCentroids = getTownCentroids()
 
 async function vt251 (input) {
   const opts = {
@@ -59,6 +65,30 @@ async function getData (input) {
   }
 
   return f.removeSpuh(input)
+}
+
+// Defaults to all
+function getTownCentroids (town) {
+  const centers = townBoundaries.features.map(feature => {
+    let center
+    // This center of West Haven is in New York.
+    if (feature.properties.town === 'West Haven'.toUpperCase()) {
+      center = centerOfMass.default(feature)
+      // TODO Unfortunately, the enclaves are broken. All Rutland counts are in Rutland City.
+    } else if (feature.properties.town.includes('Rutland'.toUpperCase())) {
+      center = turf.center(feature)
+      // console.log(feature.properties.town, center.geometry.coordinates.reverse())
+    } else {
+      center = turf.center(feature)
+    }
+    center.properties = feature.properties
+    return center
+  })
+  if (town) {
+    return centers.find(c => c.properties.town === town.toUpperCase())
+  } else {
+    return centers
+  }
 }
 
 async function biggestTime (timespan, opts) {
@@ -167,7 +197,7 @@ async function towns (opts) {
   })
   speciesSeenInVermont = _.flatten(speciesSeenInVermont)
   if (opts.all) {
-    const towns = getAllTowns(Town_boundaries)
+    const towns = getAllTowns(townBoundaries)
     towns.forEach(t => {
       let i = 0
       t.species = []
@@ -310,12 +340,16 @@ async function regions (opts) {
   const data = f.orderByDate(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts)
 
   function getRegions (geojson) {
-    const regions = []
-    geojson.features.forEach((r) => regions.push({ region: r.properties.name }))
-    return regions
+    const array = []
+    const regions = ['Northeastern Highlands', 'Champlain Valley', 'Taconic Mountains', 'Vermont Valley', 'Champlain Hills', 'Northern Green Mountains', 'Northern Vermont Piedmont', 'Southern Vermont Piedmont', 'Southern Green Mountains']
+    // geojson = GeoJsonGeometriesLookup(geojson.D[2].list
+    // console.log(geojson)
+    regions.forEach((r) => array.push({ region: r }))
+    return array
   }
 
-  const regions = getRegions(Vermont_regions)
+  const regions = getRegions(vermontRegions)
+  // TODO Currently doing this ten times. Really slow.
   regions.forEach(r => {
     let i = 0
     r.species = []
@@ -426,22 +460,39 @@ async function quadBirds (opts) {
   console.log(`You ${(!opts.year || opts.year.toString() === moment().format('YYYY')) ? 'have seen' : 'saw'}, photographed, and recorded a total of ${completionDates.length} species${(opts.year) ? ` in ${opts.year}` : ''}.`)
 }
 
-function pointLookup (geojson, geojsonLookup, data) {
-  let point
-  if (data.type === 'Point') {
-    point = data
-  } else {
-    point = { type: 'Point', coordinates: [data.Longitude, data.Latitude] }
+// map: 'town' || 'region'
+// coordinates: {
+//   Longitude: row.LONGITUDE,
+//   Latitude: row.LATITUDE
+// }
+// countyCode: 023
+function getPoint (map, coordinates, countyCode) {
+  function getContainer (map, coordinates) {
+    let point
+    if (map === 'towns') {
+      point = f.pointLookup(townBoundaries, vermontTowns, coordinates)
+    } else if (map === 'regions') {
+      point = f.pointLookup(vermontRegions, vermontRegions, coordinates)
+    }
+    return point
   }
-  const containerArea = geojsonLookup.getContainers(point)
-  if (containerArea.features[0]) {
-    const props = containerArea.features[0].properties
-    return (props.town) ? props.town : props.name
+
+  let point = getContainer(map, coordinates)
+
+  // If it is on a river or across a border or something, get the nearest town
+  if (point === undefined) {
+    // dirty.write(JSON.stringify(row) + ',\n')
+    // Only check towns in the relevant county
+    const countyCenters = townCentroids.filter(f => f.properties.county === countyCode)
+    const newCoords = nearestPoint.default(turf.point([coordinates.LONGITUDE, coordinates.LATITUDE]), turf.featureCollection(countyCenters))
+    coordinates = {
+      Longitude: newCoords.geometry.coordinates[0],
+      Latitude: newCoords.geometry.coordinates[1]
+    }
+    point = getContainer(map, coordinates)
+    // console.log('Previously undefined point:', point)
   }
-  // If, for some reason, the point is on a border and the map I have discards it, but eBird doesn't - just discard it.
-  // This can be fixed by using nearest neighbor approaches, but those tend to have a high computational load, and they require
-  // mapping libraries that need window, which just stinks.
-  // TODO Use turf for this, seems to work just fine.
+  return point
 }
 
 // - Get scientific name for a given bird
@@ -452,18 +503,9 @@ async function getSpeciesObjGivenName (str) {
 }
 
 async function getCountyForTown (town) {
-  const mapping = Town_boundaries.features.map(obj => obj.properties)
+  const mapping = townBoundaries.features.map(obj => obj.properties)
   const res = mapping.find(t => t.town === town.toUpperCase())
   return (res) ? eBirdCountyIds[res.county] : undefined
-}
-
-async function getLatLngCenterofTown (town) {
-  if (typeof town !== 'string') {
-    throw new Error('Town must be a string to get a LatLng coördinate.')
-  }
-  const polygon = Town_boundaries.features.find(x => x.properties.town === town.toUpperCase())
-  const center = polygonCenter(polygon.geometry)
-  return center
 }
 
 // TODO: Figure out how to get input from a dropdown in React
@@ -485,7 +527,7 @@ async function isSpeciesSightingRare (opts) {
   opts.data = [{
     County: await getCountyForTown(opts.town),
     Date: opts.date,
-    Region: await pointLookup(Vermont_regions, vermontRegions, await getLatLngCenterofTown(opts.town)),
+    Region: await f.pointLookup(vermontRegions, vermontRegions, getTownCentroids('Berlin').geometry),
     'Scientific Name': species['Scientific Name'],
     Species: species.Species,
     Subspecies: opts.subspecies,
@@ -494,6 +536,9 @@ async function isSpeciesSightingRare (opts) {
     'Common Name': species.Species,
     Location: helpers.capitalizeFirstLetters(opts.town)
   }]
+
+  console.log(opts.data)
+
   opts.manual = true
   return rare(opts)
 }
@@ -601,7 +646,7 @@ async function subspecies (opts) {
   // const dateFormat = helpers.parseDateFormat('day')
   data = f.orderByDate(f.dateFilter(f.locationFilter(data, opts), opts), opts)
   data = f.removeSpuh(data, true)
-  const allIdentifications = _.uniq(data.map(x => x["Scientific Name"]))
+  const allIdentifications = _.uniq(data.map(x => x['Scientific Name']))
   const species = _.uniq(f.removeSpuh(data).map(x => x['Scientific Name']))
 
   // Counting species as the sole means of a life list is silly, because it
@@ -868,8 +913,8 @@ async function daylistTargets (opts) {
 // }
 
 // Switch this for CLI testing
-module.exports = {
 // export default {
+module.exports = {
   biggestTime,
   firstTimeList,
   firstTimes,
@@ -884,16 +929,14 @@ module.exports = {
   subspecies,
   checklists,
   getLastDate,
-  pointLookup,
   countTheBirds,
   isSpeciesSightingRare,
-  getLatLngCenterofTown,
-
-  // Functions
   getData,
   eBirdCountyIds,
   getAllTowns,
   datesSpeciesObserved,
   daylistTargets,
-  countUniqueSpecies
+  countUniqueSpecies,
+  getPoint,
+  f
 }
