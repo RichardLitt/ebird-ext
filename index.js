@@ -527,7 +527,7 @@ async function isSpeciesSightingRare (opts) {
   opts.data = [{
     County: await getCountyForTown(opts.town),
     Date: opts.date,
-    Region: await f.pointLookup(vermontRegions, vermontRegions, getTownCentroids('Berlin').geometry),
+    Region: f.pointLookup(vermontRegions, vermontRegions, getTownCentroids('Berlin').geometry),
     'Scientific Name': species['Scientific Name'],
     Species: species.Species,
     Subspecies: opts.subspecies,

@@ -164,5 +164,6 @@ module.exports = {
   createPeriodArray,
   locationFilter,
   removeSpuh,
-  removeSpuhFromCounties
+  removeSpuhFromCounties,
+  pointLookup
 }
