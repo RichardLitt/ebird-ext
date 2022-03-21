@@ -8,7 +8,21 @@ const _ = require('lodash')
 const moment = require('moment')
 const provinces = require('provinces')
 const helpers = require('./helpers')
-const eBird = require('./')
+
+function pointLookup (geojson, geojsonLookup, data) {
+  let point
+  if (data.type === 'Point') {
+    point = data
+  } else {
+    point = { type: 'Point', coordinates: [data.Longitude, data.Latitude] }
+  }
+  const containerArea = geojsonLookup.getContainers(point)
+  if (containerArea.features[0]) {
+    const props = containerArea.features[0].properties
+    return (props.town) ? props.town : props.name
+  }
+  // Seems to be an issue for two points in my dataset
+}
 
 function locationFilter (list, opts) {
   const filterList = ['Country', 'State', 'Region', 'County', 'Town']
@@ -37,11 +51,11 @@ function locationFilter (list, opts) {
       // This option takes 25 seconds to do, every time, on my data
       // Might be worth just not including.
       // TODO Why I need default here but nowhere else I have no idea.
-      const point = eBird.default.pointLookup(Vermont_regions, vermontRegions, checklist)
+      const point = pointLookup(Vermont_regions, vermontRegions, checklist)
       checklist.Region = point
 
       // This one takes 3.5 seconds
-      checklist.Town = eBird.default.pointLookup(Town_boundaries, vermontTowns, checklist)
+      checklist.Town = pointLookup(Town_boundaries, vermontTowns, checklist)
       // This should work, but it don't. Not ideal.
       if (!checklist.Town) {
         console.log(checklist)

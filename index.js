@@ -13,10 +13,10 @@ const moment = require('moment')
 const difference = require('compare-latlong')
 const appearsDuringExpectedDates = require('./appearsDuringExpectedDates.js')
 const helpers = require('./helpers')
+const f = require('./filters')
 const turf = require('turf')
 const centerOfMass = require('@turf/center-of-mass')
 const nearestPoint = require('@turf/nearest-point')
-const f = require('./filters.js')
 
 // Why eBird uses this format I have no idea.
 const eBirdCountyIds = {
@@ -340,12 +340,16 @@ async function regions (opts) {
   const data = f.orderByDate(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts)
 
   function getRegions (geojson) {
-    const regions = []
-    geojson.features.forEach((r) => regions.push({ region: r.properties.name }))
-    return regions
+    const array = []
+    const regions = ['Northeastern Highlands', 'Champlain Valley', 'Taconic Mountains', 'Vermont Valley', 'Champlain Hills', 'Northern Green Mountains', 'Northern Vermont Piedmont', 'Southern Vermont Piedmont', 'Southern Green Mountains']
+    // geojson = GeoJsonGeometriesLookup(geojson.D[2].list
+    // console.log(geojson)
+    regions.forEach((r) => array.push({ region: r }))
+    return array
   }
 
   const regions = getRegions(vermontRegions)
+  // TODO Currently doing this ten times. Really slow.
   regions.forEach(r => {
     let i = 0
     r.species = []
@@ -466,9 +470,9 @@ function getPoint (map, coordinates, countyCode) {
   function getContainer (map, coordinates) {
     let point
     if (map === 'towns') {
-      point = pointLookup(townBoundaries, vermontTowns, coordinates)
+      point = f.pointLookup(townBoundaries, vermontTowns, coordinates)
     } else if (map === 'regions') {
-      point = pointLookup(vermontRegions, vermontRegions, coordinates)
+      point = f.pointLookup(vermontRegions, vermontRegions, coordinates)
     }
     return point
   }
@@ -489,20 +493,6 @@ function getPoint (map, coordinates, countyCode) {
     // console.log('Previously undefined point:', point)
   }
   return point
-}
-
-function pointLookup (geojson, geojsonLookup, data) {
-  let point
-  if (data.type === 'Point') {
-    point = data
-  } else {
-    point = { type: 'Point', coordinates: [data.Longitude, data.Latitude] }
-  }
-  const containerArea = geojsonLookup.getContainers(point)
-  if (containerArea.features[0]) {
-    const props = containerArea.features[0].properties
-    return (props.town) ? props.town : props.name
-  }
 }
 
 // - Get scientific name for a given bird
@@ -537,7 +527,7 @@ async function isSpeciesSightingRare (opts) {
   opts.data = [{
     County: await getCountyForTown(opts.town),
     Date: opts.date,
-    Region: await pointLookup(vermontRegions, vermontRegions, getTownCentroids('Berlin').geometry),
+    Region: await f.pointLookup(vermontRegions, vermontRegions, getTownCentroids('Berlin').geometry),
     'Scientific Name': species['Scientific Name'],
     Species: species.Species,
     Subspecies: opts.subspecies,
@@ -923,8 +913,8 @@ async function daylistTargets (opts) {
 // }
 
 // Switch this for CLI testing
-// module.exports = {
-export default {
+// export default {
+module.exports = {
   biggestTime,
   firstTimeList,
   firstTimes,
@@ -939,16 +929,14 @@ export default {
   subspecies,
   checklists,
   getLastDate,
-  pointLookup,
   countTheBirds,
   isSpeciesSightingRare,
-
-  // Functions
   getData,
   eBirdCountyIds,
   getAllTowns,
   datesSpeciesObserved,
   daylistTargets,
   countUniqueSpecies,
-  getPoint
+  getPoint,
+  f
 }
