@@ -550,7 +550,7 @@ Ledyard Bridge Area, Connecticut River
 Lefferts Pond - Chittenden (55 acres)
 Leicester Junction
 Lemon Fair Road, Weybridge
-Lemon Fair WMA
+Lemon Fair WMA, vicinity of Rte. 125 bridge
 Lemon Fair WMA--Bonner Parcel
 Lemon Fair WMA--Gorton Parcel
 Leonard Bay
