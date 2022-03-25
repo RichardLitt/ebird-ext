@@ -796,9 +796,8 @@ async function checklists (opts) {
 
 /* Used when updating the 251 page */
 async function getLastDate (opts) {
-  let data = f.orderByDate(f.durationFilter(f.completeChecklistFilter(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts), opts), opts)
-  data = moment.max(_.uniq(data.map(x => moment(x.Date, 'YYYY-MM-DD'))))
-  console.log(moment(data).format('MMMM Do, YYYY'))
+  // Just use the date it is actually updated
+  console.log(moment().format('MMMM Do, YYYY'))
 }
 
 async function countTheBirds (opts) {
