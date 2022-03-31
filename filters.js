@@ -8,20 +8,104 @@ const _ = require('lodash')
 const moment = require('moment')
 const provinces = require('provinces')
 const helpers = require('./helpers')
+const nearestPoint = require('@turf/nearest-point')
+const turf = require('turf')
+const centerOfMass = require('@turf/center-of-mass')
+
+// Why eBird uses this format I have no idea.
+const eBirdCountyIds = {
+  1: 'Addison',
+  3: 'Bennington',
+  5: 'Caledonia',
+  7: 'Chittenden',
+  9: 'Essex',
+  11: 'Franklin',
+  13: 'Grand Isle',
+  15: 'Lamoille',
+  17: 'Orange',
+  19: 'Orleans',
+  21: 'Rutland',
+  23: 'Washington',
+  25: 'Windham',
+  27: 'Windsor'
+}
+
+// Used more than once.
+const townCentroids = getTownCentroids()
+
+// Defaults to all
+function getTownCentroids (town) {
+  const centers = Town_boundaries.features.map(feature => {
+    let center
+    // This center of West Haven is in New York.
+    if (feature.properties.town === 'West Haven'.toUpperCase()) {
+      center = centerOfMass.default(feature)
+      // TODO Unfortunately, the enclaves are broken. All Rutland counts are in Rutland City.
+    } else if (feature.properties.town.includes('Rutland'.toUpperCase())) {
+      center = turf.center(feature)
+      // console.log(feature.properties.town, center.geometry.coordinates.reverse())
+    } else {
+      center = turf.center(feature)
+    }
+    center.properties = feature.properties
+    return center
+  })
+  if (town) {
+    return centers.find(c => c.properties.town === town.toUpperCase())
+  } else {
+    return centers
+  }
+}
+
+// map: 'towns' || 'regions'
+// coordinates: {
+//   Longitude: row.LONGITUDE,
+//   Latitude: row.LATITUDE
+// }
+// countyCode: 023
+function getPoint (map, coordinates, countyCode) {
+  function getContainer (map, coordinates) {
+    let point
+    if (map === 'towns') {
+      point = pointLookup(Town_boundaries, vermontTowns, coordinates)
+    } else if (map === 'regions') {
+      point = pointLookup(Vermont_regions, vermontRegions, coordinates)
+    }
+    return point
+  }
+
+  let point = getContainer(map, coordinates)
+
+  // If it is on a river or across a border or something, get the nearest town
+  if (point === undefined) {
+    // Only check towns in the relevant county
+    // TODO What if I don't have the relevant county?
+    const countyCenters = townCentroids.filter(f => f.properties.county === countyCode)
+    const newCoords = nearestPoint.default(turf.point([coordinates.LONGITUDE, coordinates.LATITUDE]), turf.featureCollection(countyCenters))
+    coordinates = {
+      Longitude: newCoords.geometry.coordinates[0],
+      Latitude: newCoords.geometry.coordinates[1]
+    }
+    point = getContainer(map, coordinates)
+    // console.log('Previously undefined point:', point)
+  }
+  return point
+}
 
 function pointLookup (geojson, geojsonLookup, data) {
+  // Shim input
   let point
   if (data.type === 'Point') {
     point = data
   } else {
     point = { type: 'Point', coordinates: [data.Longitude, data.Latitude] }
   }
+  // TODO Add a fallback if it fails
   const containerArea = geojsonLookup.getContainers(point)
   if (containerArea.features[0]) {
     const props = containerArea.features[0].properties
     return (props.town) ? props.town : props.name
   }
-  // Seems to be an issue for two points in my dataset
 }
 
 function locationFilter (list, opts) {
@@ -49,16 +133,26 @@ function locationFilter (list, opts) {
     }
     if (checklist.State === 'Vermont') {
       // This option takes 25 seconds to do, every time, on my data
-      // Might be worth just not including.
-      // TODO Why I need default here but nowhere else I have no idea.
-      const point = pointLookup(Vermont_regions, vermontRegions, checklist)
-      checklist.Region = point
-
-      // This one takes 3.5 seconds
+      let point
+      checklist.Region = pointLookup(Vermont_regions, vermontRegions, checklist)
       checklist.Town = pointLookup(Town_boundaries, vermontTowns, checklist)
-      // This should work, but it don't. Not ideal.
+
+      // These should only apply to literal edge cases
       if (!checklist.Town) {
-        console.log(checklist)
+        point = getPoint('towns', {
+          Longitude: checklist.Longitude,
+          Latitude: checklist.Latitude
+          // This is ugly but it should work.
+        }, Number(Object.keys(eBirdCountyIds).filter(key => eBirdCountyIds[key] === checklist.County)[0]))
+        checklist.Town = helpers.capitalizeFirstLetters(point)
+      }
+      if (!checklist.Region) {
+        point = getPoint('regions', {
+          Longitude: checklist.Longitude,
+          Latitude: checklist.Latitude
+          // This is ugly but it should work.
+        }, Number(Object.keys(eBirdCountyIds).filter(key => eBirdCountyIds[key] === checklist.County)[0]))
+        checklist.Region = helpers.capitalizeFirstLetters(point)
       }
     }
 
@@ -165,5 +259,7 @@ module.exports = {
   locationFilter,
   removeSpuh,
   removeSpuhFromCounties,
-  pointLookup
+  pointLookup,
+  getPoint,
+  getTownCentroids
 }

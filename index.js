@@ -4,7 +4,6 @@ const VermontRecords = require('./data/vermont_records.json')
 const CountyBarcharts = require('./data/countyBarcharts.json')
 const VermontSubspecies = require('./data/vermont_records_subspecies.json')
 const GeoJsonGeometriesLookup = require('geojson-geometries-lookup')
-const vermontTowns = new GeoJsonGeometriesLookup(townBoundaries)
 vermontRegions = new GeoJsonGeometriesLookup(vermontRegions)
 const fs = require('fs').promises
 const _ = require('lodash')
@@ -14,9 +13,6 @@ const difference = require('compare-latlong')
 const appearsDuringExpectedDates = require('./appearsDuringExpectedDates.js')
 const helpers = require('./helpers')
 const f = require('./filters')
-const turf = require('turf')
-const centerOfMass = require('@turf/center-of-mass')
-const nearestPoint = require('@turf/nearest-point')
 
 // Why eBird uses this format I have no idea.
 const eBirdCountyIds = {
@@ -35,9 +31,6 @@ const eBirdCountyIds = {
   25: 'Windham',
   27: 'Windsor'
 }
-
-// Used more than once.
-const townCentroids = getTownCentroids()
 
 async function vt251 (input) {
   const opts = {
@@ -65,30 +58,6 @@ async function getData (input) {
   }
 
   return f.removeSpuh(input)
-}
-
-// Defaults to all
-function getTownCentroids (town) {
-  const centers = townBoundaries.features.map(feature => {
-    let center
-    // This center of West Haven is in New York.
-    if (feature.properties.town === 'West Haven'.toUpperCase()) {
-      center = centerOfMass.default(feature)
-      // TODO Unfortunately, the enclaves are broken. All Rutland counts are in Rutland City.
-    } else if (feature.properties.town.includes('Rutland'.toUpperCase())) {
-      center = turf.center(feature)
-      // console.log(feature.properties.town, center.geometry.coordinates.reverse())
-    } else {
-      center = turf.center(feature)
-    }
-    center.properties = feature.properties
-    return center
-  })
-  if (town) {
-    return centers.find(c => c.properties.town === town.toUpperCase())
-  } else {
-    return centers
-  }
 }
 
 async function biggestTime (timespan, opts) {
@@ -189,7 +158,7 @@ async function towns (opts) {
     opts.state = 'Vermont'
   }
   const dateFormat = helpers.parseDateFormat('day')
-  let data = f.orderByDate(f.durationFilter(f.completeChecklistFilter(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts), opts), opts)
+  let data = f.orderByDate(f.locationFilter(f.dateFilter(f.durationFilter(f.completeChecklistFilter(await getData(opts.input), opts), opts), opts), opts), opts)
   var speciesSeenInVermont = []
   _.forEach(countUniqueSpecies(data, dateFormat), (o) => {
     var mapped = _.map(o, 'Common Name')
@@ -460,41 +429,6 @@ async function quadBirds (opts) {
   console.log(`You ${(!opts.year || opts.year.toString() === moment().format('YYYY')) ? 'have seen' : 'saw'}, photographed, and recorded a total of ${completionDates.length} species${(opts.year) ? ` in ${opts.year}` : ''}.`)
 }
 
-// map: 'town' || 'region'
-// coordinates: {
-//   Longitude: row.LONGITUDE,
-//   Latitude: row.LATITUDE
-// }
-// countyCode: 023
-function getPoint (map, coordinates, countyCode) {
-  function getContainer (map, coordinates) {
-    let point
-    if (map === 'towns') {
-      point = f.pointLookup(townBoundaries, vermontTowns, coordinates)
-    } else if (map === 'regions') {
-      point = f.pointLookup(vermontRegions, vermontRegions, coordinates)
-    }
-    return point
-  }
-
-  let point = getContainer(map, coordinates)
-
-  // If it is on a river or across a border or something, get the nearest town
-  if (point === undefined) {
-    // dirty.write(JSON.stringify(row) + ',\n')
-    // Only check towns in the relevant county
-    const countyCenters = townCentroids.filter(f => f.properties.county === countyCode)
-    const newCoords = nearestPoint.default(turf.point([coordinates.LONGITUDE, coordinates.LATITUDE]), turf.featureCollection(countyCenters))
-    coordinates = {
-      Longitude: newCoords.geometry.coordinates[0],
-      Latitude: newCoords.geometry.coordinates[1]
-    }
-    point = getContainer(map, coordinates)
-    // console.log('Previously undefined point:', point)
-  }
-  return point
-}
-
 // - Get scientific name for a given bird
 async function getSpeciesObjGivenName (str) {
   // Search for substring in vermontRecords
@@ -527,7 +461,7 @@ async function isSpeciesSightingRare (opts) {
   opts.data = [{
     County: await getCountyForTown(opts.town),
     Date: opts.date,
-    Region: f.pointLookup(vermontRegions, vermontRegions, getTownCentroids('Berlin').geometry),
+    Region: f.pointLookup(vermontRegions, vermontRegions, f.getTownCentroids(opts.town).geometry),
     'Scientific Name': species['Scientific Name'],
     Species: species.Species,
     Subspecies: opts.subspecies,
@@ -936,6 +870,5 @@ module.exports = {
   datesSpeciesObserved,
   daylistTargets,
   countUniqueSpecies,
-  getPoint,
   f
 }

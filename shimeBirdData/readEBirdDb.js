@@ -187,7 +187,7 @@ async function runFile (filepath, string) {
           Latitude: row.LATITUDE
         }
 
-        const point = eBird.getPoint(areas, coordinates, Number(row['COUNTY CODE'].split('-')[2]))
+        const point = f.getPoint(areas, coordinates, Number(row['COUNTY CODE'].split('-')[2]))
 
         const species = {
           'Scientific Name': row['SCIENTIFIC NAME'],
