@@ -333,7 +333,11 @@ async function regions (opts) {
     // console.log(`Region: ${r.region}. Species count: ${r.speciesTotal}.`)
   })
 
-  return regions
+  // Again, as above es6 probably has a better way of doing this.
+  const newObj = {}
+  regions.forEach(r => { newObj[r.region] = r })
+
+  return newObj
   // fs.writeFile('vt_region_counts.json', JSON.stringify(regions), 'utf8')
 }
 
