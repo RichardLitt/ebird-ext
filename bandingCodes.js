@@ -66,6 +66,14 @@ function speciesNameToCode (latin) {
   return species.alpha
 }
 
+function unfurlObjToSpecies (obj) {
+  const object = {}
+  Object.keys(obj).forEach(area => {
+    object[area] = obj[area].map(code => codeToCommonName(code))
+  })
+  return object
+}
+
 // TODO Add tests
 // codeToCommonName('BCCH')
 // commonNameToCode('Bells Vireo')
@@ -74,5 +82,6 @@ function speciesNameToCode (latin) {
 module.exports = {
   codeToCommonName,
   commonNameToCode,
-  speciesNameToCode
+  speciesNameToCode,
+  unfurlObjToSpecies
 }
