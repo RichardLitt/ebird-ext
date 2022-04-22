@@ -4,6 +4,7 @@ const csv = require('csv-parse')
 const eBird = require('../')
 const f = require('../filters')
 const helpers = require('../helpers')
+const banding = require('../bandingCodes')
 const _ = require('lodash')
 const parser = csv({
   delimiter: '\t',
@@ -68,8 +69,8 @@ const parser = csv({
   ]
 })
 
-const files = [process.argv[3]]
 const areas = process.argv[2] // 'regions' or 'towns'
+const files = [process.argv[3]]
 
 if (areas !== 'towns' && areas !== 'regions') {
   console.log('Specify towns or regions please.')
@@ -134,6 +135,7 @@ function addStringstoCommonName (input) {
 
 async function analyzeFiles () {
   for (const file of files) {
+    // Change if using a test file
     const string = file.match(/0\d\d\.txt/g)[0].match(/\d+/g)[0]
     console.log(`Analyzing ${file}.`)
     await runFile(file, string)
@@ -164,6 +166,7 @@ function shimData (row) {
     'Area Covered (ha)': row['EFFORT AREA HA'],
     'Number of Observers': row['NUMBER OBSERVERS'],
     'Breeding Code': row['BREEDING CODE'],
+    'Observer ID': row['OBSERVER ID'],
     'Observation Details': row['SPECIES COMMENTS'],
     'Checklist Comments': row['TRIP COMMENTS'],
     'ML Catalog Numbers': row['HAS MEDIA']
@@ -175,6 +178,7 @@ async function runFile (filepath, string) {
     const boundaries = {}
     const boundaryIds = {}
     const shimmedRows = []
+    const region150 = {}
 
     // Note: If you need to make a log file, this is how you do it.
     // const dirty = fs.createWriteStream('dirty_entries.txt', { flags: 'a' })
@@ -188,67 +192,87 @@ async function runFile (filepath, string) {
         }
 
         const point = f.getPoint(areas, coordinates, Number(row['COUNTY CODE'].split('-')[2]))
-
         const species = {
           'Scientific Name': row['SCIENTIFIC NAME'],
           'Common Name': row['COMMON NAME']
         }
-        const isSpecies = f.removeSpuh([species]).length
         const commonName = addStringstoCommonName(species['Common Name'])
-
-        if (isSpecies) {
-          // sort by county
-          // if (!(row['COUNTY'] in counties)) {
-          // } else {
-          //   if(counties[row['COUNTY']].indexOf(commonName) < 0){
-          //     counties[row['COUNTY']].push(commonName)
-          //   }
-          // }
-
-          if (!(point in boundaries)) {
-            boundaries[point] = [commonName]
-          } else {
-            if (boundaries[point].indexOf(commonName) < 0) {
-              boundaries[point].push(commonName)
-            }
-          }
-        }
         const year = row['OBSERVATION DATE'].split('-')[0]
-        if (!(point in boundaryIds)) {
-          boundaryIds[point] = {
-            observers: {},
-            spuhs: []
-          }
-        }
-        if (!boundaryIds[point].years) {
-          boundaryIds[point].years = [year]
-        } else if (boundaryIds[point].years.indexOf(year) < 0) {
-          boundaryIds[point].years.push(year)
-        }
-        const birdCount = parseInt(row['OBSERVATION COUNT'])
-        if (_.isInteger(birdCount)) {
-          if (!boundaryIds[point].birdCount) {
-            boundaryIds[point].birdCount = birdCount
-          } else if (boundaryIds[point].birdCount) {
-            boundaryIds[point].birdCount = parseInt(boundaryIds[point].birdCount) + birdCount
-          }
-          if (Object.keys(boundaryIds[point].observers).indexOf(row['OBSERVER ID']) < 0) {
-            boundaryIds[point].observers[row['OBSERVER ID']] = [row['SAMPLING EVENT IDENTIFIER']]
-          } else {
-            if (boundaryIds[point].observers[row['OBSERVER ID']].indexOf(row['SAMPLING EVENT IDENTIFIER']) < 0) {
-              boundaryIds[point].observers[row['OBSERVER ID']].push(row['SAMPLING EVENT IDENTIFIER'])
+        const isSpecies = f.removeSpuh([species]).length
+        const generate150 = true
+
+        // Add species to the region
+        if (generate150 !== true) {
+          if (isSpecies) {
+            if (!(point in boundaries)) {
+              boundaries[point] = [commonName]
+            } else {
+              if (boundaries[point].indexOf(commonName) < 0) {
+                boundaries[point].push(commonName)
+              }
             }
           }
-          // Create a spuh section
-          if (!isSpecies && boundaryIds[point].spuhs.indexOf(commonName) < 0) {
-            boundaryIds[point].spuhs.push(commonName)
+          if (!(point in boundaryIds)) {
+            boundaryIds[point] = {
+              observers: {},
+              spuhs: []
+            }
+          }
+          if (!boundaryIds[point].years) {
+            boundaryIds[point].years = [year]
+          } else if (boundaryIds[point].years.indexOf(year) < 0) {
+            boundaryIds[point].years.push(year)
+          }
+          const birdCount = parseInt(row['OBSERVATION COUNT'])
+          if (_.isInteger(birdCount)) {
+            if (!boundaryIds[point].birdCount) {
+              boundaryIds[point].birdCount = birdCount
+            } else if (boundaryIds[point].birdCount) {
+              boundaryIds[point].birdCount = parseInt(boundaryIds[point].birdCount) + birdCount
+            }
+            if (Object.keys(boundaryIds[point].observers).indexOf(row['OBSERVER ID']) < 0) {
+              boundaryIds[point].observers[row['OBSERVER ID']] = [row['SAMPLING EVENT IDENTIFIER']]
+            } else {
+              if (boundaryIds[point].observers[row['OBSERVER ID']].indexOf(row['SAMPLING EVENT IDENTIFIER']) < 0) {
+                boundaryIds[point].observers[row['OBSERVER ID']].push(row['SAMPLING EVENT IDENTIFIER'])
+              }
+            }
+            // Create a spuh section
+            if (!isSpecies && boundaryIds[point].spuhs.indexOf(commonName) < 0) {
+              boundaryIds[point].spuhs.push(commonName)
+            }
+          }
+        } else {
+          const observer = row['OBSERVER ID']
+          if (!(point in region150)) {
+            region150[point] = {}
+          }
+          if (!(year in region150[point])) {
+            region150[point][year] = {}
+          }
+          if (!(observer in region150[point][year])) {
+            region150[point][year][observer] = {
+              species: [banding.commonNameToCode(species['Common Name'])],
+              total: (banding.isBandingCode(banding.commonNameToCode(species['Common Name']))) ? 1 : 0,
+              sampleChecklistId: row['SAMPLING EVENT IDENTIFIER']
+            }
+          }
+          if (!(region150[point][year][observer].species.includes(banding.commonNameToCode(species['Common Name'])))) {
+            region150[point][year][observer].species.push(banding.commonNameToCode(species['Common Name']))
+            if (isSpecies) {
+              if (banding.isBandingCode(banding.commonNameToCode(species['Common Name']))) {
+                const noSpuhs = region150[point][year][observer].species.filter(s => {
+                  const spuhed = f.removeSpuh([{
+                    'Scientific Name': banding.codeToScientificName(s)
+                  }])
+                  return !!(spuhed.length)
+                })
+                region150[point][year][observer].total = noSpuhs.length
+              }
+            }
+            // console.log(region])
           }
         }
-        // sort by Lat/Long
-
-        // Delete everything between county code and latitude
-        // Match1: US-VT-\d\d\d
-        // Match 2: ^(.*)\t^[\t]*\tL\d+.*
 
         shimmedRows.push(shimData(row))
       })
@@ -256,7 +280,7 @@ async function runFile (filepath, string) {
         console.log('BONK', e)
       })
       .on('end', () => {
-        const shim = false
+        const shim = '150'
         if (!shim) {
           const totalCount = []
           Object.keys(boundaryIds).forEach(t => {
@@ -283,6 +307,52 @@ async function runFile (filepath, string) {
           // console.log('Total count: ', _.sum(totalCount))
           console.log('CSV file successfully processed')
           fs.writeFile(`vt${helpers.capitalizeFirstLetters(areas)}-${string}.json`, JSON.stringify(boundaryIds), 'utf8', (err) => {
+            if (err) {
+              console.log(err)
+              reject(err)
+            } else {
+              console.log(`vt${helpers.capitalizeFirstLetters(areas)}-${string}.json written successfully.`)
+              resolve()
+            }
+          })
+        // Make a different output if you're only trying to figure out something from the data.
+        // Here, we're figuring out the observation counts for a region.
+        } else if (shim === '150') {
+          const filteredYear = function (region, year, filterValue) {
+            return Object.keys(region[year]).reduce((res, key) => {
+              return (
+                (region[year][key].total && region[year][key].total > filterValue)
+                  ? res[key] = region[year][key]
+                  : false
+                  , res
+              )
+            }, {})
+          }
+
+          // Arguably, I could have done this instead of the above.
+          const filteredRegion = function (obj, region, filterValue) {
+            const newObj = {}
+            Object.keys(obj).forEach(region => {
+              const newRegionObj = {}
+              Object.keys(obj[region]).forEach(year => {
+                const observers = filteredYear(obj[region], year, filterValue)
+                if (!_.isEmpty(observers)) {
+                  newRegionObj[year] = observers
+                }
+              })
+              if (!_.isEmpty(newRegionObj)) {
+                newObj[region] = newRegionObj
+              }
+            })
+            console.log(newObj)
+            return newObj
+          }
+
+          const newObj = filteredRegion(region150, 'Northern Vermont Piedmont', 0)
+
+          // After getting this, sort to show only >150 species, or the top three for a region that year.
+          // Also, only save the banding codes for species?
+          fs.writeFile(`vt${helpers.capitalizeFirstLetters(areas)}-${string}.json`, JSON.stringify(newObj), 'utf8', (err) => {
             if (err) {
               console.log(err)
               reject(err)
