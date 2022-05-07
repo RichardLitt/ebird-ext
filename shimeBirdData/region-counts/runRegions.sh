@@ -1,0 +1,16 @@
+#!/#!/usr/bin/env bash
+
+node readEBirdDb.js regions '/Users/richard/Downloads/ebd_US-VT_relMar-2022/counties/001.txt'
+node readEBirdDb.js regions '/Users/richard/Downloads/ebd_US-VT_relMar-2022/counties/003.txt'
+node readEBirdDb.js regions '/Users/richard/Downloads/ebd_US-VT_relMar-2022/counties/005.txt'
+node readEBirdDb.js regions '/Users/richard/Downloads/ebd_US-VT_relMar-2022/counties/007.txt'
+node readEBirdDb.js regions '/Users/richard/Downloads/ebd_US-VT_relMar-2022/counties/009.txt'
+node readEBirdDb.js regions '/Users/richard/Downloads/ebd_US-VT_relMar-2022/counties/011.txt'
+node readEBirdDb.js regions '/Users/richard/Downloads/ebd_US-VT_relMar-2022/counties/013.txt'
+node readEBirdDb.js regions '/Users/richard/Downloads/ebd_US-VT_relMar-2022/counties/015.txt'
+node readEBirdDb.js regions '/Users/richard/Downloads/ebd_US-VT_relMar-2022/counties/017.txt'
+node readEBirdDb.js regions '/Users/richard/Downloads/ebd_US-VT_relMar-2022/counties/019.txt'
+node readEBirdDb.js regions '/Users/richard/Downloads/ebd_US-VT_relMar-2022/counties/021.txt'
+node readEBirdDb.js regions '/Users/richard/Downloads/ebd_US-VT_relMar-2022/counties/023.txt'
+node readEBirdDb.js regions '/Users/richard/Downloads/ebd_US-VT_relMar-2022/counties/025.txt'
+node readEBirdDb.js regions '/Users/richard/Downloads/ebd_US-VT_relMar-2022/counties/027.txt'

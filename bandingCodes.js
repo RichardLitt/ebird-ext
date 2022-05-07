@@ -37,30 +37,51 @@ codes.push({
   "scientific_name": "Anser indicus",
 })
 
-function codeToCommonName (code) {
+function isBandingCode (code) {
+  return (codes.find(x => x.alpha === code))
+}
+
+function codeToCommonName (code, log) {
   const species = codes.find(x => x.alpha === code)
   if (!species) {
-    console.log(`Error: Unable to find entry for ${code}, returning ${code}.`)
+    if (log) {
+      console.log(`Error: Unable to find entry for ${code}, returning ${code}.`)
+    }
     return code
   }
   return species.common_name
 }
 
-function commonNameToCode (commonName) {
+function codeToScientificName (code, log) {
+  const species = codes.find(x => x.alpha === code)
+  if (!species) {
+    if (log) {
+      console.log(`Error: Unable to find entry for ${code}, returning ${code}.`)
+    }
+    return code
+  }
+  return species.scientific_name
+}
+
+function commonNameToCode (commonName, log) {
   const species = codes.find(x => {
     return x.common_name.replace(/'/g, '') === commonName.replace(/'/g, '')
   })
   if (!species) {
-    console.log(`Error: Unable to find entry for ${commonName}, returning ${commonName}.`)
+    if (log) {
+      console.log(`Error: Unable to find entry for ${commonName}, returning ${commonName}.`)
+    }
     return commonName
   }
   return species.alpha
 }
 
-function speciesNameToCode (latin) {
+function speciesNameToCode (latin, log) {
   const species = codes.find(x => x.scientific_name === latin)
   if (!species) {
-    console.log(`Error: Unable to find entry for ${latin}, returning ${latin}.`)
+    if (log) {
+      console.log(`Error: Unable to find entry for ${latin}, returning ${latin}.`)
+    }
     return latin
   }
   return species.alpha
@@ -83,5 +104,7 @@ module.exports = {
   codeToCommonName,
   commonNameToCode,
   speciesNameToCode,
-  unfurlObjToSpecies
+  unfurlObjToSpecies,
+  codeToScientificName,
+  isBandingCode
 }

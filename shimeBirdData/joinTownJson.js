@@ -6,6 +6,7 @@ let files
 
 const areas = process.argv[2]
 
+// Easier to just hardcode than figure this out.
 if (areas === 'towns') {
   files = [
     require('./vtTown-001.json'),
@@ -25,20 +26,20 @@ if (areas === 'towns') {
   ]
 } else if (areas === 'regions') {
   files = [
-    require('./vtRegion-001.json'),
-    require('./vtRegion-003.json'),
-    require('./vtRegion-005.json'),
-    require('./vtRegion-007.json'),
-    require('./vtRegion-009.json'),
-    require('./vtRegion-011.json'),
-    require('./vtRegion-013.json'),
-    require('./vtRegion-015.json'),
-    require('./vtRegion-017.json'),
-    require('./vtRegion-019.json'),
-    require('./vtRegion-021.json'),
-    require('./vtRegion-023.json'),
-    require('./vtRegion-025.json'),
-    require('./vtRegion-027.json')
+    require('./vtRegions-001.json'),
+    require('./vtRegions-003.json'),
+    require('./vtRegions-005.json'),
+    require('./vtRegions-007.json'),
+    require('./vtRegions-009.json'),
+    require('./vtRegions-011.json'),
+    require('./vtRegions-013.json'),
+    require('./vtRegions-015.json'),
+    require('./vtRegions-017.json'),
+    require('./vtRegions-019.json'),
+    require('./vtRegions-021.json'),
+    require('./vtRegions-023.json'),
+    require('./vtRegions-025.json'),
+    require('./vtRegions-027.json')
   ]
 }
 
@@ -76,6 +77,7 @@ Object.keys(newFile).forEach(town => {
 // )
 // const townIntersection = getTownIntersection(townSightings)
 
+// TODO Shouldn't modify state
 fs.writeFile(`../data/${helpers.capitalizeFirstLetters(areas)}Sightings.json`, JSON.stringify(townSightings), (e) => {
   if (e) {
     console.log(e)
