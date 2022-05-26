@@ -1,7 +1,7 @@
 const fetch = require('node-fetch')
 const VermontHotspots = require('./data/hotspots.json')
-const Town_boundaries = require('./geojson/vt_towns.json')
-const BerlinPond = {} //require('./montpelier.json')
+const townBoundaries = require('./geojson/vt_towns.json')
+const eBirdDataAsJSON = require('./montpelierhotspots.json')
 const _ = require('lodash')
 const fs = require('fs').promises
 const moment = require('moment')
@@ -117,7 +117,7 @@ async function townHotspots (opts) {
 
   if (opts.noVisits) {
     if (opts.print) {
-      const towns = main.getAllTowns(Town_boundaries).sort((a, b) => a.town.localeCompare(b.town));
+      const towns = main.getAllTowns(townBoundaries).sort((a, b) => a.town.localeCompare(b.town));
       console.log('Towns with unvisited hotspots:')
       towns.forEach(t => {
         let hotspots = data.filter(x => x.Town === t.town)
@@ -133,7 +133,7 @@ async function townHotspots (opts) {
     return noVisits
   }
   if (opts.all) {
-    const towns = main.getAllTowns(Town_boundaries).sort((a, b) => a.town.localeCompare(b.town));
+    const towns = main.getAllTowns(townBoundaries).sort((a, b) => a.town.localeCompare(b.town));
     console.log('Town hotspots:')
     towns.forEach(t => {
       let hotspots = data.filter(x => x.Town === t.town)
@@ -157,7 +157,7 @@ async function daysYouveBirdedAtHotspot (opts) {
   console.log(`
 You have not birded in ${name} on:`)
 
-  let data = BerlinPond //await main.getData(opts.input)
+  let data = eBirdDataAsJSON//await main.getData(opts.input)
   let observedDates = {}
   let fullYearChart = {}
   let unbirdedDates = {}

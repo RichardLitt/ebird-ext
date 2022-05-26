@@ -1,7 +1,6 @@
 // This function reads only the eBird database files, requestable from eBird.
 const fs = require('fs')
 const csv = require('csv-parse')
-const eBird = require('../')
 const f = require('../filters')
 const helpers = require('../helpers')
 const banding = require('../bandingCodes')
@@ -136,7 +135,8 @@ function addStringstoCommonName (input) {
 async function analyzeFiles () {
   for (const file of files) {
     // Change if using a test file
-    const string = file.match(/0\d\d\.txt/g)[0].match(/\d+/g)[0]
+    // const string = file.match(/0\d\d\.txt/g)[0].match(/\d+/g)[0]
+    const string = file
     console.log(`Analyzing ${file}.`)
     await runFile(file, string)
     console.log(`Analyzed ${file}.`)
@@ -280,7 +280,7 @@ async function runFile (filepath, string) {
         console.log('BONK', e)
       })
       .on('end', () => {
-        const shim = '150'
+        const shim = true
         if (!shim) {
           const totalCount = []
           Object.keys(boundaryIds).forEach(t => {
