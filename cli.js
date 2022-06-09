@@ -33,6 +33,7 @@ const cli = meow(`
     townHotspots  Show which hotspots are in which towns
     csvToJsonHotspots Create hotspots file
     unbirdedHotspots  Show which hotspots haven't been birded
+    findMontpelierHotspotNeedsToday Only for Montplier hotspots
 
   Options
     --input, -i The input file

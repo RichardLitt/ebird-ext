@@ -192,7 +192,7 @@ function dataForThisWeekInHistory (opts) {
     console.log('Get the ID for this location first, manually. Send it as --id.')
   }
 
-  let data = BerlinPond
+  let data = eBirdDataAsJSON
   let observedDates = []
   let unbirdedDates = Array.from({length: 52}, (_, i) => i + 1)
 
@@ -270,12 +270,12 @@ You've birded at ${VermontHotspots.find(h => h.ID === opts.id).Name} every week 
 async function findMontpelierHotspotNeedsToday (opts) {
   console.log('')
   console.log('These hotspots have not been birded on this date:')
-  console.log(`${'Hotspot'.padEnd(50)} Last        This Week`)
+  console.log(`Last        Week     ${'Hotspot'.padEnd(50)}`)
   console.log(`${'-----'.padEnd(72, '-')}`)
   const lat = '44.2587866'
   const lng = '-72.5740852'
   let today = moment().format('MM-DD')
-  let data = BerlinPond
+  let data = eBirdDataAsJSON
   let ids = [...new Set(data.map(item => item['Location ID']))]
   let unbirded = []
   ids.forEach(id => {
@@ -299,7 +299,7 @@ async function findMontpelierHotspotNeedsToday (opts) {
     .filter(d => d.distance < 3)
     .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
     .forEach(d => {
-      console.log(`${d.locName.padEnd(50)} ${d.latestObsDt.split(' ')[0]}    ${d.nextUnbirdedWeek}`)
+      console.log(`${d.latestObsDt.split(' ')[0]}  ${(d.nextUnbirdedWeek) ? d.nextUnbirdedWeek.padEnd(8) : ''.padEnd(8)} ${d.locName.padEnd(50)}`)
     })
   console.log('')
 
