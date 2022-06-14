@@ -33,7 +33,6 @@ const cli = meow(`
     townHotspots  Show which hotspots are in which towns
     csvToJsonHotspots Create hotspots file
     unbirdedHotspots  Show which hotspots haven't been birded
-    findMontpelierHotspotNeedsToday Only for Montplier hotspots
 
   Options
     --input, -i The input file
@@ -191,12 +190,8 @@ async function run () {
     await hotspots.unbirdedHotspots(cli.flags)
   } else if (cli.input[0] === 'csvToJsonHotspots') {
     await hotspots.csvToJsonHotspots(cli.flags)
-  } else if (cli.input[0] === 'daysYouveBirdedAtHotspot') {
-    await hotspots.daysYouveBirdedAtHotspot(cli.flags)
   } else if (cli.input[0] === 'weeksYouveBirdedAtHotspot') {
     await hotspots.weeksYouveBirdedAtHotspot(cli.flags)
-  } else if (cli.input[0] === 'findMontpelierHotspotNeedsToday') {
-    await hotspots.findMontpelierHotspotNeedsToday(cli.flags)
   } else if (cli.input[0] === 'datesSpeciesObserved') {
     await main.datesSpeciesObserved(cli.flags)
   } else if (cli.input[0] === 'daylistTargets') {
