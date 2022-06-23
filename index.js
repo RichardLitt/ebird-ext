@@ -582,8 +582,7 @@ async function subspecies (opts) {
   }
 
   // const dateFormat = helpers.parseDateFormat('day')
-  data = f.orderByDate(f.dateFilter(f.locationFilter(data, opts), opts), opts)
-  data = f.removeSpuh(data, true)
+  data = f.orderByDate(f.locationFilter(f.dateFilter(f.removeSpuh(data, true), opts), opts), opts)
   const allIdentifications = _.uniq(data.map(x => x['Scientific Name']))
   const species = _.uniq(f.removeSpuh(data).map(x => x['Scientific Name']))
 
@@ -618,7 +617,7 @@ async function subspecies (opts) {
           const genus = x.split(' ')[0].split('/')[0]
           if (!leaves.join(' ').includes(genus)) {
             // Worst offender. Will need a better way of doing this for other genera.
-            // These seem to be the only eird adjectival spuhs, though.
+            // These seem to be the only weird adjectival spuhs, though.
             if (['Anatinae', 'Anatidae'].includes(genus)) {
               const anatinae = ['Amazonetta', 'Sibirionetta', 'Spatula', 'Mareca', 'Lophonetta', 'Speculanas', 'Anas']
               if (!anatinae.some(ducks => species.join(' ').includes(ducks))) {
