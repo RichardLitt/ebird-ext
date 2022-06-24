@@ -13,6 +13,8 @@ const difference = require('compare-latlong')
 const appearsDuringExpectedDates = require('./appearsDuringExpectedDates.js')
 const helpers = require('./helpers')
 const f = require('./filters')
+const banding = require('./bandingCodes')
+const townDataFor2022 = require('./data/townDataFor2022-May-Export.json')
 
 // Why eBird uses this format I have no idea.
 const eBirdCountyIds = {
@@ -39,6 +41,9 @@ async function vt251 (input) {
     all: true,
     complete: true,
     duration: 5,
+    // TODO Enable this, instead of requiring above.
+    // baseData: 'data/townDataFor2022-May-Export.json',
+    baseData: true,
     output: 'data/vt_town_counts.json',
     input
   }
@@ -141,11 +146,9 @@ function countUniqueSpecies (data, dateFormat) {
 }
 
 function getAllTowns (geojson) {
-  const towns = []
+  const towns = {}
   geojson.features.forEach((t) => {
-    towns.push({
-      town: t.properties.town
-    })
+    towns[t.properties.town] = {}
   })
   return towns
 }
@@ -167,18 +170,19 @@ async function towns (opts) {
   speciesSeenInVermont = _.flatten(speciesSeenInVermont)
   if (opts.all) {
     const towns = getAllTowns(townBoundaries)
-    towns.forEach(t => {
-      let i = 0
-      t.species = []
-      const speciesByDate = countUniqueSpecies(data.filter(x => x.Town === t.town), dateFormat)
+    Object.keys(towns).forEach(t => {
+      towns[t] = []
+      const speciesByDate = countUniqueSpecies(data.filter(x => x.Town === t), dateFormat)
       _.sortBy(f.createPeriodArray(speciesByDate), 'Date').forEach((e) => {
-        e.Species.forEach((species) => {
-          t.species.push(species['Common Name'])
-          i++
-        })
+        e.Species.forEach((species) => towns[t].push(banding.commonNameToCode(species['Common Name'])))
       })
-      t.speciesTotal = i
     })
+
+    if (opts.baseData === true) {
+      Object.keys(townDataFor2022).forEach(x => {
+        towns[x] = _.union(towns[x], townDataFor2022[x])
+      })
+    }
 
     if (opts.output) {
       fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(towns), 'utf8')

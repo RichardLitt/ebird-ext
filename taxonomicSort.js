@@ -2,6 +2,8 @@
 // const Papa = require('papaparse')
 // Uncomment when you need to use taxonomic sort. For now, not included, because React scoops up everything, and it is too big.
 // const taxonomy = require('./taxonomies/eBird-Clements-v2021-integrated-checklist-August-2021.json')
+// Note: This only uses Vermont birds, and may have issues with newer ones. (It'll put them at the end.)
+const taxonomy = require('./taxonomies/eBird_Taxonomy_2020_VT.json')
 
 // Testing arrays
 // TODO Actually implement a testing framework
@@ -21,11 +23,10 @@
 // TODO Make a new sort for 2022 from the Clements and from the Vermont species list
 
 function taxonomicSort (list, name = 'common') {
-  console.log('Not sorting, due to space issues with React!')
-  // const sortedTaxos = taxonomy.map(x => {
-  //   return (name === 'scientific') ? x['scientific name'] : x['English name']
-  // })
-  // return list.sort((a, b) => sortedTaxos.indexOf(a) - sortedTaxos.indexOf(b))
+  const sortedTaxos = taxonomy.map(x => {
+    return (name === 'scientific') ? x['scientific name'] : x['English name']
+  })
+  return list.sort((a, b) => sortedTaxos.indexOf(a) - sortedTaxos.indexOf(b))
 }
 
 module.exports = taxonomicSort

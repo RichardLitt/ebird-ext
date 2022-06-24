@@ -114,13 +114,13 @@ async function townHotspots (opts) {
 
   if (opts.noVisits) {
     if (opts.print) {
-      const towns = main.getAllTowns(townBoundaries).sort((a, b) => a.town.localeCompare(b.town))
+      const towns = Object.keys(main.getAllTowns(townBoundaries)).sort((a, b) => a.localeCompare(b))
       console.log('Towns with unvisited hotspots:')
       towns.forEach(t => {
-        const hotspots = data.filter(x => x.Town === t.town)
+        const hotspots = data.filter(x => x.Town === t)
         const noVisits = hotspots.filter(x => !x['Last visited'])
         if (noVisits.length) {
-          console.log(`${helpers.capitalizeFirstLetters(t.town)}: ${noVisits.length}`)
+          console.log(`${helpers.capitalizeFirstLetters(t)}: ${noVisits.length}`)
           console.log(`  ${noVisits.map(x => `${x.Name} (https://ebird.org/hotspot/${x.ID})`).join('\n  ')}
             `)
         }
@@ -130,11 +130,11 @@ async function townHotspots (opts) {
     return noVisits
   }
   if (opts.all) {
-    const towns = main.getAllTowns(townBoundaries).sort((a, b) => a.town.localeCompare(b.town))
+    const towns = Object.keys(main.getAllTowns(townBoundaries)).sort((a, b) => a.localeCompare(b))
     console.log('Town hotspots:')
     towns.forEach(t => {
-      const hotspots = data.filter(x => x.Town === t.town)
-      console.log(`${helpers.capitalizeFirstLetters(t.town)}: ${hotspots.length}`)
+      const hotspots = data.filter(x => x.Town === t)
+      console.log(`${helpers.capitalizeFirstLetters(t)}: ${hotspots.length}`)
     })
   } else if (opts.town) {
     // Turn on to find checklists in that town console.log(_.uniq(data.map((item, i) => `${item['Submission ID']}`)))
