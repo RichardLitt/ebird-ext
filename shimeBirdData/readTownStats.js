@@ -1,9 +1,11 @@
-// This function reads only the output of town stats.
+// The functions here read only the output of town stats.
+// There are many different little functions - turn on them on the bottom or not as needed
 
-const data = require('./data/vtTownData.json')
+const data = require('./vtTowns-clean.json')
 const _ = require('lodash')
+const banding = require('../bandingCodes')
 const fs = require('fs').promises
-const eBird = require('./')
+const eBird = require('../')
 
 // Data object format
 // [
@@ -19,6 +21,7 @@ const eBird = require('./')
 //   'averageChecklistsToBirds'
 // ]
 
+// Just tell me how many towns have been seen in this dataset
 function countTowns (data) {
   console.log(Object.keys(data).length)
 }
@@ -75,10 +78,6 @@ function yearsCount (data) {
   // console.log(town[0].years)
 }
 
-function birdsNotInBaltimore (data) {
-  console.log(data.BALTIMORE)
-}
-
 function averageTownBirds (data) {
   let average = 0
   _.forEach(data, x => average += x.speciesCount)
@@ -124,7 +123,7 @@ function removeSpuh (arr, reverse) {
   return _.uniq(newArr)
 }
 
-function findWithoutBird(data) {
+function findTownsWithoutBird(data) {
   let count = 0
   Object.keys(data).forEach(town => {
     if (!data[town].species.includes('Canada Goose')) {
@@ -136,19 +135,18 @@ function findWithoutBird(data) {
 }
 
 // TODO Don't save full species name, save alphacodes instead
-
 async function createDataset (data) {
   // Instead of saving Blue Jay in each town, remove all species which are in all towns into their own key
   // const intersection = await findIntersection(data)
   const towns = {}
   Object.keys(data).forEach(town => {
     // const species  = _.difference(removeSpuh(data[town].species), intersection)
-    towns[town] = data[town].species
+    towns[town] = data[town].species.map(x => banding.commonNameToCode(x))
   })
   // towns.intersection = intersection
   // let intersection = _.intersection(...townLists)
-  // console.log(towns)
-  fs.writeFile('regionData.json', JSON.stringify(towns), 'utf-8')
+  console.log(towns)
+  fs.writeFile('townDataFor2022-May-Export.json', JSON.stringify(towns), 'utf-8')
 }
 
 async function readData () {
