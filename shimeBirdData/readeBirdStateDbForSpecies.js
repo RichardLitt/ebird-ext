@@ -64,6 +64,29 @@ const parser = csv({
     'SPECIES COMMENTS'
   ]
 })
+const { Transform } = require('stream')
+
+// Used to filter out unapproved entries before getting to data sorting.
+class Filter extends Transform {
+  constructor () {
+    super({
+      readableObjectMode: true,
+      writableObjectMode: true
+    })
+  }
+
+  _transform (chunk, encoding, next) {
+    if (this.approved(chunk)) {
+      return next(null, chunk)
+    }
+
+    next()
+  }
+
+  approved (value) {
+    return value.APPROVED !== '0'
+  }
+}
 
 const files = [process.argv[2]]
 
@@ -89,6 +112,7 @@ async function runFile (filepath, string) {
     let state = ''
     fs.createReadStream(filepath)
       .pipe(parser)
+      .pipe(new Filter())
       .on('data', (row) => {
         if (!state) {
           state = row['STATE CODE'].split('-')[1]
@@ -143,9 +167,9 @@ async function runFile (filepath, string) {
         const sorted = t(Object.keys(shimmedData), 'scientific')
         const sortedcounts = ['Common Name,Scientific Name,State,Counts,Every Year,Total Years,Years']
         sorted.forEach(taxon => {
-          sortedcounts.push(`${shimmedData[taxon].commonName},${taxon},${state},${shimmedData[taxon][state].counts},${shimmedData[taxon][state].everyYear},${shimmedData[taxon][state].totalYears},${shimmedData[taxon][state].years}`)
+          sortedcounts.push(`${shimmedData[taxon].commonName},${taxon},${state},${shimmedData[taxon][state].counts},${shimmedData[taxon][state].everyYear},${shimmedData[taxon][state].totalYears},"""${shimmedData[taxon][state].years}"""`)
         })
-        fs.writeFile(`${state}-species.json`, sortedcounts.join('\n'), 'utf8', (err) => {
+        fs.writeFile(`${state}-species.csv`, sortedcounts.join('\n'), 'utf8', (err) => {
           if (err) {
             console.log(err)
             reject(err)
