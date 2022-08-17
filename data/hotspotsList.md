@@ -22,10 +22,12 @@ Arnold Bay
 Arrowhead Mountain Lake - Milton (760 acres)
 Arthur Buck River Access
 Arthur Davis WMA
+Ashley Community Forest
 Athens Pond - Athens (21 acres)
 Atherton Meadows WMA--east unit
 Atherton Meadows WMA--west unit
 Austin Pond - Hubbardton (28 acres)
+Averill Mountain
 Avery Gore Pond (Unknown Pond) - Avery's Gore (19 acres)
 Averys Gore WMA
 Babcock Nature Preserve
@@ -104,6 +106,7 @@ Bone Mountain
 Bonnyvale Environmental Education Center
 Boulder Beach State Park
 Bourn Pond - Sunderland (48 acres)
+Boyce Hill Saylor Woods (restricted access)
 Boyce Hill Town Forest
 Bragdon Preserve (Vermont Institute of Natural Science) IBA
 Braintree Mountain Forest
@@ -160,6 +163,7 @@ Cabot Hills Maple Farm (Restricted Access)
 Cady Hill Forest
 Calahan Park
 Calendar Brook WMA
+Calvin Coolidge Historic Site
 Camel's Hump State Forest (South)
 Camels Hump State Park--Monroe Trail
 Camels Hump State Park--Summit
@@ -240,6 +244,7 @@ Cross Vermont Trail--Waterbury Section
 Cross Vermont Trail--West Shore Dr. to Boulder Beach Rd.
 Cross Vermont Trail--West Shore Dr. to Lakeside Dr.
 Crossroad Farm / Taylor Floodplain
+Crosstown Trail
 Crystal Beach
 Crystal Lake - Barton (763 acres)
 Crystal Lake State Park
@@ -276,6 +281,7 @@ Delta Park IBA
 Dennis Pond - Brunswick (185 acres)
 Densmore Hill WMA
 Depot Hill Road Wetlands
+Derby Line Welcome Center
 Derway Island Nature Preserve
 Deweys Mill Pond - Hartford (56 acres)
 Diamond Run Mall Nature Trail
@@ -325,7 +331,9 @@ Essex Tree Farm Soccer Fields and XC Course
 Ethan Allen East Peak
 Ethan Allen Homestead
 Ethan Allen Park
+Ewell Mill Pond
 Ewell Pond - Peacham (51 acres)
+Ewells Mills Historic Park
 Fairfield Pond - Fairfield (446 acres)
 Fairfield Swamp WMA
 Fairfield Swamp WMA--French Hill Access
@@ -339,6 +347,7 @@ Ferrisburgh Town Beach
 Ferrisburgh Town Forest
 Fields (Kellogg) Bay / Kellogg Bay Road
 Fisher Covered Railroad Bridge
+Fisk Quarry Preserve
 Five Tree Hill Country Park
 Flagg Pond - Wheelock (111 acres)
 Fletcher Farm Foundation Fields
@@ -459,9 +468,11 @@ Jackson Trail
 Jacksonville Pond - Whitingham (20 acres)
 Jail Branch Marsh
 Jamaica State Park
+Janes Cemetery
 Jay Peak
 Jeffrey Murdock Nature Preserve
 Jericho Research Forest--UVM
+Jericho Town Forest
 Jewell Brook Site Number 1 Reservoir
 Jewell Brook Site Number 5 Reservoir
 Jobs Pond - Westmore (39 acres)
@@ -567,6 +578,7 @@ Lemon Fair WMA--Bonner Parcel
 Lemon Fair WMA--Gorton Parcel
 Leonard Bay
 Les Newell WMA
+Levesque Power Plant and Siboinebi Path Bridge
 Levi Pond WMA - Groton (22 acres)
 Lewis Creek Fishing Access
 Lewis Creek WMA
@@ -860,6 +872,7 @@ Pine Pond - Castleton (40 acres)
 Pinnacle Meadows
 Pittsford Trails--Bald Peak Trail
 Pittsford Trails--Cadwell Loop
+Pittsford Trails--Recreation Area Trails
 Pittsford Trails--Split Rock
 Pleasant St. Powerline
 Pleasant Valley Pond - Brattleboro (25 acres)
@@ -950,6 +963,7 @@ Sabin's Pasture
 Sadawga Pond - Whitingham (194 acres)
 Saint Michael's College Natural Area
 Salmon Hole Park
+Salt Ash Mountain
 Sand Bar State Park
 Sand Hill Road / Wilson Wetland Preserve
 Sandbar Causeway (Chittenden County)
@@ -994,6 +1008,7 @@ Silver Lake - Barnard (84 acres)
 Silver Lake - Georgia (27 acres)
 Silver Lake - Leicester (101 acres)
 Silver Lake State Park
+Silvio O. Conte NWR Nulhegan Basin Headquarters
 Silvio O. Conte NWR--Mollie Beattie Bog
 Silvio O. Conte NWR--Nulhegan Basin Division
 Silvio O. Conte NWR--Peanut Dam Road
@@ -1127,6 +1142,7 @@ Townshend State Park
 Tracy Woods Community Trail
 Trapp Family Lodge
 Tri-Town Water District Plant / Oven Bay
+Trowbridge Crossing Trail
 Tunbridge World's Fair
 Turkey Lane
 Turntable Park
@@ -1158,6 +1174,7 @@ Vermont Center for Ecostudies Office
 Vermont Family Forest--Guthrie Bancroft Property (Restricted Access)
 Vermont State House
 Vermont Woods Studios
+Vermont Youth Conservation Corps
 Vernon Dam (Vermont)
 Vershire Pond - E - Vershire (10 acres)
 Victory Basin IBA
