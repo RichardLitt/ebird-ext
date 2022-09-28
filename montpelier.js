@@ -1,6 +1,7 @@
 const fetch = require('node-fetch')
 const VermontHotspots = require('./data/hotspots.json')
-const eBirdDataAsJSON = require('./montpelierhotspots.json')
+const montpelierHotspotIDs = require('./data/10kmontpelierhotspotids.json')
+const eBirdDataAsJSON = require('./data/montpelierhotspots.json')
 const _ = require('lodash')
 const moment = require('moment')
 const difference = require('compare-latlong')
@@ -103,7 +104,8 @@ async function findMontpelierHotspotNeedsToday (opts) {
   const lng = '-72.5740852'
   const today = moment().format('MM-DD')
   const data = eBirdDataAsJSON
-  const ids = [...new Set(data.map(item => item['Location ID']))]
+  const ids = montpelierHotspotIDs.ids // [...new Set(data.map(item => item['Location ID']))]
+  // console.log(montpelierHotspotIDs.ids, ids)
   const unbirded = []
   ids.forEach(id => {
     data.filter(entry => entry['Location ID'] === id).forEach(entry => {

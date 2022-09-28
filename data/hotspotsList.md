@@ -80,6 +80,7 @@ Bill Sladyk WMA--Hurricane Brook
 Billado Park
 Billings Farm
 Billings Park (local park)
+Bingham Falls Trail
 Birds of Vermont Museum
 Birdseye WMA
 Bittersweet Falls
@@ -209,6 +210,7 @@ Co-op Community Garden and Fields
 Cobb Pond - Derby (27 acres)
 Coggman Pond - West Haven (20 acres)
 Cogman Road / Ghost Hollow Road
+Cohen Park
 Coits Pond - Cabot (40 acres)
 Colby Pond - Plymouth (20 acres)
 Colchester Bog (UVM Natural Area)
@@ -234,7 +236,6 @@ Cow Mountain Pond - Granby (10 acres)
 Cow Pasture
 Cram Rd. Powerline
 Cranberry Meadow Pond - Woodbury (28 acres)
-Crane Brook Conservation Area
 Crane Brook Conservation District
 Creek Rd. floodplain
 Crescent Lake - Sharon (20 acres)
@@ -263,7 +264,9 @@ D & H Rail Trail--West Pawlet to Sawmill Rd.
 DAR State Park
 Danby Pond - Danby (56 acres)
 Daniels Pond - Glover (66 acres)
+Darling State Park / Burke Mt. Summit
 DeForge Hydroelectric Station Recreation Area
+Dead Creek Outlet
 Dead Creek WMA IBA
 Dead Creek WMA IBA--Bird Observatory & banding station
 Dead Creek WMA IBA--Brilyea Access
@@ -365,7 +368,7 @@ Fuller Pond - Strafford (18 acres)
 Gale Meadows WMA and Gale Meadows Pond - Winhall (195 acres)
 Garvey Field
 Gates Pond - Whitingham (30 acres)
-Gateway Park
+Gateway Park / Peace Park
 George Davis (Singing Cedars) Fishing Access
 Georgia Plains Res. - Georgia (19 acres)
 Georgia Rest Area I-89 North Bound
@@ -379,6 +382,7 @@ Gillett Pond - Richmond (30 acres)
 Glastenbury Mountain
 Glen Lake - Castleton (206 acres)
 Goddard Shelter
+Goodsell Ridge Preserve
 Grand Isle Ferry Landing
 Grand Isle State Park
 Granville Gulf Reservation State Forest
@@ -416,6 +420,7 @@ Hardwick Village Forest
 Hardwood Pond - Elmore (44 acres)
 Harriman Pond - Newbury (20 acres)
 Harriman Reservoir - Whitingham (2040 acres)
+Harrison Preserve
 Hartness State Airport
 Hartwell Pond - Albany (16 acres)
 Harveys Lake - Barnet (351 acres)
@@ -688,6 +693,7 @@ Metcalf Pond - Fletcher (81 acres)
 Middle Peak - Worcester Range
 Middlebury College
 Middlebury College--Bird Sanctuary
+Middlebury College--Class of '97 Trail
 Middlebury College--Ralph Myhre Golf Course
 Middlebury Falls
 Middlesex Notch WMA
@@ -718,7 +724,6 @@ Missisquoi Bay Bridge
 Missisquoi NWR IBA
 Missisquoi NWR--Charcoal Creek
 Missisquoi NWR--Dead Creek
-Missisquoi NWR--Dead Creek Outlet
 Missisquoi NWR--Mac's Bend & Jeep Trail
 Missisquoi NWR--Maquam & Black Creek Trails
 Missisquoi NWR--Maquam Bog / Old Railroad Passage
@@ -748,6 +753,7 @@ Mount Abraham summit
 Mount Alice Summit
 Mount Anthony Union Middle School
 Mount Ascutney State Park
+Mount Ascutney State Park--Weathersfield Trail
 Mount Ellen summit
 Mount Haystack Trail, Wilmington, VT
 Mount Independence
@@ -756,7 +762,6 @@ Mount Peg Park - east
 Mount Peg Park - west
 Mount Peg--ridgeline ski trails
 Mount Pleasant Cemetery
-Mountt Ascutney State Park--Weathersfield Trail
 Mt. Ascutney
 Mt. Calvary Annex Cemetery
 Mt. Carmel State Forest
