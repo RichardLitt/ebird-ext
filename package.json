@@ -23,6 +23,7 @@
     "turf": "^3.0.14"
   },
   "scripts": {
-    "norwich": "node norwich.js --input=/Users/richard/Downloads/MyEBirdData.csv"
+    "norwich": "node norwich.js --input=/Users/richard/Downloads/MyEBirdData.csv",
+    "updateHotspots": "sh scripts/updateHotspots.sh"
   }
 }
