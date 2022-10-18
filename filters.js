@@ -184,6 +184,7 @@ function durationFilter (list, opts) {
 }
 
 function completeChecklistFilter (list, opts) {
+  list = (opts.noIncidental) ? list.filter(x => x.Protocol !== 'Incidental') : list
   return (opts.complete) ? list.filter(x => parseInt(x['All Obs Reported']) === 1) : list
 }
 
