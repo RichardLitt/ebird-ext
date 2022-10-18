@@ -5,6 +5,7 @@ const eBirdDataAsJSON = require('./data/montpelierhotspots.json')
 const _ = require('lodash')
 const moment = require('moment')
 const difference = require('compare-latlong')
+const f = require('./filters')
 
 if (process.argv[2] === 'daysYouveBirdedAtHotspot') {
   daysYouveBirdedAtHotspot(process.argv[3])
@@ -63,14 +64,19 @@ function dataForThisWeekInHistory (opts) {
   const unbirdedDates = Array.from({ length: 52 }, (_, i) => i + 1)
 
   // Filter and add all days observed to the chart
-  data.filter(x => x['Location ID'] === opts.id).forEach(x => {
-    const week = moment(x.Date).week()
-    if (observedDates.indexOf(week) === -1) {
-      observedDates.push(week)
-    }
-  })
+  data
+    .filter(x => (x.length !== 0 && x[0]) ? x[0]['Location ID'] === opts.id : false)
+    // Should automatically happen anyway due to data input
+    .filter(x => f.completeChecklistFilter(x, { complete: true, noIncidental: true }))
+    .forEach(x => {
+      const week = moment(x[0].Date).week()
+      if (observedDates.indexOf(week) === -1) {
+        observedDates.push(week)
+      }
+    })
 
   // Last observations are almost certainly not in the downloaded db.
+  // Note - latest observations can be incindental. I can't think of a way around this, except to get all of the checklists from a region
   const lastBirdedWeek = moment(opts.latestObsDt.split(' ')[0]).week()
   if (!observedDates.includes(lastBirdedWeek)) {
     observedDates.push(lastBirdedWeek)
@@ -124,9 +130,12 @@ async function findMontpelierHotspotNeedsToday (opts) {
       d.nextUnbirdedWeek = dataForThisWeekInHistory({ id: d.locId, latestObsDt: d.latestObsDt })
       return d
     })
+    // Don't show hotspots that have been birded
     .filter(d => unbirdedToday.includes(d.locId))
+    // Within a three mile radius
     .filter(d => d.distance < 3)
     .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
+    // Print the results
     .forEach(d => {
       console.log(`${d.latestObsDt.split(' ')[0]}  ${(d.nextUnbirdedWeek) ? d.nextUnbirdedWeek.padEnd(8) : ''.padEnd(8)} ${d.locName.padEnd(50)}`)
     })
