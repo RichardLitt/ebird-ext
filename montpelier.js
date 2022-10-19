@@ -137,7 +137,7 @@ async function findMontpelierHotspotNeedsToday (opts) {
     .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
     // Print the results
     .forEach(d => {
-      console.log(`${d.latestObsDt.split(' ')[0]}  ${(d.nextUnbirdedWeek) ? d.nextUnbirdedWeek.padEnd(8) : ''.padEnd(8)} ${d.locName.padEnd(50)} https://ebird.org/hotspot/${d.locId}`)
+      console.log(`${d.latestObsDt.split(' ')[0]}  ${(d.nextUnbirdedWeek) ? d.nextUnbirdedWeek.padEnd(8) : ''.padEnd(8)} ${d.locName.padEnd(50)} https://ebird.org/hotspot/${d.locId} `)
     })
   console.log('')
 
