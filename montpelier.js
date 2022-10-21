@@ -83,17 +83,20 @@ function dataForThisWeekInHistory (opts) {
   }
 
   const unbirdedWeeks = _.difference(unbirdedDates, observedDates.sort((a, b) => Number(a) - Number(b)))
+  const coveragePercentage = (52 - unbirdedWeeks.length) / 52 * 100
+
+  const obj = {
+    nextUnbirdedWeek: '',
+    coveragePercentage
+  }
   // Returns next unbirded week
-  if (unbirdedWeeks.length === 0) {
-    return ''
-  } else {
+  if (unbirdedWeeks.length !== 0) {
     const nextWeek = unbirdedWeeks.filter(w => w >= moment().week())[0]
     if (moment().week() === nextWeek) {
-      return 'No data'
-    } else {
-      return '' // moment().startOf('year').week(nextWeek).startOf('week').format('YYYY-MM-DD')
+      obj.nextUnbirdedWeek = 'No data'
     }
   }
+  return obj // moment().startOf('year').week(nextWeek).startOf('week').format('YYYY-MM-DD')
 }
 
 /*
@@ -103,8 +106,8 @@ function dataForThisWeekInHistory (opts) {
 */
 async function findMontpelierHotspotNeedsToday (opts) {
   console.log('')
-  console.log('These hotspots have not been birded on this date:')
-  console.log(`Last        Week     ${'Hotspot'.padEnd(50)}`)
+  console.log('These hotspots have not had a complete checklist submitted on this date:')
+  console.log(`Last        Cover    ${'Hotspot (Coverage)'.padEnd(50)}`)
   console.log(`${'-----'.padEnd(72, '-')}`)
   const lat = '44.2587866'
   const lng = '-72.5740852'
@@ -127,7 +130,9 @@ async function findMontpelierHotspotNeedsToday (opts) {
   body
     .map((d) => {
       d.distance = difference.distance(lat, lng, d.lat, d.lng, 'M')
-      d.nextUnbirdedWeek = dataForThisWeekInHistory({ id: d.locId, latestObsDt: d.latestObsDt })
+      const data = dataForThisWeekInHistory({ id: d.locId, latestObsDt: d.latestObsDt })
+      d.nextUnbirdedWeek = data.nextUnbirdedWeek
+      d.coveragePercentage = data.coveragePercentage
       return d
     })
     // Don't show hotspots that have been birded
@@ -137,7 +142,11 @@ async function findMontpelierHotspotNeedsToday (opts) {
     .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
     // Print the results
     .forEach(d => {
-      console.log(`${d.latestObsDt.split(' ')[0]}  ${(d.nextUnbirdedWeek) ? d.nextUnbirdedWeek.padEnd(8) : ''.padEnd(8)} ${d.locName.padEnd(50)} https://ebird.org/hotspot/${d.locId} `)
+      d.locName = d.locName
+        .replace('(Restricted Access)', '')
+        .replace('Cross Vermont Trail--', '')
+        .trim()
+      console.log(`${d.latestObsDt.split(' ')[0]}  ${(d.nextUnbirdedWeek) ? d.nextUnbirdedWeek.padEnd(8) : ''.padEnd(8)} ${(d.locName + ' (' + Math.round(d.coveragePercentage) + '%)').padEnd(40)} https://ebird.org/hotspot/${d.locId} `)
     })
   console.log('')
 
