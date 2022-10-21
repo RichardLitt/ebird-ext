@@ -138,15 +138,19 @@ async function findMontpelierHotspotNeedsToday (opts) {
     // Don't show hotspots that have been birded
     .filter(d => unbirdedToday.includes(d.locId))
     // Within a three mile radius
-    .filter(d => d.distance < 3)
+    .filter(d => d.distance < 10)
     .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
     // Print the results
     .forEach(d => {
       d.locName = d.locName
         .replace('(Restricted Access)', '')
         .replace('Cross Vermont Trail--', '')
+        .replace(' - East Montpelier', '')
+        .replace('-East Montpelier', '')
+        .replace(' - Berlin', '')
+        .replace(/\(\d+ acres\)/i, '')
         .trim()
-      console.log(`${d.latestObsDt.split(' ')[0]}  ${(d.nextUnbirdedWeek) ? d.nextUnbirdedWeek.padEnd(8) : ''.padEnd(8)} ${(d.locName + ' (' + Math.round(d.coveragePercentage) + '%)').padEnd(40)} https://ebird.org/hotspot/${d.locId} `)
+      console.log(`${d.latestObsDt.split(' ')[0]}  ${(d.nextUnbirdedWeek) ? d.nextUnbirdedWeek.padEnd(8) : ''.padEnd(8)} ${(d.locName + ' (' + Math.round(d.coveragePercentage) + '%)').padEnd(42)} https://ebird.org/hotspot/${d.locId} `)
     })
   console.log('')
 
