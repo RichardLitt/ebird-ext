@@ -32,7 +32,8 @@ const parser = csv({
 const allRows = {}
 
 async function analyzeFiles () {
-  const file = 'data/NE-species.csv'
+  // const file = 'data/NE-species.csv'
+  const file = 'WA-species.csv'
   console.log(`Analyzing ${file}.`)
   await runFile(file)
   console.log(`Analyzed ${file}.`)

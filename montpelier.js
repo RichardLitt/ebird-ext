@@ -1,17 +1,103 @@
 const fetch = require('node-fetch')
 const VermontHotspots = require('./data/hotspots.json')
-const montpelierHotspotIDs = require('./data/10kmontpelierhotspotids.json')
-const eBirdDataAsJSON = require('./data/montpelierhotspots.json')
+const eBirdDataAsJSON = require('./data/washingtonHotspots.json')
 const _ = require('lodash')
 const moment = require('moment')
 const difference = require('compare-latlong')
 const f = require('./filters')
 
+let opts = {}
+
 if (process.argv[2] === 'daysYouveBirdedAtHotspot') {
   daysYouveBirdedAtHotspot(process.argv[3])
+} else if (process.argv[2] && process.argv[2] === 'ids') {
+  // Should be done programmatically
+  opts = {
+    miles: 10,
+    // Rebecca
+    // lat: '44.1341227',
+    // lng: '-72.5339384'
+    // Ben
+    // lat: '35.8040346',
+    // lng: '-79.1351467'
+    // Montpelier
+    lat: '44.2587866',
+    lng: '-72.5740852'
+  }
+  getIdsFromRadius(opts)
 } else {
-  findMontpelierHotspotNeedsToday()
+  opts = {
+    miles: 10,
+    // Rebecca
+    // lat: '44.1341227',
+    // lng: '-72.5339384'
+    // Montpelier
+    lat: '44.2587866',
+    lng: '-72.5740852'
+  }
+  // console.log(process.argv[2].split(','))
+  if (process.argv[2] && process.argv[2].split(',').length === 2) {
+    opts.lat = process.argv[2].split(',')[0]
+    opts.lng = process.argv[2].split(',')[1]
+  }
+
+  findMontpelierHotspotNeedsToday(opts)
 }
+
+async function getChecklist (checklistId) {
+  // curl --location -g --request GET 'https://api.ebird.org/v2/product/checklist/view/{{subId}}' \
+  let checklist = await fetch(`https://api.ebird.org/v2/product/checklist/view/${checklistId}`,
+    { method: 'GET', headers: { 'X-eBirdApiToken': 'a6ebaopct2l3' } })
+  checklist = JSON.parse(await checklist.text())
+  console.log(checklist)
+}
+
+// getChecklist('S121622621')
+
+// L19107474
+
+// ON HOLD - This entire function is on hold. On some weeks, it could ask for as many as 7*25*x hits to the db, which is likely too many.
+// Sucks, because I want it to work.
+async function getRecentObs (id) {
+  // Minimum is one, which counts for today.
+  const daysToGet = moment().diff(moment().startOf('week'), 'days') + 1
+  const datesToGet = []
+  for (let step = 0; step < daysToGet; step++) {
+    datesToGet.push(moment().subtract(step, 'days'))
+  }
+
+  // Actually, should only happen once
+  // For each days to get, find the date, and get the chcklists for that date
+  // Add checklists to a giant list of checklists
+  // TODO Replace dummy data
+  const checklists = [] // require('./test.json')
+  // // console.log(`'https://api.ebird.org/v2/data/obs/KZ/recent?r=${tenIds.join(',')}&back=${daysToGet}`)
+
+  await datesToGet.forEach(async date => {
+    console.log(`https://api.ebird.org/v2/product/lists/${id}/${moment(date).format('YYYY')}/${moment(date).format('MM')}/${moment(date).format('DD')}`)
+    let recentChecklists = await fetch(`https://api.ebird.org/v2/product/lists/${id}/${moment(date).format('YYYY')}/${moment(date).format('MM')}/${moment(date).format('DD')}`,
+      { method: 'GET', headers: { 'X-eBirdApiToken': 'a6ebaopct2l3' } })
+    recentChecklists = JSON.parse(await recentChecklists.text())
+    // console.log(recentChecklists)
+    await recentChecklists.forEach(async checklist => {
+      checklist = await fetch(`https://api.ebird.org/v2/product/checklist/view/${checklist.subID}`,
+        { method: 'GET', headers: { 'X-eBirdApiToken': 'a6ebaopct2l3' } })
+      checklist = JSON.parse(await checklist.text())
+      console.log(checklist)
+      checklists.push(checklist)
+    })
+  })
+
+  const hotspotIdsWithCompleteChecklistsThisWeek = []
+
+  checklists.forEach(checklist => {
+    if (checklist.allObsReported) {
+      hotspotIdsWithCompleteChecklistsThisWeek.push(checklist.locId)
+    }
+  })
+  return hotspotIdsWithCompleteChecklistsThisWeek
+}
+
 
 async function daysYouveBirdedAtHotspot (opts) {
   if (!opts.id) {
@@ -30,7 +116,7 @@ You have not birded in ${name} on:`)
   const unbirdedDates = {}
 
   // Create keys in observedDates for months
-  Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0')).forEach(key => observedDates[key] = [])
+  Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0')).forEach(key => { observedDates[key] = [] })
 
   // Filter and add all days observed to the chart
   // EDIT: this breaks for personal locations
@@ -99,37 +185,60 @@ function dataForThisWeekInHistory (opts) {
   return obj // moment().startOf('year').week(nextWeek).startOf('week').format('YYYY-MM-DD')
 }
 
+async function getIdsFromRadius (opts) {
+  const response = await fetch(`https://api.ebird.org/v2/ref/hotspot/geo?lat=${opts.lat}&lng=${opts.lng}&dist=${opts.miles}&fmt=json`)
+  const body = JSON.parse(await response.text())
+
+  // Get all of the IDs in the area, not just what is in your data.
+  const ids = body.map(d => d.locId)
+
+  ids.forEach(id => {
+    console.log(id)
+  })
+}
+
 /*
   A really useful function that won't be useful for anyone else - given the local
   hotspots in my area, which ones should I go to today to maximally fill out
   those hotspots?
 */
 async function findMontpelierHotspotNeedsToday (opts) {
+  // Locally stored observsations
+  const data = eBirdDataAsJSON
+
+  const today = moment().format('MM-DD')
+  // Get data from eBird
+  const response = await fetch(`https://api.ebird.org/v2/ref/hotspot/geo?lat=${opts.lat}&lng=${opts.lng}&dist=${opts.miles}&fmt=json`)
+  const body = JSON.parse(await response.text())
+
+  // Get all of the IDs in the area, not just what is in your data.
+  const ids = body.map(d => d.locId)
+
+  // Begin printout
   console.log('')
   console.log('These hotspots have not had a complete checklist submitted on this date:')
   console.log(`Last        Cover    ${'Hotspot (Coverage)'.padEnd(50)}`)
   console.log(`${'-----'.padEnd(72, '-')}`)
-  const lat = '44.2587866'
-  const lng = '-72.5740852'
-  const today = moment().format('MM-DD')
-  const data = eBirdDataAsJSON
-  const ids = montpelierHotspotIDs.ids // [...new Set(data.map(item => item['Location ID']))]
-  // console.log(montpelierHotspotIDs.ids, ids)
+
+  // Make a list of IDs of unbirded hotspots today
   const unbirded = []
   ids.forEach(id => {
-    data.filter(entry => entry['Location ID'] === id).forEach(entry => {
-      if (entry.Date.slice(5) === today && !unbirded.includes(id)) {
-        unbirded.push(id)
-      }
-    })
+    data
+      // Probably a mark of a poor data structure, here, tbh. Keeps tripping me up.
+      .filter(x => (x[0]))
+      .map(x => x[0])
+      .filter(entry => entry['Location ID'] === id)
+      .forEach(entry => {
+        if (entry.Date.slice(5) === today && !unbirded.includes(id)) {
+          unbirded.push(id)
+        }
+      })
   })
   const unbirdedToday = ids.filter(x => !unbirded.includes(x))
-  const response = await fetch(`https://api.ebird.org/v2/ref/hotspot/geo?lat=${lat}&lng=${lng}&dist=10&fmt=json`)
-  const body = JSON.parse(await response.text())
 
   body
     .map((d) => {
-      d.distance = difference.distance(lat, lng, d.lat, d.lng, 'M')
+      d.distance = difference.distance(opts.lat, opts.lng, d.lat, d.lng, 'M')
       const data = dataForThisWeekInHistory({ id: d.locId, latestObsDt: d.latestObsDt })
       d.nextUnbirdedWeek = data.nextUnbirdedWeek
       d.coveragePercentage = data.coveragePercentage
@@ -137,11 +246,12 @@ async function findMontpelierHotspotNeedsToday (opts) {
     })
     // Don't show hotspots that have been birded
     .filter(d => unbirdedToday.includes(d.locId))
-    // Within a three mile radius
-    .filter(d => d.distance < 10)
+    // Within an X mile radius
+    .filter(d => d.distance < opts.miles)
     .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
     // Print the results
-    .forEach(d => {
+    .forEach(async d => {
+      // Clean up the Hotspot names a bit
       d.locName = d.locName
         .replace('(Restricted Access)', '')
         .replace('Cross Vermont Trail--', '')
@@ -152,6 +262,7 @@ async function findMontpelierHotspotNeedsToday (opts) {
         .trim()
       console.log(`${d.latestObsDt.split(' ')[0]}  ${(d.nextUnbirdedWeek) ? d.nextUnbirdedWeek.padEnd(8) : ''.padEnd(8)} ${(d.locName + ' (' + Math.round(d.coveragePercentage) + '%)').padEnd(42)} https://ebird.org/hotspot/${d.locId} `)
     })
+
   console.log('')
 
   function hasBerlinPondBeenBirdedThisWeeK () {

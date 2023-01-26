@@ -68,11 +68,10 @@ const parser = csv({
   ]
 })
 
-const areas = process.argv[2] // 'regions' or 'towns'
+const areas = process.argv[2] // 'regions', 'towns', '150', '250'
 const files = [process.argv[3]]
-const run150 = process.argv[4]
 
-if (areas !== 'towns' && areas !== 'regions' && areas !== 'json') {
+if (!['regions', 'towns', '150', '250', 'json'].includes(areas)) {
   console.log('Specify towns, regions, or json please.')
   console.log('Example: node readEBirdDb.js regions /Users/richard/Downloads/ebd_US-VT_relJan-2022/counties/test-050.txt')
   console.log()
@@ -171,7 +170,7 @@ async function rowsToJSON (file, string) {
     const shimmedRows = []
     fs.createReadStream(file)
       .pipe(parser)
-      .on('data', (row) => shimmedRows.push(shimData(row)))
+      .on('data', (row) => shimmedRows.push(f.completeChecklistFilter([shimData(row)], { complete: true, noIncidental: true })))
       .on('error', (e) => console.log('BONK', e))
       .on('end', () => {
         fs.writeFile('results.json', JSON.stringify(shimmedRows), 'utf8', (err) => {
@@ -308,6 +307,96 @@ async function runFile (file, string) {
   })
 }
 
+
+/// Get records of people who've seen 250 in a year
+async function run250Query (file, string) {
+  return new Promise(function (resolve, reject) {
+    const region250 = {}
+    fs.createReadStream(file)
+      .pipe(parser)
+      .on('data', (row) => {
+        // Define some variables that won't be in the output but help you sort
+        const year = row['OBSERVATION DATE'].split('-')[0]
+        const species = {
+          'Scientific Name': row['SCIENTIFIC NAME'],
+          'Common Name': row['COMMON NAME']
+        }
+        // TODO Adjust to use four-letter banding codes instead.
+        const isSpecies = f.removeSpuh([species]).length
+
+        const observer = row['OBSERVER ID']
+        // Create the data object: All observers, sorted by year, in all areas
+        if (!(year in region250)) {
+          region250[year] = {}
+        }
+        if (!(observer in region250[year])) {
+          region250[year][observer] = {
+            species: [banding.commonNameToCode(species['Common Name'])],
+            total: (banding.isBandingCode(banding.commonNameToCode(species['Common Name']))) ? 1 : 0,
+            sampleChecklistId: row['SAMPLING EVENT IDENTIFIER']
+          }
+        }
+        // Add unique species (not spuhs) to the observer entries
+        if (!(region250[year][observer].species.includes(banding.commonNameToCode(species['Common Name'])))) {
+          region250[year][observer].species.push(banding.commonNameToCode(species['Common Name']))
+          if (isSpecies) {
+            if (banding.isBandingCode(banding.commonNameToCode(species['Common Name']))) {
+              const noSpuhs = region250[year][observer].species.filter(s => {
+                const spuhed = f.removeSpuh([{
+                  'Scientific Name': banding.codeToScientificName(s)
+                }])
+                return !!(spuhed.length)
+              })
+              region250[year][observer].total = noSpuhs.length
+            }
+          }
+        }
+      })
+      .on('error', (e) => {
+        console.log('BONK', e)
+      })
+      .on('end', () => {
+
+        const filteredYear = function (obj, year, filterValue) {
+          return Object.keys(obj[year]).reduce((res, key) => {
+            return (
+              (obj[year][key].total && obj[year][key].total > filterValue)
+                ? res[key] = obj[year][key]
+                : false
+                , res
+            )
+          }, {})
+        }
+
+        // Arguably, I could have done this instead of the above.
+        const filteredRegion = function (obj, filterValue) {
+          const newObj = {}
+          Object.keys(obj).forEach(year => {
+            const observers = filteredYear(obj, year, filterValue)
+            if (!_.isEmpty(observers)) {
+              newObj[year] = observers
+            }
+          })
+          return newObj
+        }
+
+        const newObj = filteredRegion(region250, 250)
+
+        // After getting this, sort to show only >150 species, or the top three for a region that year.
+        // Also, only save the banding codes for species?
+        fs.writeFile(`vt-250-${string}.json`, JSON.stringify(newObj), 'utf8', (err) => {
+          if (err) {
+            console.log(err)
+            reject(err)
+          } else {
+            console.log(`vt-250-${string}.json written successfully.`)
+            resolve()
+          }
+        })
+      })
+  })
+}
+
 async function run150Query (file, string) {
   return new Promise(function (resolve, reject) {
     const region150 = {}
@@ -423,8 +512,10 @@ async function analyzeFiles () {
     console.log(`Analyzing ${file}.`)
     if (areas === 'json') {
       await rowsToJSON(file, string)
-    } else if (run150) {
+    } else if (areas === '150') {
       await run150Query(file, string)
+    } else if (areas === '250') {
+      await run250Query(file, string)
     } else {
       await runFile(file, string)
     }
