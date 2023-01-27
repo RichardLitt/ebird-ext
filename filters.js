@@ -184,8 +184,10 @@ function durationFilter (list, opts) {
 }
 
 function completeChecklistFilter (list, opts) {
-  list = (opts.noIncidental) ? list.filter(x => x.Protocol !== 'Incidental') : list
-  return (opts.complete) ? list.filter(x => parseInt(x['All Obs Reported']) === 1) : list
+  // This isn't as clear cut as it should be. There are other non-complete formats: Historical, etc.
+  list = (opts.noIncidental) ? list.filter(x => !['Incidental', 'Historical'].includes(x.Protocol)) : list
+  list = (opts.complete) ? list.filter(x => [1, '1'].includes(parseInt(x['All Obs Reported']))) : list
+  return list
 }
 
 function orderByDate (arr) {
