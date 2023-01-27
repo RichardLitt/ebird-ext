@@ -1,8 +1,8 @@
 const fetch = require('node-fetch')
 const VermontHotspots = require('./data/hotspots.json')
-const eBirdDataAsJSON = require('./data/washingtonHotspots.json')
+// const eBirdDataAsJSON = require('./data/washingtonHotspots.json')
 // TODO Implement this, instead
-// const hotspotDates = require('./data/hotspotsDates.json')
+const hotspotDates = require('./data/hotspotsDates.json')
 const _ = require('lodash')
 const moment = require('moment')
 const difference = require('compare-latlong')
@@ -201,30 +201,35 @@ function dataForThisWeekInHistory (opts) {
     console.log('Get the ID for this location first, manually. Send it as --id.')
   }
 
-  const data = eBirdDataAsJSON
-  const observedDates = []
+  const data = hotspotDates
+  const observedWeeks = []
   const unbirdedDates = Array.from({ length: 52 }, (_, i) => i + 1)
 
   // Filter and add all days observed to the chart
-  data
-    .filter(x => (x.length !== 0 && x[0]) ? x[0]['Location ID'] === opts.id : false)
-    // Should automatically happen anyway due to data input
-    .filter(x => f.completeChecklistFilter(x, { complete: true, noIncidental: true }))
-    .forEach(x => {
-      const week = moment(x[0].Date).week()
-      if (observedDates.indexOf(week) === -1) {
-        observedDates.push(week)
-      }
-    })
+  if (data[opts.id]) {
+    Object.keys(data[opts.id]['Dates Birded'])
+      .forEach(month => {
+        data[opts.id]['Dates Birded'][month].forEach(date => {
+          // Why Date uses a month index is totally beyond me.
+          const dateString = new Date(moment().format('YYYY'), Number(month)-1, date)
+          const week = moment(dateString).week()
+          if (observedWeeks.indexOf(week) === -1) {
+            observedWeeks.push(week)
+          }
+        })
+      })
+  }
 
+  // console.log(data['L7487086'])
+  
   // Last observations are almost certainly not in the downloaded db.
   // Note - latest observations can be incindental. I can't think of a way around this, except to get all of the checklists from a region
   const lastBirdedWeek = moment(opts.latestObsDt.split(' ')[0]).week()
-  if (!observedDates.includes(lastBirdedWeek)) {
-    observedDates.push(lastBirdedWeek)
+  if (!observedWeeks.includes(lastBirdedWeek)) {
+    observedWeeks.push(lastBirdedWeek)
   }
 
-  const unbirdedWeeks = _.difference(unbirdedDates, observedDates.sort((a, b) => Number(a) - Number(b)))
+  const unbirdedWeeks = _.difference(unbirdedDates, observedWeeks.sort((a, b) => Number(a) - Number(b)))
   const coveragePercentage = (52 - unbirdedWeeks.length) / 52 * 100
 
   const obj = {
@@ -259,11 +264,12 @@ async function getIdsFromRadius (opts) {
   those hotspots?
 */
 async function findMontpelierHotspotNeedsToday (opts) {
-  // Locally stored observsations
-  const data = eBirdDataAsJSON
+  const data = hotspotDates
 
   const today = moment().format('MM-DD')
-  // Get data from eBird
+  const month = moment().format('MM')
+  const todayDate = moment().format('DD')
+  // Get data from eBird. Note that this still depends on a local hotspot dates file, which needs to be got from the database and then shimmed.
   const response = await fetch(`https://api.ebird.org/v2/ref/hotspot/geo?lat=${opts.lat}&lng=${opts.lng}&dist=${opts.miles}&fmt=json`)
   const body = JSON.parse(await response.text())
 
@@ -276,20 +282,17 @@ async function findMontpelierHotspotNeedsToday (opts) {
   console.log(`Last        Cover    ${'Hotspot (Coverage)'.padEnd(50)}`)
   console.log(`${'-----'.padEnd(72, '-')}`)
 
-  // Make a list of IDs of unbirded hotspots today
+  // Make a list of IDs of birded hotspots today
   const birded = []
   ids.forEach(id => {
-    data
-      // Probably a mark of a poor data structure, here, tbh. Keeps tripping me up.
-      .filter(x => (x[0]))
-      .map(x => x[0])
-      .filter(entry => entry['Location ID'] === id)
-      .forEach(entry => {
-        if (entry.Date.slice(5) === today && !birded.includes(id)) {
-          birded.push(id)
-        }
-      })
+    if (data[id]) {
+      if (data[id]['Dates Birded'][month].includes(Number(todayDate)) && !birded.includes(id)) {
+        birded.push(id)
+      }
+    }
   })
+
+  // Then find the unbirded ones
   const unbirdedToday = ids.filter(x => !birded.includes(x))
 
   body
