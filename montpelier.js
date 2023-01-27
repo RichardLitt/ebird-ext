@@ -1,10 +1,13 @@
 const fetch = require('node-fetch')
 const VermontHotspots = require('./data/hotspots.json')
 const eBirdDataAsJSON = require('./data/washingtonHotspots.json')
+// TODO Implement this, instead
+// const hotspotDates = require('./data/hotspotsDates.json')
 const _ = require('lodash')
 const moment = require('moment')
 const difference = require('compare-latlong')
 const f = require('./filters')
+const fs = require('fs')
 
 let opts = {}
 
@@ -42,6 +45,59 @@ if (process.argv[2] === 'daysYouveBirdedAtHotspot') {
   }
 
   findMontpelierHotspotNeedsToday(opts)
+}
+
+/* I needed to make this because I made a massive JSON file of all observations in every hotspot,
+which was too much for this scripts memory to handle. Instead, this is a much smaller output that 
+should cover all of the dates purposes here.
+
+Turn this on when you use it. Note: I didn't create washingtonHotspots.json this time, so I don't
+know how or when I created it. So, the input for this is vague, which means it may need fixing when
+you eventually decide to repopulate your hotspot information. The variable for it is just 'ebirdDataAsJSON',
+which probably gives a hint in to how it was gotten. It looks like [[{"Submission ID": ..., ...}]] and so on - 
+So, a massive array of arrays of single dictionary entries. Weird format.
+*/
+async function shimFilterHotspotJSON () {
+  const data = eBirdDataAsJSON
+  const hotspots = {}
+
+  data
+    // This may be causing some bugs below. 
+    .filter(x => {
+      const entry = f.completeChecklistFilter(x, { complete: true, noIncidental: true })
+      if (entry[0]) {
+        return true
+      }
+    })
+    .map(x => x[0])
+    .map(entry => {
+      return {
+        Location: entry.Location,
+        'Location ID': entry['Location ID'],
+        Date: entry.Date
+      }
+    })
+    .map(entry => {
+      if (!hotspots[entry['Location ID']]) {
+        hotspots[entry['Location ID']] = {
+          Location: entry['Location'],
+          'Dates Birded': {}
+        }
+        Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0')).forEach(key => { hotspots[entry['Location ID']]['Dates Birded'][key] = [] })
+      }
+      const [month, day] = entry.Date.split('-').slice(1)
+      if (hotspots[entry['Location ID']]['Dates Birded'][month].indexOf(Number(day)) === -1) {
+        hotspots[entry['Location ID']]['Dates Birded'][month].push(Number(day))
+      }
+    })
+
+    fs.writeFile(`hotspotsDates.json`, JSON.stringify(hotspots), 'utf8', (err) => {
+      if (err) {
+        console.log(err)
+      } else {
+        console.log(`hotspots.json written successfully.`)
+      }
+    })
 }
 
 async function getChecklist (checklistId) {
