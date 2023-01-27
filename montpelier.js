@@ -279,7 +279,7 @@ async function findMontpelierHotspotNeedsToday (opts) {
   // Begin printout
   console.log('')
   console.log('These hotspots have not had a complete checklist submitted on this date:')
-  console.log(`Last        Cover    ${'Hotspot (Coverage)'.padEnd(50)}`)
+  console.log(`Last             Cover      ${'Hotspot (Coverage)'.padEnd(50)}`)
   console.log(`${'-----'.padEnd(72, '-')}`)
 
   // Make a list of IDs of birded hotspots today
@@ -319,7 +319,7 @@ async function findMontpelierHotspotNeedsToday (opts) {
         .replace(' - Berlin', '')
         .replace(/\(\d+ acres\)/i, '')
         .trim()
-      console.log(`${d.latestObsDt.split(' ')[0]}  ${(d.nextUnbirdedWeek) ? d.nextUnbirdedWeek.padEnd(8) : ''.padEnd(8)} ${(d.locName + ' (' + Math.round(d.coveragePercentage) + '%)').padEnd(42)} https://ebird.org/hotspot/${d.locId} `)
+      console.log(`${d.latestObsDt.split(' ')[0]}  ${(d.nextUnbirdedWeek) ? d.nextUnbirdedWeek.padEnd(10) : ''.padEnd(14)} ${(d.locName + ' (' + Math.round(d.coveragePercentage) + '%)').padEnd(42)} https://ebird.org/hotspot/${d.locId} `)
     })
 
   console.log('')
