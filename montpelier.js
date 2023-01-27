@@ -114,45 +114,45 @@ async function getChecklist (checklistId) {
 
 // ON HOLD - This entire function is on hold. On some weeks, it could ask for as many as 7*25*x hits to the db, which is likely too many.
 // Sucks, because I want it to work.
-async function getRecentObs (id) {
-  // Minimum is one, which counts for today.
-  const daysToGet = moment().diff(moment().startOf('week'), 'days') + 1
-  const datesToGet = []
-  for (let step = 0; step < daysToGet; step++) {
-    datesToGet.push(moment().subtract(step, 'days'))
-  }
+// async function getRecentObs (id) {
+//   // Minimum is one, which counts for today.
+//   const daysToGet = moment().diff(moment().startOf('week'), 'days') + 1
+//   const datesToGet = []
+//   for (let step = 0; step < daysToGet; step++) {
+//     datesToGet.push(moment().subtract(step, 'days'))
+//   }
 
-  // Actually, should only happen once
-  // For each days to get, find the date, and get the chcklists for that date
-  // Add checklists to a giant list of checklists
-  // TODO Replace dummy data
-  const checklists = [] // require('./test.json')
-  // // console.log(`'https://api.ebird.org/v2/data/obs/KZ/recent?r=${tenIds.join(',')}&back=${daysToGet}`)
+//   // Actually, should only happen once
+//   // For each days to get, find the date, and get the chcklists for that date
+//   // Add checklists to a giant list of checklists
+//   // TODO Replace dummy data
+//   const checklists = [] // require('./test.json')
+//   // // console.log(`'https://api.ebird.org/v2/data/obs/KZ/recent?r=${tenIds.join(',')}&back=${daysToGet}`)
 
-  await datesToGet.forEach(async date => {
-    console.log(`https://api.ebird.org/v2/product/lists/${id}/${moment(date).format('YYYY')}/${moment(date).format('MM')}/${moment(date).format('DD')}`)
-    let recentChecklists = await fetch(`https://api.ebird.org/v2/product/lists/${id}/${moment(date).format('YYYY')}/${moment(date).format('MM')}/${moment(date).format('DD')}`,
-      { method: 'GET', headers: { 'X-eBirdApiToken': 'a6ebaopct2l3' } })
-    recentChecklists = JSON.parse(await recentChecklists.text())
-    // console.log(recentChecklists)
-    await recentChecklists.forEach(async checklist => {
-      checklist = await fetch(`https://api.ebird.org/v2/product/checklist/view/${checklist.subID}`,
-        { method: 'GET', headers: { 'X-eBirdApiToken': 'a6ebaopct2l3' } })
-      checklist = JSON.parse(await checklist.text())
-      console.log(checklist)
-      checklists.push(checklist)
-    })
-  })
+//   await datesToGet.forEach(async date => {
+//     console.log(`https://api.ebird.org/v2/product/lists/${id}/${moment(date).format('YYYY')}/${moment(date).format('MM')}/${moment(date).format('DD')}`)
+//     let recentChecklists = await fetch(`https://api.ebird.org/v2/product/lists/${id}/${moment(date).format('YYYY')}/${moment(date).format('MM')}/${moment(date).format('DD')}`,
+//       { method: 'GET', headers: { 'X-eBirdApiToken': 'a6ebaopct2l3' } })
+//     recentChecklists = JSON.parse(await recentChecklists.text())
+//     // console.log(recentChecklists)
+//     await recentChecklists.forEach(async checklist => {
+//       checklist = await fetch(`https://api.ebird.org/v2/product/checklist/view/${checklist.subID}`,
+//         { method: 'GET', headers: { 'X-eBirdApiToken': 'a6ebaopct2l3' } })
+//       checklist = JSON.parse(await checklist.text())
+//       console.log(checklist)
+//       checklists.push(checklist)
+//     })
+//   })
 
-  const hotspotIdsWithCompleteChecklistsThisWeek = []
+//   const hotspotIdsWithCompleteChecklistsThisWeek = []
 
-  checklists.forEach(checklist => {
-    if (checklist.allObsReported) {
-      hotspotIdsWithCompleteChecklistsThisWeek.push(checklist.locId)
-    }
-  })
-  return hotspotIdsWithCompleteChecklistsThisWeek
-}
+//   checklists.forEach(checklist => {
+//     if (checklist.allObsReported) {
+//       hotspotIdsWithCompleteChecklistsThisWeek.push(checklist.locId)
+//     }
+//   })
+//   return hotspotIdsWithCompleteChecklistsThisWeek
+// }
 
 
 async function daysYouveBirdedAtHotspot (opts) {
@@ -277,7 +277,7 @@ async function findMontpelierHotspotNeedsToday (opts) {
   console.log(`${'-----'.padEnd(72, '-')}`)
 
   // Make a list of IDs of unbirded hotspots today
-  const unbirded = []
+  const birded = []
   ids.forEach(id => {
     data
       // Probably a mark of a poor data structure, here, tbh. Keeps tripping me up.
@@ -285,12 +285,12 @@ async function findMontpelierHotspotNeedsToday (opts) {
       .map(x => x[0])
       .filter(entry => entry['Location ID'] === id)
       .forEach(entry => {
-        if (entry.Date.slice(5) === today && !unbirded.includes(id)) {
-          unbirded.push(id)
+        if (entry.Date.slice(5) === today && !birded.includes(id)) {
+          birded.push(id)
         }
       })
   })
-  const unbirdedToday = ids.filter(x => !unbirded.includes(x))
+  const unbirdedToday = ids.filter(x => !birded.includes(x))
 
   body
     .map((d) => {
