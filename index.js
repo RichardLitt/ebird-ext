@@ -345,6 +345,34 @@ async function regions (opts) {
   // fs.writeFile('vt_region_counts.json', JSON.stringify(regions), 'utf8')
 }
 
+
+/* node cli.js count -i=MyEBirdData.csv --town="Fayston" --state=Vermont
+As this is set up, it will currently return only the first time I saw species in each town provided, in Vermont */
+async function state (opts) {
+  // TODO Add in other states
+  opts.state = 'Vermont'
+  const dateFormat = helpers.parseDateFormat('day')
+  const data = f.orderByDate(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts)
+
+  const newObj = {}
+
+  newObj.species = []
+  newObj.speciesByDate = countUniqueSpecies(data, dateFormat)
+  _.sortBy(f.createPeriodArray(newObj.speciesByDate), 'Date').forEach((e) => {
+    e.Species.forEach((specie) => {
+      newObj.species.push(specie['Common Name'])
+    })
+  })
+
+  console.log(newObj.species.length)
+  Object.keys(newObj.speciesByDate).forEach(d => {
+    console.log(`${d}: ${newObj.speciesByDate[d].map(submission => submission['Common Name']).join(', ')}.`)
+  })
+  // console.log(newObj)
+  // return newObj
+  // fs.writeFile('vt_region_counts.json', JSON.stringify(regions), 'utf8')
+}
+
 async function radialSearch (opts) {
   const dateFormat = helpers.parseDateFormat('day')
   const radius = opts.distance || 10 // miles
@@ -864,6 +892,7 @@ module.exports = {
   regions,
   towns,
   counties,
+  state,
   winterFinch,
   vt251,
   subspecies,

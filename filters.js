@@ -166,6 +166,13 @@ function locationFilter (list, opts) {
 }
 
 function dateFilter (list, opts) {
+  // Currently not documented
+  if (opts.after) {
+    return list.filter(x => {
+      return moment(x.Date, helpers.momentFormat(x.Date)).isAfter(moment(opts.after))
+    })
+  }
+
   // TODO Make month and day work
   if (!opts.year) {
     return list

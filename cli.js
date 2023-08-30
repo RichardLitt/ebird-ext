@@ -23,6 +23,7 @@ const cli = meow(`
     towns         Show your town counts
     regions       Show your region counts
     counties      Show your counties counts
+    state         Show your state counts
     rare          Show which rarities to report to records committee
     251           Show 251
     winterFinch   Show winterFinch needs
@@ -40,6 +41,7 @@ const cli = meow(`
     --state     Search by state
     --county    Search by county
     --year      Limit results to a given year
+    --after     Limit results to after a given date
     --town      Search by towns in Vemront
     --region    Search by biophysical regions in Vermont
     --list, -l  List all of the species
@@ -104,6 +106,8 @@ async function run () {
     await main.regions(cli.flags)
   } else if (cli.input[0] === 'counties') {
     await main.counties(cli.flags)
+  } else if (cli.input[0] === 'state') {
+    await main.state(cli.flags)
   } else if (cli.input[0] === 'winterFinch') {
     await main.winterFinch(cli.flags)
   } else if (cli.input[0] === 'rare') {
