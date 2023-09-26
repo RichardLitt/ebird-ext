@@ -172,7 +172,10 @@ async function rowsToJSON (file, opts) {
       .pipe(parser)
       .on('data', (row) => {
         if (opts.complete) {
-          shimmedRows.push(f.completeChecklistFilter([shimData(row)], { complete: true, noIncidental: true }))
+          const filteredRow = f.completeChecklistFilter([shimData(row)], { complete: true, noIncidental: true });
+          if (filteredRow.length) {
+            shimmedRows.push(filteredRow[0]);
+          }
         } else {
           shimmedRows.push(shimData(row))
         }
@@ -517,7 +520,7 @@ async function analyzeFiles () {
     }
     console.log(`Analyzing ${file}.`)
     if (areas === 'json') {
-      await rowsToJSON(file, {complete: false})
+      await rowsToJSON(file, {complete: true})
     } else if (areas === '150') {
       await run150Query(file, string)
     } else if (areas === '250') {

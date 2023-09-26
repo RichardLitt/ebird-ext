@@ -1,6 +1,6 @@
 const fetch = require('node-fetch')
 const VermontHotspots = require('./data/hotspots.json')
-// const eBirdDataAsJSON = require('./data/montpelierhotspots.json')
+// const eBirdDataAsJSON = require('./data/washCoHotspotObservations.json')
 // TODO Implement this, instead
 const hotspotDates = require('./data/hotspotsDates.json')
 const _ = require('lodash')
