@@ -53,7 +53,7 @@ try {
 
     default:
       opts = {
-        miles: 10,
+        miles: 12,
         lat: '44.2587866',
         lng: '-72.5740852'
       };
