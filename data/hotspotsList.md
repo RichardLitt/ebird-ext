@@ -46,6 +46,7 @@ Barbers Lake - Pownal (19 acres)
 Barnes Camp Boardwalk
 Barr Hill Natural Area
 Barre Town Forest
+Barre Town Forest--Quarries Disc Golf Course
 Barton River Marshes
 Bathtub Rock Rd.
 Battell Trail
@@ -98,6 +99,7 @@ Blueberry Hill, Goshen
 Blueberry Lake - Warren (48 acres)
 Bob Collins Conservation Farm
 Bogburn Trails
+Bolton Dome
 Bolton Valley Nordic Back-Country Area
 Bolton Valley Resort
 Bombardier Park West
@@ -143,6 +145,7 @@ Bullhead Pond
 Bullis Pond - Franklin (11 acres)
 Burbee Pond - Windham (50 acres)
 Burlington Bike Path - Coast Guard Station to North Beach
+Burlington Country Club
 Burlington International Airport
 Burlington Intervale
 Burlington Waterfront Park and Breakwater
@@ -153,6 +156,7 @@ Burr Pond - Sudbury (85 acres)
 Burrows Trail
 Burton Island State Park
 Butler Lodge Trail
+Butterfield Mountain
 Butterfield Ridges Trail
 Buttermilk Falls
 Butternut Hill Natural Area
@@ -165,6 +169,7 @@ Cady Hill Forest
 Calahan Park
 Calendar Brook WMA
 Calvin Coolidge Historic Site
+Cambridge Junction Rail Trail Park
 Camel's Hump State Forest (South)
 Camels Hump State Park--Monroe Trail
 Camels Hump State Park--Summit
@@ -231,9 +236,10 @@ Cooley Glen Trail
 Coolidge State Park
 Cornwall Swamp WMA--North
 Cornwall Swamp WMA--South, Swamp Road
-Cota Park
+Cota Field / Creekside Trail
 Cow Mountain Pond - Granby (10 acres)
 Cow Pasture
+Craftsbury Academy Woodlot
 Cram Rd. Powerline
 Cranberry Meadow Pond - Woodbury (28 acres)
 Crane Brook Conservation District
@@ -249,6 +255,7 @@ Crosstown Trail
 Crystal Beach
 Crystal Lake - Barton (763 acres)
 Crystal Lake State Park
+Currier Park
 Curtis Pond - Calais (72 acres)
 Cutler Memorial Forest
 Cutler Pond - Highgate (25 acres)
@@ -303,13 +310,14 @@ Dutton Pines State Park
 Dutton Pond - Maidstone (12 acres)
 Eagle Mountain Natural Area
 Eagle Point WMA
+East Creek & East Creek WMA--Mt. Independence Road Access
 East Creek & East Creek WMA--north unit
 East Creek WMA--south unit
 East End Park
 East Face and Toll road
 East Hill WMA
 East Long Pond - Woodbury (188 acres)
-East Montpelier Trails
+East Montpelier Town Forest
 East Woods (UVM Natural Area)
 Echo Lake (Keeler Pond) - Hubbardton (54 acres)
 Echo Lake - Charleston (550 acres)
@@ -324,6 +332,7 @@ Ely Mountain Conservation Area
 Emerald Lake - Dorset (28 acres)
 Emerald Lake State Park
 Emily Proctor Trail
+Enchanted Forest Trail
 Enchanted Isle
 Enosburg Town Forest
 Equinox Mtn.
@@ -454,10 +463,12 @@ Howell's Swamp
 Hubbard Park
 Hubbard Recreation & Natural Area
 Hubbardton Battlefield WMA and State Historic Site
+Hulbert Outdoor Center
 Hunger Mountain
 Huntington Community Forest
 Huntington Falls
 Huntington Gap WMA
+Huntington Gorge
 Hurd Grassland
 I-91 Northbound Rest Stop, Bradford Information Center
 Indian Brook Reservoir - Essex (50 acres)
@@ -512,6 +523,7 @@ Killington Marsh
 Killington Peak
 King Farm
 Kings Bay Fishing Access
+Kingsbury Greenway/Wabanaki Conservation Area
 Kingsland Bay State Park
 Kirby Pond - Kirby (10 acres)
 Knapp Brook #1 - Cavendish (25 acres)
@@ -520,6 +532,8 @@ Knapp Brook WMA
 Knight Island State Park
 Knight Point State Park
 Knob Hill Pond - Marshfield (16 acres)
+Knox Mountain
+Knox Mountain--West Peak
 L.R. Jones State Forest / Spruce Mt. Peak
 LaPlatte Headwaters Town Forest
 LaPlatte River Nature Park (E of Falls Rd. & Post Office)
@@ -529,6 +543,7 @@ Lagoon Road
 Laird Pond - Marshfield (12 acres)
 Lake Abenaki - Thetford (44 acres)
 Lake Bomoseen - Castleton (2360 acres)
+Lake Bomoseen--Edward F. Kehoe Access Area
 Lake Bomoseen/Hubbardton Marshes IBA
 Lake Carmi - Franklin (1402 acres)
 Lake Carmi State Park
@@ -537,6 +552,7 @@ Lake Dunmore - Salisbury (985 acres)
 Lake Eden - Eden (194 acres)
 Lake Elligo (Eligo Pond)-Greensboro (174 acres)
 Lake Elmore - Elmore (219 acres)
+Lake Elmore Cemetery
 Lake Fairlee - Thetford (457 acres)
 Lake Greenwood - Woodbury (96 acres)
 Lake Groton - Groton (422 acres)
@@ -597,6 +613,7 @@ Little Ascutney WMA
 Little Averill Pond - Averill (467 acres)
 Little Eligo - Hardwick (15 acres)
 Little Elmore Pond - Elmore (24 acres)
+Little Hogback Community Forest
 Little Hosmer Pond - Craftsbury (180 acres)
 Little Otter Creek WMA IBA--Greenbush Rd. Access
 Little Otter Creek WMA IBA--South Slang
@@ -642,6 +659,7 @@ Lovers Lane Pond
 Loves Marsh WMA
 Lowell Lake - Londonderry (109 acres)
 Lowell Lake State Park
+Lower Cabot Town Forest
 Lower Lamoille WMA
 Lower Otter Creek WMA
 Lower Pond (Lake Sunset) - Hinesburg (58 acres)
@@ -667,6 +685,7 @@ Maple Shade Town Forest
 Maple Street Park and Pool
 Maquam WMA / Swanton Town Beach
 Marl Pond - Sutton (10 acres)
+Marsh clearing on Main St.
 Marsh-Billings-Rockefeller National Historical Park
 Marsh-Billings-Rockefeller National Historical Park--East Forest
 Marsh-Billings-Rockefeller National Historical Park--Fields
@@ -682,7 +701,6 @@ May Pond - Barton (116 acres)
 McAllister Pond - Lowell (25 acres)
 McConnell Pond - Brighton (87 acres)
 McCuen Slang
-McCulloch Property
 McIntosh Pond - Royalton (23 acres)
 McWaters Park
 Mcindoe Falls Park
@@ -692,10 +710,11 @@ Merck Forest
 Metcalf Pond - Fletcher (81 acres)
 Middle Peak - Worcester Range
 Middlebury College
-Middlebury College--Bird Sanctuary
 Middlebury College--Class of '97 Trail
 Middlebury College--Ralph Myhre Golf Course
+Middlebury College--Stephen C. Trombulak Nature Sanctuary
 Middlebury Falls
+Middlebury Snowbowl
 Middlesex Notch WMA
 Middlesex Town Forest
 Middlesex WMA
@@ -737,6 +756,7 @@ Mollie Beattie State Forest
 Molly Bog (UVM Natural Area)
 Molly Stark State Park
 Molly's Pond - Cabot (38 acres)
+Montpelier High School
 Montshire Museum of Science and Quinn Preserve
 Moore Park
 Moosalamoo Campground
@@ -748,6 +768,7 @@ Morristown Bog Natural Area
 Morristown Town Forest
 Morrisville-Stowe State Airport
 Morse Park
+Moss Glen Falls
 Moss Glen Falls
 Mount Abraham summit
 Mount Alice Summit
@@ -762,6 +783,7 @@ Mount Peg Park - east
 Mount Peg Park - west
 Mount Peg--ridgeline ski trails
 Mount Pleasant Cemetery
+Mountain Meadow Preserve
 Mt. Ascutney
 Mt. Calvary Annex Cemetery
 Mt. Carmel State Forest
@@ -851,8 +873,10 @@ Otter Creek Gorge Preserve
 Otter Creek WMA
 Otter View Park
 Owls Head Town Forest
+Owls Nest Preserve (restricted access)
 Oxbow Park
 Page Pond - Albany (16 acres)
+Paine Mountain Trail
 Patch Pond - Rutland (20 acres)
 Patterson Mountain
 Paul Stream Pond - Brunswick (20 acres)
@@ -899,6 +923,7 @@ Preston Pond Loop Trail
 Proctor Village Forest
 Prouty Beach
 Prouty Park
+Pumpkin Hill Town Forest
 Putney Great Meadow
 Putney Mountain
 Quarry Hill
@@ -939,6 +964,8 @@ Rock Island IBA
 Rock River Public Boat Launch
 Rock River WMA
 Rockingham Fire Pond
+Rodgers Lot Town Forest
+Rokeby Museum Trails
 Rood Pond - Williamstown (23 acres)
 Root Pond - Benson (18 acres)
 Rossetti Natural Area
@@ -957,6 +984,7 @@ Roy Mountain WMA
 Royalton Hill Pond - Royalton (11 acres)
 Royalton Town Forest
 Rte 4/Rte 7 Rutland County Audubon easement
+Runaway Pond Park
 Rush Pond - Eden (14 acres)
 Russell Greene Natural Area
 Russell Trails
@@ -971,6 +999,7 @@ Salmon Hole Park
 Salt Ash Mountain
 Sand Bar State Park
 Sand Hill Road / Wilson Wetland Preserve
+Sandbar Access
 Sandbar Causeway (Chittenden County)
 Sandbar Causeway (Grand Isle County)
 Sandbar WMA IBA
@@ -1018,6 +1047,7 @@ Silvio O. Conte NWR--Mollie Beattie Bog
 Silvio O. Conte NWR--Nulhegan Basin Division
 Silvio O. Conte NWR--Peanut Dam Road
 Silvio O. Conte NWR--Stone Dam Road
+Silvio O. Conte NWR--Stone Dam Road Boardwalk
 Silvio O. Conte NWR--Tin Shack Road
 Silvio O. Conte NWR--Yellow Bogs
 Skitchewaug Mountain Wildlife Management Area
@@ -1029,6 +1059,7 @@ Slate Valley Trails--Fairgrounds East
 Slate Valley Trails--Fairgrounds West
 Slate Valley Trails--Howe Hill Trails
 Sleepers Meadow, Newbury
+Sleepy Hollow Ski and Bike Center (Restricted Access)
 Smuggler's Notch
 Smugglers' Notch State Park
 Snake Mountain South, TNC preserve
@@ -1043,6 +1074,7 @@ South Bay WMA (IBA)
 South Bay WMA (IBA)--Barton River Marsh, Coventry Station Rd.
 South Hero Causeway
 South Hero Marsh Trail
+South Hero Recreation Park
 South Pond - Brookfield (16 acres)
 South Pond - Chittenden (10 acres)
 South Pond - Eden (103 acres)
@@ -1084,6 +1116,7 @@ Sterling Pond
 Stevens Pond - Maidstone (26 acres)
 Stiles Pond - Waterford (135 acres)
 Stillwater State Park
+Stonewall Meadows Park
 Stoney Point Fishing Access
 Stony Cove
 Stoughton Pond - Weathersfield (56 acres)
@@ -1098,9 +1131,11 @@ Strong Swamp
 Sucker Brook Park
 Sugar Hill Reservoir - Goshen (63 acres)
 Sugar Hollow Pond - Pittsford (21 acres)
+Sugarbush Resort Golf Club
 Summer Street Park
 Sunny Hollow Natural Area
 Sunrise Lake - Benson (57 acres)
+Sunset Hill Rd.
 Sunset Lake - Benson (202 acres)
 Sunset Lake - Brookfield (25 acres)
 Sunset Lake - Marlboro (96 acres)
@@ -1114,6 +1149,7 @@ Tabor Point Fishing Access
 Taconic Mountains Ramble State Park
 Talcott Forest
 Technology Park
+Telephone Gap
 Tenney Pond - Newbury (10 acres)
 Tenney Rd.
 Texas Falls
@@ -1204,6 +1240,7 @@ Ward Hill - Pratt Refuge (restricted access)
 Ward Hill - Red Gate (restricted access)
 Ward Marsh WMA - Poultney River/East Bay IBA
 Warden Pond - Barnet (46 acres)
+Warren Falls
 Warren and Ruth Beeken Rivershore Trail
 Washington WMA
 Waterbury Center State Park
@@ -1225,6 +1262,7 @@ West River Trail - Rice Farm Rd Trailhead
 West Rutland Marsh IBA
 West Rutland Marsh--Whipple Hollow Trail
 West Rutland Recreation Area & Town Forest-Dodd Farm Block
+Westford School Trails
 Westminster Station
 Westminster Town Forest--George D. Aiken Lot
 Westmore Town Forest
@@ -1232,6 +1270,7 @@ Wheeler Mountain
 Wheeler Nature Park
 Wheeler Pond - Barton (15 acres)
 Wheeler Pond - Brunswick (66 acres)
+Whetstone Woods Preserve
 Whipple Hollow WMA
 Whipstock Hill WMA
 Whiskey Bay (Cove)
