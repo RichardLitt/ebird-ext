@@ -165,12 +165,18 @@ function shimData (row) {
   }
 }
 
-async function rowsToJSON (file, string) {
+async function rowsToJSON (file, opts) {
   return new Promise(function (resolve, reject) {
     const shimmedRows = []
     fs.createReadStream(file)
       .pipe(parser)
-      .on('data', (row) => shimmedRows.push(f.completeChecklistFilter([shimData(row)], { complete: true, noIncidental: true })))
+      .on('data', (row) => {
+        if (opts.complete) {
+          shimmedRows.push(f.completeChecklistFilter([shimData(row)], { complete: true, noIncidental: true }))
+        } else {
+          shimmedRows.push(shimData(row))
+        }
+      })
       .on('error', (e) => console.log('BONK', e))
       .on('end', () => {
         fs.writeFile('results.json', JSON.stringify(shimmedRows), 'utf8', (err) => {
@@ -511,7 +517,7 @@ async function analyzeFiles () {
     }
     console.log(`Analyzing ${file}.`)
     if (areas === 'json') {
-      await rowsToJSON(file, string)
+      await rowsToJSON(file, {complete: false})
     } else if (areas === '150') {
       await run150Query(file, string)
     } else if (areas === '250') {
