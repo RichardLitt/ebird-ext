@@ -128,6 +128,8 @@ function locationFilter (list, opts) {
         if (_.findIndex(provinces, { short: state }) !== -1) { // Note that this file is larger than needed, and has more countries
           checklist.State = provinces[_.findIndex(provinces, { short: state })].name
         }
+      } else {
+        checklist.State = state
       }
       checklist.Country = country
     }
@@ -157,9 +159,22 @@ function locationFilter (list, opts) {
     }
 
     return intersection.every(filter => {
-      if (opts[filter.toLowerCase()] && checklist[filter]) {
-        return checklist[filter].toLowerCase() === opts[filter.toLowerCase()].toLowerCase()
+      // console.log(filter.toLowerCase(), opts)
+      if (Array.isArray(opts[filter.toLowerCase()])) {
+        // console.log(opts[filter.toLowerCase()])
+        const test = opts[filter.toLowerCase()].find(x => {
+          // console.log(opts, filter, checklist)
+          return opts[filter.toLowerCase()].map(y => y.toLowerCase()).includes(checklist[filter].toLowerCase())
+        })
+        return !!(test)
+      } else {
+        if (opts[filter.toLowerCase()] && checklist[filter]) {
+          // console.log(checklist, filter)
+          // TODO This should also work for Arrays, I guess
+          return checklist[filter].toLowerCase() === opts[filter.toLowerCase()].toLowerCase()
+        }
       }
+
       return false
     })
   })
