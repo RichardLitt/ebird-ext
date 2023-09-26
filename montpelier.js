@@ -1,6 +1,6 @@
 const fetch = require('node-fetch')
 const VermontHotspots = require('./data/hotspots.json')
-// const eBirdDataAsJSON = require('./data/washingtonHotspots.json')
+// const eBirdDataAsJSON = require('./data/montpelierhotspots.json')
 // TODO Implement this, instead
 const hotspotDates = require('./data/hotspotsDates.json')
 const _ = require('lodash')
@@ -13,6 +13,8 @@ let opts = {}
 
 if (process.argv[2] === 'daysYouveBirdedAtHotspot') {
   daysYouveBirdedAtHotspot(process.argv[3])
+} else if (process.argv[2] === 'shimFilterHotspotJSON') {
+  shimFilterHotspotJSON()
 } else if (process.argv[2] && process.argv[2] === 'ids') {
   // Should be done programmatically
   opts = {
@@ -64,12 +66,11 @@ async function shimFilterHotspotJSON () {
   data
     // This may be causing some bugs below. 
     .filter(x => {
-      const entry = f.completeChecklistFilter(x, { complete: true, noIncidental: true })
+      const entry = f.completeChecklistFilter([x], { complete: true, noIncidental: true })
       if (entry[0]) {
         return true
       }
     })
-    .map(x => x[0])
     .map(entry => {
       return {
         Location: entry.Location,
@@ -95,7 +96,7 @@ async function shimFilterHotspotJSON () {
       if (err) {
         console.log(err)
       } else {
-        console.log(`hotspots.json written successfully.`)
+        console.log(`hotspotsDates.json written successfully.`)
       }
     })
 }
@@ -333,5 +334,12 @@ async function findMontpelierHotspotNeedsToday (opts) {
     }
   }
 
-  console.log(`Was Berlin Pond birded this week, this year: ${hasBerlinPondBeenBirdedThisWeeK()}.`)
+  console.log(`Was Berlin Pond birded this week, this year: ${hasBerlinPondBeenBirdedThisWeeK()}.
+
+How does this script work? It uses a list of all of the Hotspots in Montpelier and checks to see what dates they 
+were all birded, by checking the eBird API. Coverage shows the percent of weeks which have had checklists submi-
+tted on them, meaning that if a hotspot has had checklists in any year in all 52 weeks, it is at 100%.
+
+For more infomation, see https://github.com/RichardLitt/ebird-ext/. 
+`)
 }
