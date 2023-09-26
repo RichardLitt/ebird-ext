@@ -11,43 +11,65 @@ const fs = require('fs')
 
 let opts = {}
 
-if (process.argv[2] === 'daysYouveBirdedAtHotspot') {
-  daysYouveBirdedAtHotspot(process.argv[3])
-} else if (process.argv[2] === 'shimFilterHotspotJSON') {
-  shimFilterHotspotJSON()
-} else if (process.argv[2] && process.argv[2] === 'ids') {
-  // Should be done programmatically
-  opts = {
-    miles: 10,
-    // Rebecca
-    // lat: '44.1341227',
-    // lng: '-72.5339384'
-    // Ben
-    // lat: '35.8040346',
-    // lng: '-79.1351467'
-    // Montpelier
-    lat: '44.2587866',
-    lng: '-72.5740852'
-  }
-  getIdsFromRadius(opts)
-} else {
-  opts = {
-    miles: 10,
-    // Rebecca
-    // lat: '44.1341227',
-    // lng: '-72.5339384'
-    // Montpelier
-    lat: '44.2587866',
-    lng: '-72.5740852'
-  }
-  // console.log(process.argv[2].split(','))
-  if (process.argv[2] && process.argv[2].split(',').length === 2) {
-    opts.lat = process.argv[2].split(',')[0]
-    opts.lng = process.argv[2].split(',')[1]
-  }
+const command = process.argv[2];
 
-  findMontpelierHotspotNeedsToday(opts)
+try {
+  switch (command) {
+    case 'daysYouveBirdedAtHotspot':
+      if (!process.argv[3]) {
+        throw new Error("Expected an argument after 'daysYouveBirdedAtHotspot'");
+      }
+      daysYouveBirdedAtHotspot(process.argv[3]);
+      break;
+
+    case 'shimFilterHotspotJSON':
+      shimFilterHotspotJSON();
+      break;
+
+    case 'region':
+      if (!process.argv[3]) {
+        throw new Error("Expected a region code after 'region'");
+      }
+      opts = {
+        regionCode: process.argv[3]
+      };
+      getIdsFromRegion(opts);
+      break;
+
+    case 'ids':
+      opts = {
+        miles: 10,
+        lat: '44.2587866',
+        lng: '-72.5740852'
+        // Rebecca
+        // lat: '44.1341227',
+        // lng: '-72.5339384'
+        // Ben
+        // lat: '35.8040346',
+        // lng: '-79.1351467'
+      };
+      getIdsFromRadius(opts);
+      break;
+
+    default:
+      opts = {
+        miles: 10,
+        lat: '44.2587866',
+        lng: '-72.5740852'
+      };
+
+      if (command && command.split(',').length === 2) {
+        [opts.lat, opts.lng] = command.split(',');
+      } else if (command) {
+        throw new Error(`Unknown command: ${command}`);
+      }
+
+      findMontpelierHotspotNeedsToday(opts);
+  }
+} catch (error) {
+  console.error(`Error: ${error.message}`);
 }
+
 
 /* I needed to make this because I made a massive JSON file of all observations in every hotspot,
 which was too much for this scripts memory to handle. Instead, this is a much smaller output that 
@@ -249,6 +271,18 @@ function dataForThisWeekInHistory (opts) {
 
 async function getIdsFromRadius (opts) {
   const response = await fetch(`https://api.ebird.org/v2/ref/hotspot/geo?lat=${opts.lat}&lng=${opts.lng}&dist=${opts.miles}&fmt=json`)
+  const body = JSON.parse(await response.text())
+
+  
+  // Get all of the IDs in the area, not just what is in your data.
+  const ids = body.map(d => d.locId)
+
+  ids.forEach(id => {
+    console.log(id)
+  })
+}
+async function getIdsFromRegion (opts) {
+  const response = await fetch(`https://api.ebird.org/v2/ref/hotspot/${opts.regionCode}?fmt=json`)
   const body = JSON.parse(await response.text())
 
   // Get all of the IDs in the area, not just what is in your data.
