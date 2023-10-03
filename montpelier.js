@@ -298,77 +298,87 @@ async function getIdsFromRegion (opts) {
   hotspots in my area, which ones should I go to today to maximally fill out
   those hotspots?
 */
-async function findMontpelierHotspotNeedsToday (opts) {
-  const data = hotspotDates
 
-  const today = moment().format('MM-DD')
-  const month = moment().format('MM')
-  const todayDate = moment().format('DD')
-  // Get data from eBird. Note that this still depends on a local hotspot dates file, which needs to be got from the database and then shimmed.
-  const response = await fetch(`https://api.ebird.org/v2/ref/hotspot/geo?lat=${opts.lat}&lng=${opts.lng}&dist=${opts.miles}&fmt=json`)
-  const body = JSON.parse(await response.text())
+async function findMontpelierHotspotNeedsToday(opts) {
+  const hotspotDatesData = hotspotDates;
+  const today = moment().format('MM-DD');
+  const month = moment().format('MM');
+  const todayDate = moment().format('DD');
 
-  // Get all of the IDs in the area, not just what is in your data.
-  const ids = body.map(d => d.locId)
-
-  // Begin printout
-  console.log('')
-  console.log('These hotspots have not had a complete checklist submitted on this date:')
-  console.log(`Last             Cover      ${'Hotspot (Coverage)'.padEnd(50)}`)
-  console.log(`${'-----'.padEnd(72, '-')}`)
-
-  // Make a list of IDs of birded hotspots today
-  const birded = []
-  ids.forEach(id => {
-    if (data[id]) {
-      if (data[id]['Dates Birded'][month].includes(Number(todayDate)) && !birded.includes(id)) {
-        birded.push(id)
-      }
-    }
-  })
-
-  // Then find the unbirded ones
-  const unbirdedToday = ids.filter(x => !birded.includes(x))
-
-  body
-    .map((d) => {
-      d.distance = difference.distance(opts.lat, opts.lng, d.lat, d.lng, 'M')
-      const data = dataForThisWeekInHistory({ id: d.locId, latestObsDt: d.latestObsDt })
-      d.nextUnbirdedWeek = data.nextUnbirdedWeek
-      d.coveragePercentage = data.coveragePercentage
-      return d
-    })
-    // Don't show hotspots that have been birded
-    .filter(d => unbirdedToday.includes(d.locId))
-    // Within an X mile radius
-    .filter(d => d.distance < opts.miles)
-    .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
-    // Print the results
-    .forEach(async d => {
-      // Clean up the Hotspot names a bit
-      d.locName = d.locName
-        .replace('(Restricted Access)', '')
-        .replace('Cross Vermont Trail--', '')
-        .replace(' - East Montpelier', '')
-        .replace('-East Montpelier', '')
-        .replace(' - Berlin', '')
-        .replace(/\(\d+ acres\)/i, '')
-        .trim()
-      console.log(`${d.latestObsDt.split(' ')[0]}  ${(d.nextUnbirdedWeek) ? d.nextUnbirdedWeek.padEnd(8) : ''.padEnd(14)} ${(d.locName + ' (' + Math.round(d.coveragePercentage) + '%)').padEnd(42)} https://ebird.org/hotspot/${d.locId} `)
-    })
-
-  console.log('')
-
-  function hasBerlinPondBeenBirdedThisWeeK () {
-    const lastDate = body.find(d => d.locId === 'L150998').latestObsDt.split(' ')[0]
-    if (moment(lastDate).week() >= moment().week()) {
-      return 'Yes'
-    } else {
-      return 'No'
-    }
+  async function fetchHotspotsFromEBird() {
+      const response = await fetch(`https://api.ebird.org/v2/ref/hotspot/geo?lat=${opts.lat}&lng=${opts.lng}&dist=${opts.miles}&fmt=json`);
+      return JSON.parse(await response.text());
   }
 
-  console.log(`Was Berlin Pond birded this week, this year: ${hasBerlinPondBeenBirdedThisWeeK()}.
+  function filterBirdedHotspots(data, ids) {
+      return ids.filter(id => {
+          return data[id] && data[id]['Dates Birded'][month].includes(Number(todayDate));
+      });
+  }
+
+  async function getLocationIdsForToday() {
+      const url = 'https://api.ebird.org/v2/product/lists/US-VT-023?maxResults=50';
+      const response = await fetch(url, { method: 'GET', headers: { 'X-eBirdApiToken': 'a6ebaopct2l3' } });
+      const data = await response.json();
+
+      const formattedToday = new Date(new Intl.DateTimeFormat('en-US', {
+          timeZone: 'America/New_York',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+      }).format(new Date())).toISOString().split('T')[0];
+
+      return data.filter(item => item.isoObsDate.startsWith(formattedToday)).map(item => item.locId);
+  }
+
+  async function computeUnbirded(ids, birded) {
+      const birdedRecently = await getLocationIdsForToday();
+      return ids.filter(x => !birded.includes(x) && !birdedRecently.includes(x));
+  }
+
+  function cleanUpAndPrintHotspots(body, unbirdedToday) {
+      // Assuming your logic for cleaning up and printing the hotspots remains the same
+      body
+          .map((d) => {
+              d.distance = difference.distance(opts.lat, opts.lng, d.lat, d.lng, 'M');
+              const data = dataForThisWeekInHistory({ id: d.locId, latestObsDt: d.latestObsDt });
+              d.nextUnbirdedWeek = data.nextUnbirdedWeek;
+              d.coveragePercentage = data.coveragePercentage;
+              return d;
+          })
+          .filter(d => unbirdedToday.includes(d.locId))
+          .filter(d => d.distance < opts.miles)
+          .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
+          .forEach(async d => {
+              d.locName = d.locName
+                  .replace('(Restricted Access)', '')
+                  .replace('Cross Vermont Trail--', '')
+                  .replace(' - East Montpelier', '')
+                  .replace('-East Montpelier', '')
+                  .replace(' - Berlin', '')
+                  .replace(/\(\d+ acres\)/i, '')
+                  .trim();
+              console.log(`${d.latestObsDt.split(' ')[0]}  ${(d.nextUnbirdedWeek) ? d.nextUnbirdedWeek.padEnd(8) : ''.padEnd(8)} ${(d.locName + ' (' + Math.round(d.coveragePercentage) + '%)').padEnd(42)} https://ebird.org/hotspot/${d.locId} `);
+          });
+  }
+
+  function hasBerlinPondBeenBirdedThisWeek(body) {
+      const lastDate = body.find(d => d.locId === 'L150998').latestObsDt.split(' ')[0];
+      return moment(lastDate).week() >= moment().week() ? 'Yes' : 'No';
+  }
+
+  // Main execution logic
+  const body = await fetchHotspotsFromEBird();
+  const ids = body.map(d => d.locId);
+  const birded = filterBirdedHotspots(hotspotDatesData, ids);
+  const unbirdedToday = await computeUnbirded(ids, birded);
+
+  printHotspotsHeader()
+  cleanUpAndPrintHotspots(body, unbirdedToday)
+
+
+  console.log(`
+Was Berlin Pond birded this week, this year: ${hasBerlinPondBeenBirdedThisWeek(body)}.
 
 How does this script work? It uses a list of all of the Hotspots in Montpelier and checks to see what dates they 
 were all birded, by checking the eBird API. Coverage shows the percent of weeks which have had checklists submi-
@@ -376,4 +386,10 @@ tted on them, meaning that if a hotspot has had checklists in any year in all 52
 
 For more infomation, see https://github.com/RichardLitt/ebird-ext/. 
 `)
+
+  function printHotspotsHeader() {
+      console.log('\nThese hotspots have not had a complete checklist submitted on this date:');
+      console.log(`Last             Cover      ${'Hotspot (Coverage)'.padEnd(50)}`);
+      console.log(`${'-----'.padEnd(72, '-')}`);
+  }
 }
