@@ -548,7 +548,34 @@ async function rare (opts) {
     Subspecies: [],
     OutsideExpectedDates: []
   }
-  const ignoredBreedingCodes = ['S Singing Bird', 'H In Appropriate Habitat', 'F Flyover']
+  // We need both the single letter and the full-text;
+  // the eBird downloaded database only has single, but MyEbirdData has the full string.
+  // Alternatively, we should convert them when importing, but there're space issues.
+  const ignoredBreedingCodes = [
+    'S Singing Bird',
+    'S',
+    'H In Appropriate Habitat',
+    'H',
+    'F Flyover',
+    'F',
+    'S7 Singing Bird Present 7+ Days (Probable)',
+    'S7',
+    'M Multiple (7+) Singing Birds (Probable)',
+    'M',
+    'P Pair in Suitable Habitat (Probable)',
+    'P',
+    'T Territorial Defense (Probable)',
+    'T',
+    'C Courtship, Display or Copulation (Probable)',
+    'C',
+    'N Visiting Probable Nest Site (Probable)',
+    'N',
+    'A Agitated Behavior (Probable)',
+    'A',
+    'B Wren/Woodpecker Nest Building (Probable)',
+    'B'
+  ]
+
   data.forEach(e => {
     const species = e['Scientific Name']
     if (speciesToReport.includes(species)) {
