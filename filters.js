@@ -78,16 +78,24 @@ function getPoint (map, coordinates, countyCode) {
 
   // If it is on a river or across a border or something, get the nearest town
   if (point === undefined) {
-    // Only check towns in the relevant county
-    // TODO What if I don't have the relevant county?
-    const countyCenters = townCentroids.filter(f => f.properties.county === countyCode)
-    const newCoords = nearestPoint.default(turf.point([coordinates.LONGITUDE, coordinates.LATITUDE]), turf.featureCollection(countyCenters))
-    coordinates = {
-      Longitude: newCoords.geometry.coordinates[0],
-      Latitude: newCoords.geometry.coordinates[1]
+    try {
+        // Only check towns in the relevant county
+        // TODO What if I don't have the relevant county?
+        const countyCenters = townCentroids.filter(f => f.properties.county === countyCode);
+        const long = coordinates.LONGITUDE || coordinates.Longitude
+        const lat = coordinates.LATITUDE || coordinates.Latitude
+        const newCoords = nearestPoint.default(turf.point([long, lat]), turf.featureCollection(countyCenters));
+        coordinates = {
+            Longitude: newCoords.geometry.coordinates[0],
+            Latitude: newCoords.geometry.coordinates[1]
+        };
+        point = getContainer(map, coordinates);
+        // console.log('Previously undefined point:', point);
+    } catch (error) {
+        console.error("Error occurred while processing newCoords:", error);
+        // You can handle the error or just log it, as done above.
+        // The script will continue to run even if this block throws an error.
     }
-    point = getContainer(map, coordinates)
-    // console.log('Previously undefined point:', point)
   }
   return point
 }
