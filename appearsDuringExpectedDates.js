@@ -1,7 +1,7 @@
 // This is a helper library for checking expected dates for VBRC
 
 const moment = require('moment')
-const wom = require('moment-weekofmonth')
+const weekOfMonth = require('moment-weekofmonth')
 
 // const test = [
 //   {
@@ -51,6 +51,14 @@ const wom = require('moment-weekofmonth')
 //     "Breeding": "*",
 //     "Reporting": "N",
 //     "Occurrence": "1A-12D"
+//   },
+//   {
+//     "Breeding": "*",
+//     "Occurrence": "3B-12D",
+//     "Reporting": "",
+//     "Scientific Name": "Ardea herodias",
+//     "Species": "Great Blue Heron",
+//     "Status": ""
 //   }
 // ]
 
@@ -79,7 +87,7 @@ function getWeek (alphaStr) {
 
 function findFirstDayOfWeekInMonth (month, week) {
   let date = 1
-  while (wom(month) !== week) {
+  while (weekOfMonth(month) !== week) {
     month = moment(month).date(date)
     date = date +1
   }
@@ -88,9 +96,9 @@ function findFirstDayOfWeekInMonth (month, week) {
 
 function findLastDayOfWeekInMonth (month, week) {
   let date = 1
-  while (wom(month) !== week+1) {
+  while (weekOfMonth(month) !== week+1) {
     // WTF kind of bug is this?
-    if (wom(month) === -47) {
+    if (weekOfMonth(month) === -47) {
       return month
     }
     month = moment(month).date(date)
@@ -99,7 +107,7 @@ function findLastDayOfWeekInMonth (month, week) {
   return month
 }
 
-function calculateTimespan(str) {
+function calculateTimespan(str, noPadding) {
   function splitStringAlphanumerically(str) {
     return str.match(/[\d]+|[A-Z]+/g)
   }
@@ -131,18 +139,49 @@ function calculateTimespan(str) {
   } else {
     earliestDate = moment(earliestDate).subtract(1, 'months').hour(0).minute(0).second(0)
   }
+
   let latestDate = moment(lastDay)
+  // Reminder: 11 is December. Zero-indexing.
   if (moment(latestDate).month() === 11) {
     latestDate = moment(latestDate).endOf('year')
+  // No padding exists to offset December records for the January spillover weeks
+  } else if (noPadding) {
+    latestDate = moment(latestDate).hour(0).minute(0).second(0)
   } else {
     latestDate = moment(latestDate).add(1, 'months').hour(0).minute(0).second(0)
   }
+
   return [earliestDate, latestDate]
+}
+
+
+// Only used for spilling over December weeks into January
+function findLetterAfterTwelve(inputString) {
+  // Check if '12' exists in the string
+  if (inputString.includes('12')) {
+    // Use RegExp to find the occurrence of '12' followed by a letter
+    const match = inputString.match(/12([a-zA-Z])/);
+    if (match) {
+      // If a match is found, it means '12' is followed by a letter.
+      // The letter is captured in the first capture group of the RegExp.
+      return match[1]; // return the letter that follows '12'
+    }
+    // If there's no letter following '12', you might want to return a default value or null
+    return null;
+  }
+
+  // If '12' doesn't exist in the string at all, handle it as you see fit (e.g., return null or a default value)
+  return null;
 }
 
 function getTimespans (occurrence) {
   let timespans = []
   if (occurrence && !occurrence.includes('+') && !(occurrence === '1A-12D')) {
+    if (occurrence.includes('12')) {
+      let januaryTimespan = `1A-1${findLetterAfterTwelve(occurrence)}`
+      januaryTimespan = calculateTimespan(januaryTimespan, true)
+      timespans.push(januaryTimespan)
+    }
     if (occurrence.includes(',')) {
       let splits = occurrence.split(', ')
       splits.forEach(timespan => timespans.push(calculateTimespan(timespan)))
@@ -171,8 +210,8 @@ function appearsDuringExpectedDates(date, speciesRecord) {
   const timespans = getTimespans(speciesRecord)
   if (timespans.length !== 0) {
     let isInTimespan = timespans.map(x => {
-      // IsBetween won't include entries on the date, so subtract a day and add a day
-      let start = moment(x[0]).year(moment(date).year()).subtract(1, 'day'), end = moment(x[1]).year(moment(date).year()).add(1, 'day')
+      // For some reason, need to subtract a day to to how isBetween works. No need to add a day.
+      let start = moment(x[0]).year(moment(date).year()).subtract(1, 'day'), end = moment(x[1]).year(moment(date).year())
       return moment(date).isBetween(start, end)
     })
     return isInTimespan.some(x => x === true)
@@ -181,5 +220,7 @@ function appearsDuringExpectedDates(date, speciesRecord) {
   }
 }
 
-// console.log(test.map(x => appearsDuringExpectedDates('2020-07-03', x.Occurrence)))
+// test.map(x => {
+//   console.log(x.Species, appearsDuringExpectedDates('2020-02-05', x.Occurrence))
+// })
 module.exports = appearsDuringExpectedDates
