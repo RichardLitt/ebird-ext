@@ -1,0 +1,58 @@
+[
+  {
+    "Common Name": "Green-winged Teal (Eurasian)",
+    "Scientific Name": "Anas crecca crecca",
+    "Target Subspecies": [
+      "Anas crecca crecca"
+    ]
+  },
+  {
+    "Common Name": "Bell's Vireo (Eastern)",
+    "Scientific Name": "Vireo bellii bellii/medius",
+    "Target Subspecies": [
+      "Vireo bellii bellii/medius"
+    ]
+  },
+  {
+    "Common Name": "Purple Finch (Eastern)",
+    "Scientific Name": "Haemorhous purpureus purpureus",
+    "Target Subspecies": [
+      "Haemorhous purpureus purpureus"
+    ]
+  },
+  {
+    "Common Name": "Fox Sparrow (Thick-billed)",
+    "Scientific Name": "Passerella iliaca [megarhyncha Group]",
+    "Target Subspecies": [
+      "Passerella iliaca [megarhyncha Group]"
+    ]
+  },
+  {
+    "Common Name": "Dark-eyed Junco (White-winged)",
+    "Scientific Name": "Junco hyemalis aikeni",
+    "Target Subspecies": [
+      "Junco hyemalis aikeni"
+    ]
+  },
+  {
+    "Common Name": "Savannah Sparrow (Large-billed)",
+    "Scientific Name": "Passerculus sandwichensis rostratus/atratus",
+    "Target Subspecies": [
+      "Passerculus sandwichensis rostratus/atratus"
+    ]
+  },
+  {
+    "Common Name": "Hooded Oriole (cucullatus/sennetti)",
+    "Scientific Name": "Icterus cucullatus cucullatus/sennetti",
+    "Target Subspecies": [
+      "Icterus cucullatus cucullatus/sennetti"
+    ]
+  },
+  {
+    "Common Name": "Yellow Warbler (Mangrove)",
+    "Scientific Name": "Setophaga petechia [erithachorides Group]",
+    "Target Subspecies": [
+      "Setophaga petechia [erithachorides Group]"
+    ]
+  }
+]
