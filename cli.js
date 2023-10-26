@@ -112,6 +112,8 @@ async function run () {
     await main.winterFinch(cli.flags)
   } else if (cli.input[0] === 'rare') {
     await main.rare(cli.flags)
+  } else if (cli.input[0] === 'rareAZ') {
+    await main.rareAZ(cli.flags)
   } else if (cli.input[0] === 'big') {
     cli.flags.list = undefined
     let timespan = 'year'

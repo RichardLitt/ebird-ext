@@ -1,6 +1,7 @@
 const townBoundaries = require('./geojson/vt_towns.json')
 let vermontRegions = require('./geojson/Polygon_VT_Biophysical_Regions.json')
 const VermontRecords = require('./data/vermont_records.json')
+const ArizonaRecords = require('./data/arizona_records.json')
 const CountyBarcharts = require('./data/countyBarcharts.json')
 const VermontSubspecies = require('./data/vermont_records_subspecies.json')
 const GeoJsonGeometriesLookup = require('geojson-geometries-lookup')
@@ -57,9 +58,31 @@ function cleanCommonName (arr) {
 
 async function getData (input) {
   if (fs) {
-    input = await fs.readFile(input, 'utf8')
-    input = Papa.parse(input, { header: true })
-    return f.removeSpuh(input.data)
+    // Read and parse
+    const fileContent = await fs.readFile(input, 'utf8');
+    const parseResult = Papa.parse(fileContent, { 
+      header: true, 
+      skipEmptyLines: true, // consider skipping empty lines
+      complete: function(results) {
+        // console.log("Parsing complete:", results);
+      },
+      error: function(error) {
+        // console.error("Parsing error:", error);
+        // console.log(fileContent)
+        // Consider throwing the error if it's critical and should stop the flow
+        // throw new Error(error);
+      }
+    });
+
+    // Check for parsing errors
+    if (parseResult.errors && parseResult.errors.length > 0) {
+      // Log or handle errors as you see fit
+      parseResult.errors.forEach(err => {
+        // console.error("Error during parsing:", err);
+        // Additional handling can be done here (e.g., deciding whether to continue or stop)
+      });
+    }
+    return f.removeSpuh(parseResult.data)
   }
 
   return f.removeSpuh(input)
@@ -513,6 +536,98 @@ async function isSpeciesSightingRare (opts) {
   return rare(opts)
 }
 
+
+async function rareAZ (opts) {
+  let data
+  opts.state = 'Arizona'
+  // Use only data from this year
+  if (!opts.manual) {
+    // console.log(opts)
+    data = f.orderByDate(f.dateFilter(await getData(opts.input), opts), opts).reverse()
+  } else {
+    // This will incorrectly flag as 'Unknown' TODO. OUt of area.
+    if (opts.data) {
+      data = opts.data
+    } else {
+      const spoof = [{
+        County: 'Washington',
+        Date: '2020-03-02',
+        Region: 'Northern Piedmont',
+        'Scientific Name': 'Martes martes',
+        Species: 'Pine Marten',
+        Town: 'Montpelier'
+      }]
+      data = spoof
+    }
+  }
+  const allSpecies = ArizonaRecords.map(x => x['Scientific Name'])
+  const speciesToReport = ArizonaRecords.map(x => x['Scientific Name'])
+  // TODO Update needs JSON file
+  const output = {
+    Breeding: [],
+    Arizona: [],
+    Unknown: [],
+    Subspecies: []
+  }
+  // We need both the single letter and the full-text;
+  // the eBird downloaded database only has single, but MyEbirdData has the full string.
+  // Alternatively, we should convert them when importing, but there're space issues.
+  const ignoredBreedingCodes = [
+    'S Singing Bird',
+    'S',
+    'H In Appropriate Habitat',
+    'H',
+    'F Flyover',
+    'F',
+    'S7 Singing Bird Present 7+ Days (Probable)',
+    'S7',
+    'M Multiple (7+) Singing Birds (Probable)',
+    'M',
+    'P Pair in Suitable Habitat (Probable)',
+    'P',
+    'T Territorial Defense (Probable)',
+    'T',
+    'C Courtship, Display or Copulation (Probable)',
+    'C',
+    'N Visiting Probable Nest Site (Probable)',
+    'N',
+    'A Agitated Behavior (Probable)',
+    'A',
+    'B Wren/Woodpecker Nest Building (Probable)',
+    'B'
+  ]
+
+  data.forEach(e => {
+    const species = e['Scientific Name']
+    if (speciesToReport.includes(species)) {
+      const recordEntry = ArizonaRecords.find(x => x['Scientific Name'] === species)
+      // This checks if there is a breeding code but this species hasn't been confirmed breeding before.
+      if (recordEntry.Breeding !== 'n' && e['Breeding Code'] && !ignoredBreedingCodes.includes(e['Breeding Code'])) {
+        output.Breeding.push(e)
+      } else if (recordEntry.Reporting === 'V') {
+        // Anyhwere in Vermont
+        output.Arizona.push(e)
+      }
+    } else if (!allSpecies.includes(species)) {
+      output.Unknown.push(e)
+    }
+
+    // Do nothing at the moment.
+    if (e.Subspecies) {
+      // TODO
+    }
+  })
+
+  if (opts.output) {
+    fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(output), 'utf8')
+    console.log(`Wrote ${opts.output.toString().replace('.json', '')}.json.`)
+  } else {
+    console.log(output)
+  }
+
+  // return output
+}
+
 async function rare (opts) {
   let data
   opts.state = 'Vermont'
@@ -916,6 +1031,7 @@ module.exports = {
   quadBirds,
   radialSearch,
   rare,
+  rareAZ,
   regions,
   towns,
   counties,
