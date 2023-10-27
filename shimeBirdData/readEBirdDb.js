@@ -1,5 +1,7 @@
 // This function reads only the eBird database files, requestable from eBird.
 const fs = require('fs')
+const stream = require('stream');
+const JSONStream = require('JSONStream'); // Make sure to install this package: 'npm install JSONStream'
 const csv = require('csv-parse')
 const f = require('../filters')
 const helpers = require('../helpers')
@@ -142,6 +144,11 @@ function shimData (row) {
     'Common Name': row['COMMON NAME'],
     'Scientific Name': row['SCIENTIFIC NAME'],
     'Taxonomic Order': row['TAXONOMIC ORDER'],
+    // Just added these three, as they're necessary for some filtering.
+    'Subspecies Common Name': row['SUBSPECIES COMMON NAME'],
+    'Subspecies Scientific Name': row['SUBSPECIES SCIENTIFIC NAME'],
+    'Exotic Code': row['EXOTIC CODE'],
+
     Count: row['OBSERVATION COUNT'],
     'State/Province': row['STATE CODE'],
     County: row.COUNTY,
@@ -165,34 +172,62 @@ function shimData (row) {
   }
 }
 
-async function rowsToJSON (file, opts) {
-  return new Promise(function (resolve, reject) {
-    const shimmedRows = []
+
+async function rowsToJSON(file, opts) {
+  opts = opts || {}
+  return new Promise((resolve, reject) => {
+    // Create a writable stream to the destination file and set up error handling
+    const fileName = 'results.json'
+    const writableStream = fs.createWriteStream(fileName);
+    writableStream.on('error', (err) => {
+      console.error('Stream writing failed:', err);
+      reject(err);
+    });
+    writableStream.on('finish', () => {
+      console.log(`File written successfully to ${fileName}.`);
+      resolve();
+    });
+
+    // Pipe the processed rows directly into a JSON stringifier, then into the file
+    const jsonTransformStream = JSONStream.stringify();
+    jsonTransformStream.on('error', (err) => {
+      console.error('JSON transform failed:', err);
+      reject(err);
+    });
+
+    // Pipe the stringified JSON to the writable file stream
+    jsonTransformStream.pipe(writableStream);
+
+    // Read and process the file content in a streaming manner
     fs.createReadStream(file)
-      .pipe(parser)
+      .pipe(parser) // Assuming 'parser' is defined in your code to parse your input file
       .on('data', (row) => {
-        if (opts.complete) {
+        // Process the row here as needed
+        let processedRow = row;
+        // TODO This isn't working particularly well for some reason. Caused a bug in output for the AZ records.
+        if (opts && opts.complete) {
           const filteredRow = f.completeChecklistFilter([shimData(row)], { complete: true, noIncidental: true });
           if (filteredRow.length) {
-            shimmedRows.push(filteredRow[0]);
+            processedRow = filteredRow[0];
           }
         } else {
-          shimmedRows.push(shimData(row))
+          processedRow = shimData(row);
         }
+
+        // Write the processed row to the JSON stream
+        jsonTransformStream.write(processedRow);
       })
-      .on('error', (e) => console.log('BONK', e))
+      .on('error', (err) => {
+        console.error('Error while reading the file:', err);
+        // Make sure to close the streams upon an error to prevent memory leaks
+        jsonTransformStream.end();
+        reject(err);
+      })
       .on('end', () => {
-        fs.writeFile('results.json', JSON.stringify(shimmedRows), 'utf8', (err) => {
-          if (err) {
-            console.log(err)
-            reject(err)
-          } else {
-            console.log('File written successfully.')
-            resolve()
-          }
-        })
-      })
-  })
+        // No more data, close the JSON stream and subsequently the file stream
+        jsonTransformStream.end();
+      });
+  });
 }
 
 async function runFile (file, string) {
@@ -207,17 +242,24 @@ async function runFile (file, string) {
       .pipe(parser)
       .on('data', (row) => {
         // Note: This check has to be turned on manually. Perhaps there should be opts for that, instead?
-        const filteredRow = f.durationFilter(f.completeChecklistFilter([shimData(row)], { complete: true }), { duration: 5 }).length !== 0
+        // TODO There should be a way to turn on this automatically using args
+        // const filteredRow = f.durationFilter(f.completeChecklistFilter([shimData(row)], { complete: false }), { duration: 5 }).length !== 0
+        const filteredRow = shimData(row)
 
         if (filteredRow) {
           // Define some variables that won't be in the output but help you sort
           const year = row['OBSERVATION DATE'].split('-')[0]
           const coordinates = {
-            Longitude: row.LONGITUDE,
-            Latitude: row.LATITUDE
+            LONGITUDE: row.LONGITUDE,
+            LATITUDE: row.LATITUDE
           }
+          let point
           // Areas is regions or towns - this figures out where a point is.
-          const point = f.getPoint(areas, coordinates, Number(row['COUNTY CODE'].split('-')[2]))
+          try {
+            point = f.getPoint(areas, coordinates, Number(row['COUNTY CODE'].split('-')[2]))
+          } catch (error) {
+            console.log('Unable to get town or county area', filteredRow, error)
+          }
           const species = {
             'Scientific Name': row['SCIENTIFIC NAME'],
             'Common Name': row['COMMON NAME']
@@ -520,7 +562,7 @@ async function analyzeFiles () {
     }
     console.log(`Analyzing ${file}.`)
     if (areas === 'json') {
-      await rowsToJSON(file, {complete: true})
+      await rowsToJSON(file)
     } else if (areas === '150') {
       await run150Query(file, string)
     } else if (areas === '250') {
