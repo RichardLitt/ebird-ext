@@ -180,6 +180,8 @@ function locationFilter (list, opts) {
           // console.log(checklist, filter)
           // TODO This should also work for Arrays, I guess
           return checklist[filter].toLowerCase() === opts[filter.toLowerCase()].toLowerCase()
+        } else {
+          console.log('Wrong state', checklist[filter], checklist)
         }
       }
 
