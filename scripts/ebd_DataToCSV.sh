@@ -30,7 +30,7 @@ CLEAN_FILE="${DIRNAME}/${BASENAME%.*}_clean.txt"  # Assuming that the script add
 
 # Read and analyze eBird data
 echo "Step 2: Reading and Analyzing eBird data..."
-node shimeBirdData/readEBirdData.js json "$CLEAN_FILE"
+node shimeBirdData/readEBirdDb.js json "$CLEAN_FILE"
 check_success  # Check if the previous step was successful
 
 # Since the script always outputs 'results.json', the filename is not dynamic. 
