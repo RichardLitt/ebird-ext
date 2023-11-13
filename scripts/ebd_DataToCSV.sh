@@ -33,6 +33,8 @@ echo "Step 2: Reading and Analyzing eBird data..."
 node shimeBirdData/readEBirdDb.js json "$CLEAN_FILE"
 check_success  # Check if the previous step was successful
 
+# TODO Make the filename dynamic.
+
 # Since the script always outputs 'results.json', the filename is not dynamic. 
 # If the output file can be different, you should modify this part.
 RESULT_JSON='results.json'
