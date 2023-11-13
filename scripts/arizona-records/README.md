@@ -6,11 +6,11 @@ Generally the process was this:
 
 - Download the eBird data you need.
 - Use `ebd_DataToCSV.sh` in the folder above as a template for how to start. So, first:
-- Clean the eBird database using `cleaneBirdDatabase.sh`
-- Split that file using split_csv_file.sh
-- Use runNodeScriptOnSplitFiles in order to run shimeBirdDb.js on those files
-- Then run `runJSON2CSVOnSplitFiles.sh` on all of the output for that
-- Finally, run `runFinalAZRecords.sh` on those output
+  - Clean the eBird database using `cleaneBirdDatabase.sh`
+  - Split that file using split_csv_file.sh
+  - Use runNodeScriptOnSplitFiles in order to run shimeBirdDb.js on those files
+  - Then run `runJSON2CSVOnSplitFiles.sh` on all of the output for that
+  - Finally, run `runFinalAZRecords.sh` on those output
 - And then, actually finally, merge those files using the munging in BRCRecordsInJSONToCSV.js
 
 This is a ridiculous pathway, but it's this way due to historical reasons:
