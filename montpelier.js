@@ -306,7 +306,8 @@ async function findMontpelierHotspotNeedsToday(opts) {
   const todayDate = moment().format('DD');
 
   async function fetchHotspotsFromEBird() {
-      const response = await fetch(`https://api.ebird.org/v2/ref/hotspot/geo?lat=${opts.lat}&lng=${opts.lng}&dist=${opts.miles}&fmt=json`);
+      const url = `https://api.ebird.org/v2/ref/hotspot/geo?lat=${opts.lat}&lng=${opts.lng}&dist=${opts.miles}&fmt=json`
+      const response = await fetch(url, { method: 'GET', headers: { 'X-eBirdApiToken': 'a6ebaopct2l3' } });
       return JSON.parse(await response.text());
   }
 
