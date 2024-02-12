@@ -53,6 +53,10 @@ try {
       getIdsFromRadius(opts);
       break;
 
+    case 'washington':
+      findMontpelierHotspotNeedsToday()
+      break;
+
     default:
       opts = {
         miles: 12,
@@ -249,8 +253,8 @@ function dataForThisWeekInHistory (opts) {
   
   // Last observations are almost certainly not in the downloaded db.
   // Note - latest observations can be incindental. I can't think of a way around this, except to get all of the checklists from a region
-  const lastBirdedWeek = moment(opts.latestObsDt.split(' ')[0]).week()
-  if (!observedWeeks.includes(lastBirdedWeek)) {
+  const lastBirdedWeek = (opts.latestObsDt) ? moment(opts.latestObsDt.split(' ')[0]).week() : null
+  if (lastBirdedWeek && !observedWeeks.includes(lastBirdedWeek)) {
     observedWeeks.push(lastBirdedWeek)
   }
 
@@ -317,9 +321,15 @@ async function findMontpelierHotspotNeedsToday(opts) {
   // const body = JSON.parse(await response.text())
 
   async function fetchHotspotsFromEBird() {
-      const url = `https://api.ebird.org/v2/ref/hotspot/geo?lat=${opts.lat}&lng=${opts.lng}&dist=${opts.miles}&fmt=json`
-      const response = await fetch(url, { method: 'GET', headers: { 'X-eBirdApiToken': 'a6ebaopct2l3' } });
-      return JSON.parse(await response.text());
+    let url
+    if (opts) {
+      url = `https://api.ebird.org/v2/ref/hotspot/geo?lat=${opts.lat}&lng=${opts.lng}&dist=${opts.miles}&fmt=json`
+    } else {
+      url = `https://api.ebird.org/v2/ref/hotspot/US-VT-023?fmt=json`
+    }
+    const response = await fetch(url, { method: 'GET', headers: { 'X-eBirdApiToken': 'a6ebaopct2l3' } });
+    const body = JSON.parse(await response.text())
+    return body
   }
 
   function filterBirdedHotspots(data, ids) {
@@ -364,15 +374,34 @@ async function findMontpelierHotspotNeedsToday(opts) {
       // Assuming your logic for cleaning up and printing the hotspots remains the same
       body
           .map((d) => {
-              d.distance = difference.distance(opts.lat, opts.lng, d.lat, d.lng, 'M');
+              if (opts) {
+                d.distance = difference.distance(opts.lat, opts.lng, d.lat, d.lng, 'M');
+              }
               const data = dataForThisWeekInHistory({ id: d.locId, latestObsDt: d.latestObsDt });
               d.nextUnbirdedWeek = data.nextUnbirdedWeek;
               d.coveragePercentage = data.coveragePercentage;
               return d;
           })
           .filter(d => unbirdedToday.includes(d.locId))
-          .filter(d => d.distance < opts.miles)
-          .sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance))
+          .filter(d => {
+            return (d && d.distance) ? d.distance < opts.miles : d
+          })
+          .sort((a, b) => {
+              // Assuming `ops` is a boolean that determines the sorting criteria
+            if (a.distance) {
+              // Sorting by distance if `ops` is true
+              return parseFloat(a.distance) - parseFloat(b.distance);
+            } else {
+              // Sorting alphabetically by locName if `ops` is false
+              if (a.locName < b.locName) {
+                return -1;
+              }
+              if (a.locName > b.locName) {
+                return 1;
+              }
+              return 0;
+            }
+          })
           .forEach(async d => {
               d.locName = d.locName
                   .replace('(Restricted Access)', '')
@@ -382,7 +411,7 @@ async function findMontpelierHotspotNeedsToday(opts) {
                   .replace(' - Berlin', '')
                   .replace(/\(\d+ acres\)/i, '')
                   .trim();
-              console.log(`${d.latestObsDt.split(' ')[0]}  ${(d.nextUnbirdedWeek) ? d.nextUnbirdedWeek.padEnd(8) : ''.padEnd(8)} ${(d.locName + ' (' + Math.round(d.coveragePercentage) + '%)').padEnd(42)} https://ebird.org/hotspot/${d.locId} `);
+              console.log(`${(d.latestObsDt) ? d.latestObsDt.split(' ')[0] : '          '}  ${(d.nextUnbirdedWeek) ? d.nextUnbirdedWeek.padEnd(8) : ''.padEnd(8)} ${(d.locName + ' (' + Math.round(d.coveragePercentage) + '%)').padEnd(42)} https://ebird.org/hotspot/${d.locId} `);
           });
   }
 
@@ -392,7 +421,7 @@ async function findMontpelierHotspotNeedsToday(opts) {
   // }
 
   // Main execution logic
-  const body = await fetchHotspotsFromEBird();
+  const body = await fetchHotspotsFromEBird()
   const ids = body.map(d => d.locId);
   const birded = filterBirdedHotspots(hotspotDatesData, ids);
   const unbirdedToday = await computeUnbirded(ids, birded);
