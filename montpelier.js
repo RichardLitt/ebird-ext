@@ -308,13 +308,13 @@ async function findMontpelierHotspotNeedsToday(opts) {
   const todayDate = moment().format('DD');
 
   // Get data from eBird. Note that this still depends on a local hotspot dates file, which needs to be got from the database and then shimmed.
-  const response = await fetch(`https://api.ebird.org/v2/ref/hotspot/geo?lat=${opts.lat}&lng=${opts.lng}&dist=${opts.miles}&fmt=json`, {
-      method: 'GET', // HTTP method
-      headers: {
-        'X-eBirdApiToken': eBirdApiToken // Include the token in the request headers
-      }
-  })
-  const body = JSON.parse(await response.text())
+  // const response = await fetch(`https://api.ebird.org/v2/ref/hotspot/geo?lat=${opts.lat}&lng=${opts.lng}&dist=${opts.miles}&fmt=json`, {
+  //     method: 'GET', // HTTP method
+  //     headers: {
+  //       'X-eBirdApiToken': eBirdApiToken // Include the token in the request headers
+  //     }
+  // })
+  // const body = JSON.parse(await response.text())
 
   async function fetchHotspotsFromEBird() {
       const url = `https://api.ebird.org/v2/ref/hotspot/geo?lat=${opts.lat}&lng=${opts.lng}&dist=${opts.miles}&fmt=json`
@@ -324,7 +324,9 @@ async function findMontpelierHotspotNeedsToday(opts) {
 
   function filterBirdedHotspots(data, ids) {
       return ids.filter(id => {
-          return data[id] && data[id]['Dates Birded'][month].includes(Number(todayDate));
+          if (data[id] && data[id]['Dates Birded'] && data[id]['Dates Birded'][month]) {
+            return data[id] && data[id]['Dates Birded'][month].includes(Number(todayDate))
+          }
       });
   }
 
