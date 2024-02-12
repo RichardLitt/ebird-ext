@@ -9,6 +9,8 @@ const difference = require('compare-latlong')
 const f = require('./filters')
 const fs = require('fs')
 
+const eBirdApiToken = 'a6ebaopct2l3'
+
 let opts = {}
 
 const command = process.argv[2];
@@ -126,7 +128,7 @@ async function shimFilterHotspotJSON () {
 async function getChecklist (checklistId) {
   // curl --location -g --request GET 'https://api.ebird.org/v2/product/checklist/view/{{subId}}' \
   let checklist = await fetch(`https://api.ebird.org/v2/product/checklist/view/${checklistId}`,
-    { method: 'GET', headers: { 'X-eBirdApiToken': 'a6ebaopct2l3' } })
+    { method: 'GET', headers: { 'X-eBirdApiToken': eBirdApiToken } })
   checklist = JSON.parse(await checklist.text())
   console.log(checklist)
 }
@@ -305,6 +307,15 @@ async function findMontpelierHotspotNeedsToday(opts) {
   const month = moment().format('MM');
   const todayDate = moment().format('DD');
 
+  // Get data from eBird. Note that this still depends on a local hotspot dates file, which needs to be got from the database and then shimmed.
+  const response = await fetch(`https://api.ebird.org/v2/ref/hotspot/geo?lat=${opts.lat}&lng=${opts.lng}&dist=${opts.miles}&fmt=json`, {
+      method: 'GET', // HTTP method
+      headers: {
+        'X-eBirdApiToken': eBirdApiToken // Include the token in the request headers
+      }
+  })
+  const body = JSON.parse(await response.text())
+
   async function fetchHotspotsFromEBird() {
       const url = `https://api.ebird.org/v2/ref/hotspot/geo?lat=${opts.lat}&lng=${opts.lng}&dist=${opts.miles}&fmt=json`
       const response = await fetch(url, { method: 'GET', headers: { 'X-eBirdApiToken': 'a6ebaopct2l3' } });
@@ -321,6 +332,16 @@ async function findMontpelierHotspotNeedsToday(opts) {
       const url = 'https://api.ebird.org/v2/product/lists/US-VT-023?maxResults=50';
       const response = await fetch(url, { method: 'GET', headers: { 'X-eBirdApiToken': 'a6ebaopct2l3' } });
       const data = await response.json();
+
+      // // Make a list of IDs of birded hotspots today
+      // const birded = []
+      // ids.forEach(id => {
+      //   if (data[id] && data[id]['Dates Birded'][month]) {
+      //     if (data[id]['Dates Birded'][month].includes(Number(todayDate)) && !birded.includes(id)) {
+      //       birded.push(id)
+      //     }
+      //   }
+      // })
 
       const formattedToday = new Date(new Intl.DateTimeFormat('en-US', {
           timeZone: 'America/New_York',
@@ -363,10 +384,10 @@ async function findMontpelierHotspotNeedsToday(opts) {
           });
   }
 
-  function hasBerlinPondBeenBirdedThisWeek(body) {
-      const lastDate = body.find(d => d.locId === 'L150998').latestObsDt.split(' ')[0];
-      return moment(lastDate).week() >= moment().week() ? 'Yes' : 'No';
-  }
+  // function hasBerlinPondBeenBirdedThisWeek(body) {
+  //     const lastDate = body.find(d => d.locId === 'L150998').latestObsDt.split(' ')[0];
+  //     return moment(lastDate).week() >= moment().week() ? 'Yes' : 'No';
+  // }
 
   // Main execution logic
   const body = await fetchHotspotsFromEBird();
@@ -378,14 +399,14 @@ async function findMontpelierHotspotNeedsToday(opts) {
   cleanUpAndPrintHotspots(body, unbirdedToday)
 
 
+// Was Berlin Pond birded this week, this year: ${hasBerlinPondBeenBirdedThisWeek(body)}.
   console.log(`
-Was Berlin Pond birded this week, this year: ${hasBerlinPondBeenBirdedThisWeek(body)}.
 
 How does this script work? It uses a list of all of the Hotspots in Montpelier and checks to see what dates they 
 were all birded, by checking the eBird API. Coverage shows the percent of weeks which have had checklists submi-
 tted on them, meaning that if a hotspot has had checklists in any year in all 52 weeks, it is at 100%.
 
-For more infomation, see https://github.com/RichardLitt/ebird-ext/. 
+For more infomation, see https://github.com/RichardLitt/ebird-ext/.
 `)
 
   function printHotspotsHeader() {
