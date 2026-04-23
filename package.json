@@ -30,6 +30,8 @@
   },
   "scripts": {
     "norwich": "node norwich.js --input=/Users/richard/Downloads/MyEBirdData.csv",
-    "updateHotspots": "sh scripts/updateHotspots.sh"
+    "updateHotspots": "sh scripts/updateHotspots.sh",
+    "test": "node --test \"test/**/*.test.js\"",
+    "test:spec": "node --test --test-reporter=spec \"test/**/*.test.js\""
   }
 }

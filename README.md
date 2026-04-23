@@ -14,3 +14,13 @@ npm run norwich
 ```
 
 To gather the output of the data: `npm run norwich > output.txt`
+
+## Testing
+
+Requires Node 18+.
+
+```sh
+npm test
+```
+
+Uses Node's built-in test runner (`node --test`). For a more readable reporter, use `npm run test:spec`.
