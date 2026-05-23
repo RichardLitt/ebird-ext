@@ -10,7 +10,7 @@ const provinces = require('provinces')
 const helpers = require('./helpers')
 const nearestPoint = require('@turf/nearest-point')
 const turf = require('turf')
-const centerOfMass = require('@turf/center-of-mass')
+// const centerOfMass = require('@turf/center-of-mass')
 
 // Why eBird uses this format I have no idea.
 const eBirdCountyIds = {
@@ -39,7 +39,8 @@ function getTownCentroids (town) {
     let center
     // This center of West Haven is in New York.
     if (feature.properties.town === 'West Haven'.toUpperCase()) {
-      center = centerOfMass.default(feature)
+      // This breaks the whole thing! 
+      center = turf.center(feature) //centerOfMass.default(feature)
       // TODO Unfortunately, the enclaves are broken. All Rutland counts are in Rutland City.
     } else if (feature.properties.town.includes('Rutland'.toUpperCase())) {
       center = turf.center(feature)
@@ -47,6 +48,7 @@ function getTownCentroids (town) {
     } else {
       center = turf.center(feature)
     }
+    // console.log(feature.properties, center)
     center.properties = feature.properties
     return center
   })
