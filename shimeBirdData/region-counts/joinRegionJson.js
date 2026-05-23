@@ -1,10 +1,14 @@
-const fs = require('fs')
-const banding = require('../bandingCodes')
-const f = require('../filters')
-const helpers = require('../helpers')
-const _ = require('lodash')
-const fetch = require('node-fetch')
+import fs from 'node:fs'
+import { createRequire } from 'node:module'
+import * as banding from '../../bandingCodes.js'
+import * as f from '../../filters.js'
+import * as helpers from '../../helpers.js'
+import _ from 'lodash'
+import fetch from 'node-fetch'
 
+const require = createRequire(import.meta.url)
+
+// vtRegions-NNN.json files are generated on demand by readEBirdDb.js, not committed.
 const files = [
   require('./vtRegions-001.json'),
   require('./vtRegions-003.json'),

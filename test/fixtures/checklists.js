@@ -1,7 +1,7 @@
 // Hand-crafted eBird-shaped checklist records for use in tests.
 // Uses only the fields actually read by the functions under test.
 
-module.exports = [
+export default [
   {
     'Submission ID': 'S100000001',
     'Date': '2023-06-15',

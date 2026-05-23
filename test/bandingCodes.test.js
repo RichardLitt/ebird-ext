@@ -1,12 +1,12 @@
-const test = require('node:test')
-const assert = require('node:assert/strict')
-const {
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {
   isBandingCode,
   codeToCommonName,
   codeToScientificName,
   commonNameToCode,
   speciesNameToCode
-} = require('../bandingCodes')
+} from '../bandingCodes.js'
 
 test('isBandingCode matches a real 4-letter alpha code', () => {
   assert.ok(isBandingCode('BCCH'))

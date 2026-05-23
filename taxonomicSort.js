@@ -1,9 +1,9 @@
-// const fs = require('fs').promises
-// const Papa = require('papaparse')
+// import fs from 'node:fs/promises'
+// import Papa from 'papaparse'
 // Uncomment when you need to use taxonomic sort. For now, not included, because React scoops up everything, and it is too big.
-// const taxonomy = require('./taxonomies/eBird-Clements-v2021-integrated-checklist-August-2021.json')
+// import taxonomy from './taxonomies/eBird-Clements-v2021-integrated-checklist-August-2021.json' with { type: 'json' }
 // Note: This only uses Vermont birds, and may have issues with newer ones. (It'll put them at the end.)
-const taxonomy = require('./taxonomies/eBird_Taxonomy_2020_VT.json')
+import taxonomy from './taxonomies/eBird_Taxonomy_2020_VT.json' with { type: 'json' }
 
 // Testing arrays
 // TODO Actually implement a testing framework
@@ -29,4 +29,4 @@ function taxonomicSort (list, name = 'common') {
   return list.sort((a, b) => sortedTaxos.indexOf(a) - sortedTaxos.indexOf(b))
 }
 
-module.exports = taxonomicSort
+export default taxonomicSort

@@ -3,6 +3,7 @@
   "homepage": "https://birdinginvermont.com",
   "version": "0.1.1",
   "private": true,
+  "type": "module",
   "dependencies": {
     "@turf/center": "^6.5.0",
     "@turf/center-of-mass": "^6.5.0",

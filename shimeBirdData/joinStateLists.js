@@ -3,11 +3,11 @@
 // These can be made by using readeBirdStateDbForSpecies.js, and a new export
 // From the eBird database.
 
-const fs = require('fs')
-const t = require('../taxonomicSort')
-const f = require('../filters')
-const csv = require('csv-parse')
-const _ = require('lodash')
+import fs from 'node:fs'
+import t from '../taxonomicSort.js'
+import * as f from '../filters.js'
+import csv from 'csv-parse'
+import _ from 'lodash'
 const parser = csv({
   delimiter: ',',
   record_delimiter: '\n',

@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-const meow = require('meow')
-const main = require('./index')
-const hotspots = require('./hotspots')
-const _ = require('lodash')
-const moment = require('moment')
+import meow from 'meow'
+import main from './index.js'
+import * as hotspots from './hotspots.js'
+import _ from 'lodash'
+import moment from 'moment'
 
 const cli = meow(`
   Usage

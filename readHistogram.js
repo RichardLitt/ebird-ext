@@ -3,8 +3,8 @@
 // cover seeing all birds which might be seen or which have been seen outside
 // of the area of the Histogram file.
 
-const fs = require('fs').promises
-const removeEmptyLines = require("remove-blank-lines");
+import { promises as fs } from 'node:fs'
+import removeEmptyLines from 'remove-blank-lines'
 
 async function getData (input) {
   let results = {}
@@ -44,6 +44,10 @@ async function washingtonCounty2020 () {
   return await getData('data/ebird_US-VT-023__2020_2020_1_12_barchart.txt')
 }
 
-module.exports = {
+export {
+  washingtonCounty2020
+}
+
+export default {
   washingtonCounty2020
 }

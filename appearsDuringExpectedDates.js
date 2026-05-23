@@ -1,7 +1,7 @@
 // This is a helper library for checking expected dates for VBRC
 
-const moment = require('moment')
-const weekOfMonth = require('moment-weekofmonth')
+import moment from 'moment'
+import weekOfMonth from 'moment-weekofmonth'
 
 // const test = [
 //   {
@@ -223,4 +223,4 @@ function appearsDuringExpectedDates(date, speciesRecord) {
 // test.map(x => {
 //   console.log(x.Species, appearsDuringExpectedDates('2020-02-05', x.Occurrence))
 // })
-module.exports = appearsDuringExpectedDates
+export default appearsDuringExpectedDates

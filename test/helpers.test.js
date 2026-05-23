@@ -1,6 +1,6 @@
-const test = require('node:test')
-const assert = require('node:assert/strict')
-const { capitalizeFirstLetters, parseDateFormat, momentFormat } = require('../helpers')
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { capitalizeFirstLetters, parseDateFormat, momentFormat } from '../helpers.js'
 
 test('capitalizeFirstLetters title-cases lowercase words', () => {
   assert.equal(capitalizeFirstLetters('hello world'), 'Hello World')

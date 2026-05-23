@@ -1,6 +1,6 @@
 // This function reads only the eBird database files, requestable from eBird.
-const fs = require('fs')
-const csv = require('csv-parse')
+import fs from 'node:fs'
+import csv from 'csv-parse'
 const parser = csv({
   delimiter: '\t',
   record_delimiter: '\n',

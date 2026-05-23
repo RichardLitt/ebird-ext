@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-const meow = require('meow')
-const _ = require('lodash')
-const fs = require('fs').promises
-const moment = require('moment')
-const main = require('./index')
-const helpers = require('./helpers')
-const hotspots = require('./hotspots')
-const f = require('./filters')
+import meow from 'meow'
+import _ from 'lodash'
+import { promises as fs } from 'node:fs'
+import moment from 'moment'
+import * as main from './index.js'
+import * as helpers from './helpers.js'
+import * as hotspots from './hotspots.js'
+import * as f from './filters.js'
 
 const cli = meow(`
   Usage

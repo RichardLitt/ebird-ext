@@ -1,8 +1,9 @@
-const fs = require('fs');
-const path = require('path');
-const JSONStream = require('JSONStream');
-const { Transform } = require('stream');
-const { Parser } = require('json2csv');
+import fs from 'node:fs';
+import path from 'node:path';
+import JSONStream from 'JSONStream';
+import { Transform } from 'node:stream';
+import json2csvPkg from 'json2csv';
+const { Parser } = json2csvPkg;
 
 const args = process.argv.slice(2);
 

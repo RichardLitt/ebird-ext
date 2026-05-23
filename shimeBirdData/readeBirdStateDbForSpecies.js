@@ -1,7 +1,8 @@
 // This function reads only the eBird database files, requestable from eBird.
-const fs = require('fs')
-const csv = require('csv-parse')
-const t = require('../taxonomicSort')
+import fs from 'node:fs'
+import csv from 'csv-parse'
+import t from '../taxonomicSort.js'
+import { Transform } from 'node:stream'
 const parser = csv({
   delimiter: '\t',
   record_delimiter: '\n',
@@ -64,8 +65,6 @@ const parser = csv({
     'SPECIES COMMENTS'
   ]
 })
-const { Transform } = require('stream')
-
 // Used to filter out unapproved entries before getting to data sorting.
 class Filter extends Transform {
   constructor () {
