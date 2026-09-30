@@ -19,8 +19,9 @@ import {
 //   firstTimes(timespan, opts)   -> the period in which the most species were
 //                                   seen for the first time ("lifers")
 //   daylistTargets(opts)         -> with opts.today, logs every Vermont
-//                                   species previously recorded on today's
-//                                   calendar date (month + day, any year)
+//                                   species NOT yet recorded in Vermont on
+//                                   today's calendar date (month + day, any
+//                                   year) -- the day's targets
 //
 // All of them read an eBird "My eBird Data" CSV from opts.input via getData,
 // which parses with Papa (header: true) and runs filters.removeSpuh (drops
@@ -725,7 +726,7 @@ test('firstTimeList is no longer exported (it was an empty stub)', () => {
 // ===========================================================================
 //
 // With opts.today, daylistTargets logs one line per Vermont species that has
-// been recorded on today's month + day in any year. "Today" is controlled by
+// NOT been recorded in Vermont on today's month + day in any year. "Today" is controlled by
 // mocking Date with t.mock.timers (moment() reads the mocked clock).
 
 function today (t, year, monthIndex, day) {
@@ -746,34 +747,49 @@ test('daylistTargets prints nothing without opts.today', async (t) => {
   assert.equal(console.log.mock.calls.length, 0)
 })
 
-test('daylistTargets logs Vermont species seen on today\'s date in earlier years', async (t) => {
+// Vermont species in daylist.csv (with coordinates, not spuhs), in file order.
+const DAYLIST_VT = [
+  'Black-capped Chickadee',
+  'Blue Jay',
+  'Dark-eyed Junco (Slate-colored)',
+  'Wild Turkey',
+  'Snow Bunting',
+  'Common Redpoll',
+  'American Robin',
+  'Brown Creeper'
+]
+const except = (...names) => DAYLIST_VT.filter(x => !names.includes(x))
+
+test('daylistTargets logs Vermont species not yet seen on today\'s date', async (t) => {
   today(t, 2024, 9, 1) // Oct 1
   await daylistTargets({ input: DAYLIST, today: true, state: 'Vermont' })
   assert.deepEqual(logged(), [
-    'Black-capped Chickadee',
-    'Blue Jay',
-    'Dark-eyed Junco (Slate-colored)',
-    'Brown Creeper'
+    'Wild Turkey',
+    'Snow Bunting',
+    'Common Redpoll',
+    'American Robin'
   ])
 })
 
 test('daylistTargets logs one species name per console.log call', async (t) => {
   today(t, 2024, 9, 1)
   await daylistTargets({ input: DAYLIST, today: true, state: 'Vermont' })
+  assert.ok(console.log.mock.calls.length > 0)
   assert.ok(console.log.mock.calls.every(c => c.arguments.length === 1 && typeof c.arguments[0] === 'string'))
 })
 
-test('daylistTargets logs a species once even if seen on this date in several years', async (t) => {
-  today(t, 2024, 9, 1)
+test('daylistTargets logs each target once', async (t) => {
+  today(t, 2024, 6, 4) // Jul 4, nothing seen
   await daylistTargets({ input: DAYLIST, today: true, state: 'Vermont' })
-  assert.equal(logged().filter(x => x === 'Black-capped Chickadee').length, 1)
+  assert.deepEqual(logged(), DAYLIST_VT)
 })
 
-test('daylistTargets does not log species seen only on other dates', async (t) => {
+test('daylistTargets does not log species seen on today\'s date in any earlier year', async (t) => {
+  // Black-capped Chickadee was seen on Oct 1 in both 2022 and 2023.
   today(t, 2024, 9, 1)
   await daylistTargets({ input: DAYLIST, today: true, state: 'Vermont' })
   const out = logged()
-  for (const name of ['Wild Turkey', 'Snow Bunting', 'Common Redpoll', 'American Robin']) {
+  for (const name of ['Black-capped Chickadee', 'Blue Jay', 'Dark-eyed Junco (Slate-colored)', 'Brown Creeper']) {
     assert.ok(!out.includes(name), name)
   }
 })
@@ -785,76 +801,91 @@ test('daylistTargets ignores species seen only outside Vermont', async (t) => {
 })
 
 test('daylistTargets excludes spuhs', async (t) => {
-  today(t, 2024, 9, 1)
+  today(t, 2024, 6, 4)
   await daylistTargets({ input: DAYLIST, today: true })
   assert.ok(!logged().includes('chickadee sp.'))
 })
 
 test('daylistTargets drops rows with no Latitude (via locationFilter)', async (t) => {
   // The Hermit Thrush row has blank coordinates.
-  today(t, 2024, 9, 1)
+  today(t, 2024, 6, 4)
   await daylistTargets({ input: DAYLIST, today: true })
   assert.ok(!logged().includes('Hermit Thrush'))
 })
 
 test('daylistTargets keeps subspecies common names as-is (not merged with the species)', async (t) => {
-  today(t, 2024, 9, 1)
+  today(t, 2024, 6, 4)
   await daylistTargets({ input: DAYLIST, today: true })
   assert.ok(logged().includes('Dark-eyed Junco (Slate-colored)'))
   assert.ok(!logged().includes('Dark-eyed Junco'))
 })
 
 test('daylistTargets honors a county filter', async (t) => {
+  // Brown Creeper is the only Chittenden species, and was seen on Oct 1.
   today(t, 2024, 9, 1)
+  await daylistTargets({ input: DAYLIST, today: true, county: 'Chittenden' })
+  assert.deepEqual(logged(), [])
+  console.log.mock.resetCalls()
+  t.mock.timers.setTime(new Date(2024, 6, 4, 12).getTime())
   await daylistTargets({ input: DAYLIST, today: true, county: 'Chittenden' })
   assert.deepEqual(logged(), ['Brown Creeper'])
 })
 
 test('daylistTargets county filter is case-insensitive', async (t) => {
-  today(t, 2024, 9, 1)
+  today(t, 2024, 6, 4)
   await daylistTargets({ input: DAYLIST, today: true, county: 'washington' })
   assert.ok(!logged().includes('Brown Creeper'))
   assert.ok(logged().includes('Blue Jay'))
 })
 
-test('daylistTargets counts an out-of-state sighting toward a Vermont species\' dates (current behavior)', async (t) => {
-  // American Robin was seen in VT on Apr 10 and in NY on Oct 1. Without a
-  // state filter the NY sighting marks Oct 1 as "observed".
+test('daylistTargets does not count an out-of-state sighting toward a Vermont species\' dates', async (t) => {
+  // American Robin was seen in VT on Apr 10 and in NY on Oct 1, so Oct 1 is
+  // still a Vermont target for it.
   today(t, 2024, 9, 1)
   await daylistTargets({ input: DAYLIST, today: true })
   assert.ok(logged().includes('American Robin'))
 })
 
-test.todo('daylistTargets builds its species list from US-VT rows only, but then collects observed dates from rows in ANY state, so an out-of-state sighting counts for a Vermont species (index.js:975, index.js:984)')
+test('daylistTargets uses only US-VT rows for observed dates', async (t) => {
+  today(t, 2024, 9, 1)
+  const NY = { 'State/Province': 'US-NY', County: 'New York', Latitude: '40.7831', Longitude: '-73.9712' }
+  const file = await csv([
+    row('Blue Jay', 'Cyanocitta cristata', '2023-10-01'),
+    row('Snow Bunting', 'Plectrophenax nivalis', '2023-12-31'),
+    row('Snow Bunting', 'Plectrophenax nivalis', '2023-10-01', NY)
+  ])
+  await daylistTargets({ input: file, today: true })
+  assert.deepEqual(logged(), ['Snow Bunting'])
+})
 
 test('daylistTargets handles Dec 31', async (t) => {
   today(t, 2024, 11, 31)
   await daylistTargets({ input: DAYLIST, today: true })
-  assert.deepEqual(logged(), ['Snow Bunting'])
+  assert.deepEqual(logged(), except('Snow Bunting'))
 })
 
 test('daylistTargets handles Jan 1', async (t) => {
   today(t, 2025, 0, 1)
   await daylistTargets({ input: DAYLIST, today: true })
-  assert.deepEqual(logged(), ['Common Redpoll'])
+  assert.deepEqual(logged(), except('Common Redpoll'))
 })
 
 test('daylistTargets matches a leap-day sighting when today is Feb 29', async (t) => {
   today(t, 2024, 1, 29)
   await daylistTargets({ input: DAYLIST, today: true })
-  assert.deepEqual(logged(), ['Wild Turkey'])
+  assert.deepEqual(logged(), except('Wild Turkey'))
 })
 
 test('daylistTargets does not carry a leap-day sighting over to Feb 28 in a non-leap year', async (t) => {
   today(t, 2025, 1, 28)
   await daylistTargets({ input: DAYLIST, today: true })
-  assert.deepEqual(logged(), [])
+  assert.deepEqual(logged(), DAYLIST_VT)
 })
 
-test('daylistTargets logs nothing on a date with no sightings', async (t) => {
+test('daylistTargets logs every Vermont species on a date with no sightings', async (t) => {
   today(t, 2024, 6, 4) // Jul 4
   await daylistTargets({ input: DAYLIST, today: true })
-  assert.equal(console.log.mock.calls.length, 0)
+  assert.deepEqual(logged(), DAYLIST_VT)
 })
 
 test('daylistTargets logs nothing for a header-only CSV', async (t) => {

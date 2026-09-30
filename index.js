@@ -950,8 +950,8 @@ async function daylistTargets (opts) {
 
     // Create keys in observedDates for months
     Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0')).forEach(key => observedDates[key] = [])
-    // Filter and add all days observed to the chart
-    data.filter(x => x['Common Name'] === species)
+    // Filter and add all days observed in Vermont to the chart
+    data.filter(x => x['Common Name'] === species && x['State/Province'] === 'US-VT')
       .forEach(x => {
         const [month, day] = helpers.monthAndDay(x.Date) || []
         if (month && observedDates[month].indexOf(Number(day)) === -1) {
@@ -971,8 +971,9 @@ async function daylistTargets (opts) {
   if (opts.today) {
     const month = moment().format('MM')
     const date = Number(moment().format('DD'))
+    // Species never seen on today's month-day: today is still unbirded for them
     Object.keys(speciesArray).forEach(species => {
-      if (speciesArray[species][month].indexOf(date) === -1) {
+      if (speciesArray[species][month].indexOf(date) !== -1) {
         console.log(species)
       }
     })
