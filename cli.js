@@ -51,10 +51,11 @@ const cli = meow(`
   Examples
     $ node cli.js
 `, {
+  importMeta: import.meta,
   flags: {
     input: {
       type: 'string',
-      alias: 'i'
+      shortFlag: 'i'
     },
     country: {
       type: 'string'
@@ -73,7 +74,7 @@ const cli = meow(`
     },
     list: {
       type: 'boolean',
-      alias: 'l'
+      shortFlag: 'l'
     },
     towns: {
       type: 'string'
@@ -82,7 +83,7 @@ const cli = meow(`
       type: 'string'
     },
     verbose: {
-      alias: 'v',
+      shortFlag: 'v',
       type: 'boolean'
     },
     withinDistance: {
@@ -94,8 +95,6 @@ const cli = meow(`
 // TODO Make Country, State, and County mutually exclusive
 // TODO Make input automatic based on file location
 // TODO This is ugly. Make it better.
-
-// WARNING: This doesn't work at the moment with the index.js file, because it is now a module. Damn.
 
 async function run () {
   if (cli.input[0] === 'quad') {

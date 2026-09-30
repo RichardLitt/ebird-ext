@@ -20,6 +20,7 @@
     "jsonstream": "^1.0.3",
     "JSONStream": "^1.3.5",
     "lodash": "^4.17.21",
+    "meow": "^14.1.0",
     "moment": "^2.27.0",
     "moment-weekofmonth": "^1.0.1",
     "node-fetch": "^2.6.7",
@@ -30,9 +31,12 @@
     "turf": "^3.0.14"
   },
   "scripts": {
-    "norwich": "node norwich.js --input=/Users/richard/Downloads/MyEBirdData.csv",
+    "norwich": "node norwich.js",
     "updateHotspots": "sh scripts/updateHotspots.sh",
     "test": "node --test \"test/**/*.test.js\"",
     "test:spec": "node --test --test-reporter=spec \"test/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
