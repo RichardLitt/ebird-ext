@@ -1,4 +1,4 @@
-import test, { beforeEach, afterEach } from 'node:test'
+import test, { before, after, beforeEach, afterEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { promises as fs } from 'node:fs'
 import { createHash } from 'node:crypto'
@@ -114,6 +114,30 @@ function ebirdCsv (rows) {
     r.date, '08:00 AM', 'eBird - Stationary Count', 30, 1, 1
   ].join(','))].join('\n') + '\n'
 }
+
+// A fake "My eBird Data" export for the unbirdedHotspots { input } tests. It is
+// written to a temp dir at test time, under eBird's standard export name, so no
+// file called MyEBirdData.csv is ever committed (.gitignore excludes that name
+// to keep real personal exports out of the repo).
+const MY_EBIRD_DATA_ROWS = [
+  'S900000001,Black-capped Chickadee,Poecile atricapillus,31000,2,US-VT,Washington,L9000001,Test Pond (Montpelier),44.2601,-72.5754,2023-01-04,08:00 AM,eBird - Stationary Count,30,1,1',
+  'S900000001,American Robin,Turdus migratorius,32000,1,US-VT,Washington,L9000001,Test Pond (Montpelier),44.2601,-72.5754,2023-01-04,08:00 AM,eBird - Stationary Count,30,1,1',
+  'S900000002,Blue Jay,Cyanocitta cristata,30000,3,US-VT,Washington,L9000001,Test Pond (Montpelier),44.2601,-72.5754,2023-03-15,09:00 AM,eBird - Stationary Count,20,1,1',
+  'S900000003,Blue Jay,Cyanocitta cristata,30000,1,US-VT,Washington,L9000001,Test Pond (Montpelier),44.2601,-72.5754,2024-03-13,09:00 AM,eBird - Stationary Count,20,1,1',
+  'S900000004,duck sp.,Anatinae sp.,5000,4,US-VT,Rutland,L9000004,Test Park (Rutland),43.6106,-72.9726,2023-05-10,07:00 AM,eBird - Traveling Count,45,1,1',
+  'S900000005,Common Raven,Corvus corax,29000,1,US-VT,Washington,L9000002,"Fake Marsh, North End",44.2650,-72.5800,2022-06-01,06:30 AM,eBird - Traveling Count,60,1,1',
+  'S900000006,Mallard,Anas platyrhynchos,5100,6,US-VT,Washington,L1234567,Somebody\'s Backyard (personal location),44.2700,-72.5900,2023-03-16,10:00 AM,eBird - Stationary Count,15,1,1'
+]
+let myEBirdDataDir
+let myEBirdData
+before(async () => {
+  myEBirdDataDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ebird-ext-myebirddata-'))
+  myEBirdData = path.join(myEBirdDataDir, 'MyEBirdData.csv')
+  await fs.writeFile(myEBirdData, [EBIRD_HEADER, ...MY_EBIRD_DATA_ROWS].join('\n') + '\n')
+})
+after(async () => {
+  await fs.rm(myEBirdDataDir, { recursive: true, force: true })
+})
 
 // 52 Wednesdays in 2023, one in each locale week 1..52.
 const wednesdays2023 = Array.from({ length: 52 }, (_, i) => moment('2023-01-04').add(i * 7, 'days').format('YYYY-MM-DD'))
@@ -417,8 +441,8 @@ test('unbirdedHotspots on an empty list prints []', async (t) => {
 })
 
 test('unbirdedHotspots { input } drops hotspots you have a checklist at', async (t) => {
-  const { logs } = await runUnbirded(t, { input: fixture('my-ebird-data.csv') })
-  // L9000001 and L9000002 have real-species checklists in my-ebird-data.csv.
+  const { logs } = await runUnbirded(t, { input: myEBirdData })
+  // L9000001 and L9000002 have real-species checklists in MyEBirdData.csv.
   assert.deepEqual(logs[0][0], [
     'Test Park (Rutland), 2010-03-13 16:20',
     'Test Field (Burlington), 2021-09-10 07:15'
@@ -426,7 +450,7 @@ test('unbirdedHotspots { input } drops hotspots you have a checklist at', async 
 })
 
 test('unbirdedHotspots { input } ignores checklists at personal (non-hotspot) locations', async (t) => {
-  const { logs } = await runUnbirded(t, { input: fixture('my-ebird-data.csv') }, [hs('L9000007', '2021-09-10 07:15', 'Untouched')])
+  const { logs } = await runUnbirded(t, { input: myEBirdData }, [hs('L9000007', '2021-09-10 07:15', 'Untouched')])
   assert.deepEqual(logs[0][0], ['Untouched, 2021-09-10 07:15'])
 })
 
@@ -437,7 +461,7 @@ test('unbirdedHotspots { input } rejects with ENOENT when the eBird export is mi
 })
 
 test.todo('unbirdedHotspots { input } should count a checklist that only recorded a spuh as a visit (main.getData runs removeSpuh, so the "duck sp."-only checklist at L9000004 is dropped and the hotspot is still reported as unbirded; hotspots.js:47)', async (t) => {
-  const { logs } = await runUnbirded(t, { input: fixture('my-ebird-data.csv') })
+  const { logs } = await runUnbirded(t, { input: myEBirdData })
   assert.ok(!logs[0][0].some(line => line.startsWith('Test Park (Rutland)')))
 })
 
@@ -512,7 +536,7 @@ test.todo('unbirdedHotspots { sinceYear } should keep never-visited hotspots, li
 })
 
 test('unbirdedHotspots combines { sinceYear } with { input }', async (t) => {
-  const { logs } = await runUnbirded(t, { sinceYear: 2021, input: fixture('my-ebird-data.csv') })
+  const { logs } = await runUnbirded(t, { sinceYear: 2021, input: myEBirdData })
   // 2019 Fake Marsh is dropped by the eBird export; 2023 Test Pond by sinceYear.
   assert.deepEqual(logs[0][0], [
     'Test Park (Rutland), 2010-03-13 16:20',
@@ -728,8 +752,8 @@ async function runWeeks (t, opts, rows) {
   const logs = captureLog(t)
   let input = opts.input
   if (rows) {
-    await sandbox({ 'my-ebird-data.csv': ebirdCsv(rows) })
-    input = path.join(sandboxDir, 'my-ebird-data.csv')
+    await sandbox({ 'MyEBirdData.csv': ebirdCsv(rows) })
+    input = path.join(sandboxDir, 'MyEBirdData.csv')
   }
   const ret = await weeksYouveBirdedAtHotspot({ ...opts, input })
   return { ret, lines: logs().map(args => args[0]) }
@@ -740,13 +764,13 @@ const unbirdedWeeks = lines => unbirdedLine(lines).replace("You've not birded he
 const range = (a, b) => Array.from({ length: b - a + 1 }, (_, i) => a + i)
 
 test('weeksYouveBirdedAtHotspot lists the weeks you have not birded at the location', async (t) => {
-  const { lines } = await runWeeks(t, { id: 'L9000001', input: fixture('my-ebird-data.csv') })
+  const { lines } = await runWeeks(t, { id: 'L9000001', input: myEBirdData })
   // Test Pond has checklists in week 1 (2023-01-04) and week 11 (2023-03-15, 2024-03-13).
   assert.deepEqual(unbirdedWeeks(lines), [...range(2, 10), ...range(12, 52)])
 })
 
 test('weeksYouveBirdedAtHotspot resolves to undefined', async (t) => {
-  const { ret } = await runWeeks(t, { id: 'L9000001', input: fixture('my-ebird-data.csv') })
+  const { ret } = await runWeeks(t, { id: 'L9000001', input: myEBirdData })
   assert.equal(ret, undefined)
 })
 
@@ -784,24 +808,24 @@ test('weeksYouveBirdedAtHotspot ignores checklists at other locations', async (t
 })
 
 test('weeksYouveBirdedAtHotspot with no checklists at the location lists all 52 weeks', async (t) => {
-  const { lines } = await runWeeks(t, { id: 'L9999999', input: fixture('my-ebird-data.csv') })
+  const { lines } = await runWeeks(t, { id: 'L9999999', input: myEBirdData })
   assert.deepEqual(unbirdedWeeks(lines), range(1, 52))
 })
 
 test('weeksYouveBirdedAtHotspot says when the next unbirded week starts (in the current year)', async (t) => {
   t.mock.timers.enable({ apis: ['Date'], now: new Date('2024-06-01T12:00:00') })
-  const { lines } = await runWeeks(t, { id: 'L9000001', input: fixture('my-ebird-data.csv') })
+  const { lines } = await runWeeks(t, { id: 'L9000001', input: myEBirdData })
   assert.ok(lines.includes('The next unbirded week (#2) starts on Sunday, January 7th.'))
 })
 
 test('weeksYouveBirdedAtHotspot "next unbirded week" follows the mocked year', async (t) => {
   t.mock.timers.enable({ apis: ['Date'], now: new Date('2023-06-01T12:00:00') })
-  const { lines } = await runWeeks(t, { id: 'L9999999', input: fixture('my-ebird-data.csv') })
+  const { lines } = await runWeeks(t, { id: 'L9999999', input: myEBirdData })
   assert.ok(lines.includes('The next unbirded week (#1) starts on Sunday, January 1st.'))
 })
 
 test('weeksYouveBirdedAtHotspot frames its output with blank lines and a caveat', async (t) => {
-  const { lines } = await runWeeks(t, { id: 'L9000001', input: fixture('my-ebird-data.csv') })
+  const { lines } = await runWeeks(t, { id: 'L9000001', input: myEBirdData })
   assert.equal(lines[0], undefined)
   assert.equal(lines.at(-1), undefined)
   assert.equal(lines.at(-2), 'Note this only takes into account your bird sightings, not the databases.')
@@ -816,7 +840,7 @@ test('weeksYouveBirdedAtHotspot congratulates you by hotspot name after all 52 w
 })
 
 test('weeksYouveBirdedAtHotspot warns when no --id is given (and still runs)', async (t) => {
-  const { lines } = await runWeeks(t, { input: fixture('my-ebird-data.csv') })
+  const { lines } = await runWeeks(t, { input: myEBirdData })
   assert.equal(lines[0], 'Get the ID for this location first, manually. Send it as --id.')
   assert.deepEqual(unbirdedWeeks(lines), range(1, 52))
 })
@@ -827,7 +851,7 @@ test('weeksYouveBirdedAtHotspot rejects with ENOENT when the eBird export is mis
 })
 
 test.todo('weeksYouveBirdedAtHotspot should stop after warning that --id is missing (hotspots.js:147-149 log the warning but fall through and report all 52 weeks as unbirded for location "undefined")', async (t) => {
-  const { lines } = await runWeeks(t, { input: fixture('my-ebird-data.csv') })
+  const { lines } = await runWeeks(t, { input: myEBirdData })
   assert.deepEqual(lines, ['Get the ID for this location first, manually. Send it as --id.'])
 })
 
@@ -852,13 +876,13 @@ test.todo('weeksYouveBirdedAtHotspot should not claim "every week" when a week i
 
 test.todo('weeksYouveBirdedAtHotspot "next unbirded week" should be the next one after today, not the first of the year (hotspots.js:177 always uses unbirdedWeeks[0], so in June it points back to January)', async (t) => {
   t.mock.timers.enable({ apis: ['Date'], now: new Date('2024-06-01T12:00:00') })
-  const { lines } = await runWeeks(t, { id: 'L9000001', input: fixture('my-ebird-data.csv') })
+  const { lines } = await runWeeks(t, { id: 'L9000001', input: myEBirdData })
   // 2024-06-01 is a Saturday in week 22; week 23 starts Sunday, June 2nd.
   assert.ok(lines.includes('The next unbirded week (#23) starts on Sunday, June 2nd.'))
 })
 
 test.todo('weeksYouveBirdedAtHotspot should count a week whose only checklist recorded a spuh (main.getData runs removeSpuh, hotspots.js:151)', async (t) => {
-  const { lines } = await runWeeks(t, { id: 'L9000004', input: fixture('my-ebird-data.csv') })
+  const { lines } = await runWeeks(t, { id: 'L9000004', input: myEBirdData })
   // The only checklist at L9000004 is a "duck sp." on 2023-05-10 (week 19).
   assert.ok(!unbirdedWeeks(lines).includes(19))
 })
