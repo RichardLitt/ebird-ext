@@ -75,7 +75,7 @@ async function getData (input, opts = {}) {
 
 async function biggestTime (timespan, opts) {
   const dateFormat = helpers.parseDateFormat(timespan)
-  const data = await getData(opts.input)
+  const data = helpers.skipInvalidDates(await getData(opts.input))
   const dataByDate = {}
 
   // Sort by the amount of unique entries per day
@@ -93,7 +93,7 @@ async function biggestTime (timespan, opts) {
 
 async function firstTimes (timespan, opts) {
   const dateFormat = helpers.parseDateFormat(timespan)
-  const data = f.orderByDate(await getData(opts.input)) // Sort by the date, instead
+  const data = f.orderByDate(helpers.skipInvalidDates(await getData(opts.input))) // Sort by the date, instead
   const dataByDate = {}
   const speciesIndex = {}
 
@@ -112,25 +112,6 @@ async function firstTimes (timespan, opts) {
   })
 
   return f.createPeriodArray(dataByDate)[0]
-}
-
-async function firstTimeList (opts) {
-  // TODO Fix
-  // const dateFormat = helpers.parseDateFormat('day')
-  // const data = f.orderByDate(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts))
-  // const dataByDate = {}
-  // const speciesIndex = {}
-  //
-  // data = countUniqueSpecies(data)
-  //
-  // let i = 1
-  // // TODO Doesn't work for MyEBirdData for some reason
-  // _.sortBy(f.createPeriodArray(dataByDate), 'Date').forEach((e) => {
-  //   e.Species.forEach((specie) => {
-  //     console.log(`${i} | ${specie['Common Name']} - ${specie['Scientific Name']} | ${(specie.County) ? specie.County + ', ' : ''}${specie['State/Province']} | ${e.Date}`)
-  //     i++
-  //   })
-  // })
 }
 
 // Sort by the amount of unique entries per day
@@ -875,7 +856,7 @@ async function subspecies (opts) {
 
 /* Return a unique list of checklists IDs */
 async function checklists (opts) {
-  let data = f.orderByDate(f.durationFilter(f.completeChecklistFilter(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts), opts), opts)
+  let data = f.orderByDate(f.durationFilter(f.completeChecklistFilter(f.dateFilter(f.locationFilter(await getData(opts.input, { keepSpuh: true }), opts), opts), opts), opts), opts)
   // Intentionally not returning a URL to make this simpler, and to avoid another flag
   data = _.uniqBy(data.map(x => {
     return {
@@ -897,7 +878,7 @@ async function getLastDate (opts) {
 }
 
 async function countTheBirds (opts) {
-  const data = f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts)
+  const data = f.dateFilter(f.locationFilter(await getData(opts.input, { keepSpuh: true }), opts), opts)
   const sum = _.sumBy(data, o => {
     if (_.isInteger(parseInt(o.Count))) {
       return parseInt(o.Count)
@@ -912,6 +893,8 @@ async function datesSpeciesObserved (opts) {
 // You have not seen ${opts.id} on:`)
 
   const data = await getData(opts.input)
+  // Every month-day of a leap year (366), matching the chart built below
+  const daysInChart = _.sumBy(_.range(1, 13), helpers.leapYearDaysInMonth)
 
   const speciesList = data.filter(x => x['State/Province'] === 'US-VT').map(x => x['Common Name']).filter((v, i, a) => a.indexOf(v) === i)
   const speciesArray = []
@@ -927,15 +910,15 @@ async function datesSpeciesObserved (opts) {
     // Filter and add all days observed to the chart
     data.filter(x => x['Common Name'] === species)
       .forEach(x => {
-        const [month, day] = x.Date.split('-').slice(1)
-        if (observedDates[month].indexOf(Number(day)) === -1) {
+        const [month, day] = helpers.monthAndDay(x.Date) || []
+        if (month && observedDates[month].indexOf(Number(day)) === -1) {
           observedDates[month].push(Number(day))
         }
       })
 
     // Create a full year chart, and then find days that weren't in days observed
     Object.keys(observedDates).forEach(month => {
-      fullYearChart[month.toString().padStart(2, '0')] = Array.from({ length: moment().month(month - 1).daysInMonth() }, (_, i) => i + 1)
+      fullYearChart[month.toString().padStart(2, '0')] = Array.from({ length: helpers.leapYearDaysInMonth(month) }, (_, i) => i + 1)
       unbirdedDates[month] = _.difference(fullYearChart[month], observedDates[month].sort((a, b) => a - b))
       totalDates += unbirdedDates[month].length
     })
@@ -950,7 +933,7 @@ async function datesSpeciesObserved (opts) {
 
   console.log(speciesArray.sort(function (a, b) {
     return a[1] - b[1]
-  }).map(x => `${x[0]}: ${365 - x[1]}`).slice(0, 20))
+  }).map(x => `${x[0]}: ${daysInChart - x[1]}`).slice(0, 20))
 }
 
 async function daylistTargets (opts) {
@@ -967,18 +950,18 @@ async function daylistTargets (opts) {
 
     // Create keys in observedDates for months
     Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0')).forEach(key => observedDates[key] = [])
-    // Filter and add all days observed to the chart
-    data.filter(x => x['Common Name'] === species)
+    // Filter and add all days observed in Vermont to the chart
+    data.filter(x => x['Common Name'] === species && x['State/Province'] === 'US-VT')
       .forEach(x => {
-        const [month, day] = x.Date.split('-').slice(1)
-        if (observedDates[month].indexOf(Number(day)) === -1) {
+        const [month, day] = helpers.monthAndDay(x.Date) || []
+        if (month && observedDates[month].indexOf(Number(day)) === -1) {
           observedDates[month].push(Number(day))
         }
       })
 
     // Create a full year chart, and then find days that weren't in days observed
     Object.keys(observedDates).forEach(month => {
-      fullYearChart[month.toString().padStart(2, '0')] = Array.from({ length: moment().month(month - 1).daysInMonth() }, (_, i) => i + 1)
+      fullYearChart[month.toString().padStart(2, '0')] = Array.from({ length: helpers.leapYearDaysInMonth(month) }, (_, i) => i + 1)
       unbirdedDates[month] = _.difference(fullYearChart[month], observedDates[month].sort((a, b) => a - b))
     })
 
@@ -988,8 +971,9 @@ async function daylistTargets (opts) {
   if (opts.today) {
     const month = moment().format('MM')
     const date = Number(moment().format('DD'))
+    // Species never seen on today's month-day: today is still unbirded for them
     Object.keys(speciesArray).forEach(species => {
-      if (speciesArray[species][month].indexOf(date) === -1) {
+      if (speciesArray[species][month].indexOf(date) !== -1) {
         console.log(species)
       }
     })
@@ -1009,7 +993,6 @@ async function daylistTargets (opts) {
 
 export {
   biggestTime,
-  firstTimeList,
   firstTimes,
   quadBirds,
   radialSearch,
@@ -1037,7 +1020,6 @@ export {
 
 export default {
   biggestTime,
-  firstTimeList,
   firstTimes,
   quadBirds,
   radialSearch,

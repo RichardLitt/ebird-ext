@@ -5,10 +5,10 @@ import path from 'node:path'
 import { promises as fs } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import Papa from 'papaparse'
+import * as index from '../index.js'
 import {
   biggestTime,
   firstTimes,
-  firstTimeList,
   daylistTargets
 } from '../index.js'
 
@@ -18,10 +18,10 @@ import {
 //                                   most unique species
 //   firstTimes(timespan, opts)   -> the period in which the most species were
 //                                   seen for the first time ("lifers")
-//   firstTimeList(opts)          -> currently a stub (body commented out)
 //   daylistTargets(opts)         -> with opts.today, logs every Vermont
-//                                   species previously recorded on today's
-//                                   calendar date (month + day, any year)
+//                                   species NOT yet recorded in Vermont on
+//                                   today's calendar date (month + day, any
+//                                   year) -- the day's targets
 //
 // All of them read an eBird "My eBird Data" CSV from opts.input via getData,
 // which parses with Papa (header: true) and runs filters.removeSpuh (drops
@@ -315,19 +315,92 @@ test('biggestTime("month") includes a leap day in February', async () => {
   assert.equal(result.SpeciesTotal, 2)
 })
 
-test('biggestTime groups an impossible date (Feb 29 in a non-leap year) under "Invalid date"', async () => {
-  // Documents current behavior: moment produces an invalid date and
-  // format() returns the literal string "Invalid date".
+test('biggestTime skips impossible dates (Feb 29 in a non-leap year) instead of forming an "Invalid date" period', async (t) => {
+  t.mock.method(console, 'warn', () => {})
   const file = await csv([
-    row('Wild Turkey', 'Meleagris gallopavo', '2023-02-29'),
-    row('Blue Jay', 'Cyanocitta cristata', '2023-02-30')
+    row('Wild Turkey', 'Meleagris gallopavo', '2023-02-29', { 'Submission ID': 'S1' }),
+    row('Blue Jay', 'Cyanocitta cristata', '2023-02-30', { 'Submission ID': 'S2' }),
+    row('American Crow', 'Corvus brachyrhynchos', '2023-02-30', { 'Submission ID': 'S2' }),
+    row('Snow Bunting', 'Plectrophenax nivalis', '2023-03-01', { 'Submission ID': 'S3' })
   ])
   const result = await biggestTime('day', { input: file })
-  assert.equal(result.Date, 'Invalid date')
-  assert.equal(result.SpeciesTotal, 2)
+  assert.equal(result.Date, '2023-03-01')
+  assert.equal(result.SpeciesTotal, 1)
 })
 
-test.todo('biggestTime/firstTimes should reject or skip impossible calendar dates (e.g. 2023-02-29) instead of silently pooling them into an "Invalid date" period (index.js:98, index.js:117)')
+test('biggestTime warns once with the skipped count and Submission IDs', async (t) => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  const file = await csv([
+    row('Wild Turkey', 'Meleagris gallopavo', '2023-02-29', { 'Submission ID': 'S1' }),
+    row('Blue Jay', 'Cyanocitta cristata', '2023-02-30', { 'Submission ID': 'S2' }),
+    row('American Crow', 'Corvus brachyrhynchos', '2023-02-30', { 'Submission ID': 'S2' }),
+    row('Snow Bunting', 'Plectrophenax nivalis', '2023-03-01', { 'Submission ID': 'S3' })
+  ])
+  await biggestTime('day', { input: file })
+  assert.equal(warn.mock.calls.length, 1)
+  const msg = warn.mock.calls[0].arguments[0]
+  assert.match(msg, /\b3 row/)
+  assert.match(msg, /S1, S2/)
+  assert.ok(!msg.includes('S3'))
+})
+
+test('biggestTime lists at most five Submission IDs in the warning', async (t) => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  const rows = Array.from({ length: 7 }, (_, i) =>
+    row('Wild Turkey', 'Meleagris gallopavo', '2023-02-29', { 'Submission ID': `S${i + 1}` }))
+  rows.push(row('Snow Bunting', 'Plectrophenax nivalis', '2023-03-01', { 'Submission ID': 'S99' }))
+  await biggestTime('day', { input: await csv(rows) })
+  const msg = warn.mock.calls[0].arguments[0]
+  assert.match(msg, /\b7 row/)
+  assert.match(msg, /S1, S2, S3, S4, S5, \.\.\./)
+  assert.ok(!msg.includes('S6'))
+})
+
+test('biggestTime does not warn when every date is valid', async (t) => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  await biggestTime('day', { input: BASIC })
+  assert.equal(warn.mock.calls.length, 0)
+})
+
+test('biggestTime skips impossible dates for month and year periods too', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const file = await csv([
+    row('Wild Turkey', 'Meleagris gallopavo', '2023-02-29'),
+    row('Blue Jay', 'Cyanocitta cristata', '2023-04-31'),
+    row('Snow Bunting', 'Plectrophenax nivalis', '2023-03-01')
+  ])
+  for (const timespan of ['month', 'year']) {
+    const result = await biggestTime(timespan, { input: file })
+    assert.notEqual(result.Date, 'Invalid date')
+    assert.equal(result.SpeciesTotal, 1)
+  }
+})
+
+test('firstTimes skips impossible dates and warns once', async (t) => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  const file = await csv([
+    row('Wild Turkey', 'Meleagris gallopavo', '2023-02-29', { 'Submission ID': 'S1' }),
+    row('Blue Jay', 'Cyanocitta cristata', '2023-02-29', { 'Submission ID': 'S1' }),
+    row('Snow Bunting', 'Plectrophenax nivalis', '2023-03-01', { 'Submission ID': 'S2' })
+  ])
+  const result = await firstTimes('day', { input: file })
+  assert.equal(result.Date, '2023-03-01')
+  assert.deepEqual(result.Species.map(x => x['Common Name']), ['Snow Bunting'])
+  assert.equal(warn.mock.calls.length, 1)
+  assert.match(warn.mock.calls[0].arguments[0], /\b2 row.*S1/)
+})
+
+test('firstTimes does not let an impossible date claim a species first seen later', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const file = await csv([
+    row('Wild Turkey', 'Meleagris gallopavo', '2023-02-29'),
+    row('Wild Turkey', 'Meleagris gallopavo', '2023-05-01'),
+    row('Blue Jay', 'Cyanocitta cristata', '2023-05-01')
+  ])
+  const result = await firstTimes('day', { input: file })
+  assert.equal(result.Date, '2023-05-01')
+  assert.equal(result.SpeciesTotal, 2)
+})
 
 // ===========================================================================
 // biggestTime -- ties
@@ -640,31 +713,20 @@ test('firstTimes rejects with ENOENT for a missing input file', async () => {
 })
 
 // ===========================================================================
-// firstTimeList -- currently a stub
+// firstTimeList -- removed
 // ===========================================================================
 
-test('firstTimeList resolves to undefined', async () => {
-  assert.equal(await firstTimeList({ input: BASIC }), undefined)
+test('firstTimeList is no longer exported (it was an empty stub)', () => {
+  assert.ok(!('firstTimeList' in index))
+  assert.ok(!('firstTimeList' in index.default))
 })
-
-test('firstTimeList does not read the input (a missing file does not reject)', async () => {
-  assert.equal(await firstTimeList({ input: path.join(tmpDir, 'nope.csv') }), undefined)
-})
-
-test('firstTimeList prints nothing', async (t) => {
-  t.mock.method(console, 'log', () => {})
-  await firstTimeList({ input: BASIC })
-  assert.equal(console.log.mock.calls.length, 0)
-})
-
-test.todo('firstTimeList is a stub: its whole body is commented out ("TODO Fix"), so it never lists first sightings (index.js:132-149)')
 
 // ===========================================================================
 // daylistTargets
 // ===========================================================================
 //
 // With opts.today, daylistTargets logs one line per Vermont species that has
-// been recorded on today's month + day in any year. "Today" is controlled by
+// NOT been recorded in Vermont on today's month + day in any year. "Today" is controlled by
 // mocking Date with t.mock.timers (moment() reads the mocked clock).
 
 function today (t, year, monthIndex, day) {
@@ -685,34 +747,49 @@ test('daylistTargets prints nothing without opts.today', async (t) => {
   assert.equal(console.log.mock.calls.length, 0)
 })
 
-test('daylistTargets logs Vermont species seen on today\'s date in earlier years', async (t) => {
+// Vermont species in daylist.csv (with coordinates, not spuhs), in file order.
+const DAYLIST_VT = [
+  'Black-capped Chickadee',
+  'Blue Jay',
+  'Dark-eyed Junco (Slate-colored)',
+  'Wild Turkey',
+  'Snow Bunting',
+  'Common Redpoll',
+  'American Robin',
+  'Brown Creeper'
+]
+const except = (...names) => DAYLIST_VT.filter(x => !names.includes(x))
+
+test('daylistTargets logs Vermont species not yet seen on today\'s date', async (t) => {
   today(t, 2024, 9, 1) // Oct 1
   await daylistTargets({ input: DAYLIST, today: true, state: 'Vermont' })
   assert.deepEqual(logged(), [
-    'Black-capped Chickadee',
-    'Blue Jay',
-    'Dark-eyed Junco (Slate-colored)',
-    'Brown Creeper'
+    'Wild Turkey',
+    'Snow Bunting',
+    'Common Redpoll',
+    'American Robin'
   ])
 })
 
 test('daylistTargets logs one species name per console.log call', async (t) => {
   today(t, 2024, 9, 1)
   await daylistTargets({ input: DAYLIST, today: true, state: 'Vermont' })
+  assert.ok(console.log.mock.calls.length > 0)
   assert.ok(console.log.mock.calls.every(c => c.arguments.length === 1 && typeof c.arguments[0] === 'string'))
 })
 
-test('daylistTargets logs a species once even if seen on this date in several years', async (t) => {
-  today(t, 2024, 9, 1)
+test('daylistTargets logs each target once', async (t) => {
+  today(t, 2024, 6, 4) // Jul 4, nothing seen
   await daylistTargets({ input: DAYLIST, today: true, state: 'Vermont' })
-  assert.equal(logged().filter(x => x === 'Black-capped Chickadee').length, 1)
+  assert.deepEqual(logged(), DAYLIST_VT)
 })
 
-test('daylistTargets does not log species seen only on other dates', async (t) => {
+test('daylistTargets does not log species seen on today\'s date in any earlier year', async (t) => {
+  // Black-capped Chickadee was seen on Oct 1 in both 2022 and 2023.
   today(t, 2024, 9, 1)
   await daylistTargets({ input: DAYLIST, today: true, state: 'Vermont' })
   const out = logged()
-  for (const name of ['Wild Turkey', 'Snow Bunting', 'Common Redpoll', 'American Robin']) {
+  for (const name of ['Black-capped Chickadee', 'Blue Jay', 'Dark-eyed Junco (Slate-colored)', 'Brown Creeper']) {
     assert.ok(!out.includes(name), name)
   }
 })
@@ -724,76 +801,91 @@ test('daylistTargets ignores species seen only outside Vermont', async (t) => {
 })
 
 test('daylistTargets excludes spuhs', async (t) => {
-  today(t, 2024, 9, 1)
+  today(t, 2024, 6, 4)
   await daylistTargets({ input: DAYLIST, today: true })
   assert.ok(!logged().includes('chickadee sp.'))
 })
 
 test('daylistTargets drops rows with no Latitude (via locationFilter)', async (t) => {
   // The Hermit Thrush row has blank coordinates.
-  today(t, 2024, 9, 1)
+  today(t, 2024, 6, 4)
   await daylistTargets({ input: DAYLIST, today: true })
   assert.ok(!logged().includes('Hermit Thrush'))
 })
 
 test('daylistTargets keeps subspecies common names as-is (not merged with the species)', async (t) => {
-  today(t, 2024, 9, 1)
+  today(t, 2024, 6, 4)
   await daylistTargets({ input: DAYLIST, today: true })
   assert.ok(logged().includes('Dark-eyed Junco (Slate-colored)'))
   assert.ok(!logged().includes('Dark-eyed Junco'))
 })
 
 test('daylistTargets honors a county filter', async (t) => {
+  // Brown Creeper is the only Chittenden species, and was seen on Oct 1.
   today(t, 2024, 9, 1)
+  await daylistTargets({ input: DAYLIST, today: true, county: 'Chittenden' })
+  assert.deepEqual(logged(), [])
+  console.log.mock.resetCalls()
+  t.mock.timers.setTime(new Date(2024, 6, 4, 12).getTime())
   await daylistTargets({ input: DAYLIST, today: true, county: 'Chittenden' })
   assert.deepEqual(logged(), ['Brown Creeper'])
 })
 
 test('daylistTargets county filter is case-insensitive', async (t) => {
-  today(t, 2024, 9, 1)
+  today(t, 2024, 6, 4)
   await daylistTargets({ input: DAYLIST, today: true, county: 'washington' })
   assert.ok(!logged().includes('Brown Creeper'))
   assert.ok(logged().includes('Blue Jay'))
 })
 
-test('daylistTargets counts an out-of-state sighting toward a Vermont species\' dates (current behavior)', async (t) => {
-  // American Robin was seen in VT on Apr 10 and in NY on Oct 1. Without a
-  // state filter the NY sighting marks Oct 1 as "observed".
+test('daylistTargets does not count an out-of-state sighting toward a Vermont species\' dates', async (t) => {
+  // American Robin was seen in VT on Apr 10 and in NY on Oct 1, so Oct 1 is
+  // still a Vermont target for it.
   today(t, 2024, 9, 1)
   await daylistTargets({ input: DAYLIST, today: true })
   assert.ok(logged().includes('American Robin'))
 })
 
-test.todo('daylistTargets builds its species list from US-VT rows only, but then collects observed dates from rows in ANY state, so an out-of-state sighting counts for a Vermont species (index.js:975, index.js:984)')
+test('daylistTargets uses only US-VT rows for observed dates', async (t) => {
+  today(t, 2024, 9, 1)
+  const NY = { 'State/Province': 'US-NY', County: 'New York', Latitude: '40.7831', Longitude: '-73.9712' }
+  const file = await csv([
+    row('Blue Jay', 'Cyanocitta cristata', '2023-10-01'),
+    row('Snow Bunting', 'Plectrophenax nivalis', '2023-12-31'),
+    row('Snow Bunting', 'Plectrophenax nivalis', '2023-10-01', NY)
+  ])
+  await daylistTargets({ input: file, today: true })
+  assert.deepEqual(logged(), ['Snow Bunting'])
+})
 
 test('daylistTargets handles Dec 31', async (t) => {
   today(t, 2024, 11, 31)
   await daylistTargets({ input: DAYLIST, today: true })
-  assert.deepEqual(logged(), ['Snow Bunting'])
+  assert.deepEqual(logged(), except('Snow Bunting'))
 })
 
 test('daylistTargets handles Jan 1', async (t) => {
   today(t, 2025, 0, 1)
   await daylistTargets({ input: DAYLIST, today: true })
-  assert.deepEqual(logged(), ['Common Redpoll'])
+  assert.deepEqual(logged(), except('Common Redpoll'))
 })
 
 test('daylistTargets matches a leap-day sighting when today is Feb 29', async (t) => {
   today(t, 2024, 1, 29)
   await daylistTargets({ input: DAYLIST, today: true })
-  assert.deepEqual(logged(), ['Wild Turkey'])
+  assert.deepEqual(logged(), except('Wild Turkey'))
 })
 
 test('daylistTargets does not carry a leap-day sighting over to Feb 28 in a non-leap year', async (t) => {
   today(t, 2025, 1, 28)
   await daylistTargets({ input: DAYLIST, today: true })
-  assert.deepEqual(logged(), [])
+  assert.deepEqual(logged(), DAYLIST_VT)
 })
 
-test('daylistTargets logs nothing on a date with no sightings', async (t) => {
+test('daylistTargets logs every Vermont species on a date with no sightings', async (t) => {
   today(t, 2024, 6, 4) // Jul 4
   await daylistTargets({ input: DAYLIST, today: true })
-  assert.equal(console.log.mock.calls.length, 0)
+  assert.deepEqual(logged(), DAYLIST_VT)
 })
 
 test('daylistTargets logs nothing for a header-only CSV', async (t) => {
@@ -802,15 +894,24 @@ test('daylistTargets logs nothing for a header-only CSV', async (t) => {
   assert.equal(console.log.mock.calls.length, 0)
 })
 
-test('daylistTargets rejects on MM/DD/YYYY dates (current behavior)', async (t) => {
-  // x.Date.split('-') leaves month undefined, so observedDates[undefined]
-  // is undefined and .indexOf throws.
+test('daylistTargets accepts MM/DD/YYYY dates like the rest of index.js', async (t) => {
+  // A slash-dated file must give the same result as the same rows dash-dated.
   today(t, 2024, 9, 1)
-  const file = await csv([row('Blue Jay', 'Cyanocitta cristata', '10/01/2023')])
-  await assert.rejects(daylistTargets({ input: file, today: true }), TypeError)
+  const dashed = await csv([
+    row('Blue Jay', 'Cyanocitta cristata', '2023-10-01'),
+    row('Snow Bunting', 'Plectrophenax nivalis', '2023-12-31')
+  ])
+  const slashed = await csv([
+    row('Blue Jay', 'Cyanocitta cristata', '10/01/2023'),
+    row('Snow Bunting', 'Plectrophenax nivalis', '12/31/2023')
+  ])
+  await daylistTargets({ input: dashed, today: true })
+  const expected = logged()
+  console.log.mock.resetCalls()
+  await daylistTargets({ input: slashed, today: true })
+  assert.deepEqual(logged(), expected)
+  assert.equal(expected.length, 1)
 })
-
-test.todo('daylistTargets should accept MM/DD/YYYY dates like the rest of index.js (helpers.momentFormat); it splits Date on "-" and throws a TypeError otherwise (index.js:986)')
 
 test('daylistTargets rejects with ENOENT for a missing input file', async () => {
   await assert.rejects(

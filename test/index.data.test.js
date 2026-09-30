@@ -24,7 +24,9 @@ import townDataFor2022 from '../data/townDataFor2022-May-Export.json' with { typ
 // filters.removeSpuh(). That means every CSV-driven function below silently
 // drops spuhs ("gull sp."), slashes ("Alder/Willow Flycatcher"), hybrids and
 // Domestic types, and trims trinomials down to the binomial (keeping the
-// original in a new `Subspecies` field).
+// original in a new `Subspecies` field). The exceptions are checklists and
+// countTheBirds, which call getData(input, { keepSpuh: true }) so that
+// spuh-only checklists and spuh individuals are counted.
 //
 // Fixtures live in test/fixtures/index-data/ and use invented submission IDs
 // and locations. Coordinates are town centres chosen to land inside the
@@ -384,7 +386,7 @@ test('checklists returns one entry per Submission ID with the documented shape',
 test('checklists with no filters drops rows without coordinates', async (t) => {
   muteLog(t)
   const ids = (await checklists({ input: BASIC })).map(x => x['Submission ID'])
-  assert.deepEqual(ids, ['S900000001', 'S900000002', 'S900000003', 'S900000004'])
+  assert.deepEqual(ids, ['S900000001', 'S900000002', 'S900000003', 'S900000004', 'S900000006'])
   assert.ok(!ids.includes('S900000005'))
 })
 
@@ -393,14 +395,14 @@ test('checklists are returned in date order regardless of file order', async (t)
   const dates = (await checklists({ input: DATES })).map(x => x.Date)
   assert.deepEqual(dates, [
     '2020-05-01', '2021-05-01', '2022-01-01', '2022-03-01', '2022-04-01',
-    '2022-05-01', '2022-06-15', '2022-12-31', '2024-02-29'
+    '2022-04-02', '2022-05-01', '2022-06-15', '2022-12-31', '2024-02-29'
   ])
 })
 
 test('checklists { complete: true } keeps only All Obs Reported = 1', async (t) => {
   muteLog(t)
   const result = await checklists({ input: BASIC, complete: true })
-  assert.deepEqual(result.map(x => x['Submission ID']), ['S900000001', 'S900000002', 'S900000004'])
+  assert.deepEqual(result.map(x => x['Submission ID']), ['S900000001', 'S900000002', 'S900000004', 'S900000006'])
   assert.ok(result.every(x => x['All Obs Reported'] === '1'))
 })
 
@@ -419,7 +421,7 @@ test('checklists { year } filters by year', async (t) => {
 test('checklists { state } filters by full state name', async (t) => {
   muteLog(t)
   const ny = await checklists({ input: BASIC, state: 'New York' })
-  assert.deepEqual(ny.map(x => x['Submission ID']), ['S900000004'])
+  assert.deepEqual(ny.map(x => x['Submission ID']), ['S900000004', 'S900000006'])
   const vt = await checklists({ input: BASIC, state: 'Vermont' })
   assert.deepEqual(vt.map(x => x['Submission ID']), ['S900000001', 'S900000002', 'S900000003'])
 })
@@ -458,7 +460,18 @@ test('checklists accepts MM/DD/YYYY dates and keeps them in their original forma
   assert.deepEqual(result.map(x => x.Date), ['05/01/2022', '12/31/2022'])
 })
 
-test.todo('checklists includes checklists whose only observations are spuhs/slashes/hybrids (S900000006 in basic.csv is missing because getData strips those rows before checklists dedupes by Submission ID, index.js:893)')
+test('checklists includes checklists whose only observations are spuhs/slashes/hybrids', async (t) => {
+  // S900000006 in basic.csv reports only "gull sp.".
+  muteLog(t)
+  const result = await checklists({ input: BASIC })
+  assert.deepEqual(result.find(x => x['Submission ID'] === 'S900000006'), {
+    'Submission ID': 'S900000006',
+    Date: '2023-08-01',
+    Time: '10:00 AM',
+    Location: 'Test Meadow',
+    'All Obs Reported': '1'
+  })
+})
 
 // ===========================================================================
 // countTheBirds
@@ -468,26 +481,27 @@ test('countTheBirds logs the total individual count and resolves undefined', asy
   const log = muteLog(t)
   const result = await countTheBirds({ input: BASIC })
   assert.equal(result, undefined)
-  // 9 (S1, "X" ignored) + 3 (S2) + 2 (S3) + 30 (S4); S5 has no coordinates.
-  assert.deepEqual(log.mock.calls.at(-1).arguments, [44])
+  // 14 (S1, "X" ignored, incl. 5 gull sp.) + 4 (S2, incl. 1 hybrid)
+  // + 3 (S3, incl. 1 slash) + 30 (S4) + 50 (S6, gull sp.); S5 has no coordinates.
+  assert.deepEqual(log.mock.calls.at(-1).arguments, [101])
 })
 
 test('countTheBirds { year } counts only that year', async (t) => {
   const log = muteLog(t)
   await countTheBirds({ input: BASIC, year: 2022 })
-  assert.deepEqual(log.mock.calls.at(-1).arguments, [12])
+  assert.deepEqual(log.mock.calls.at(-1).arguments, [18])
 })
 
 test('countTheBirds { state } counts only that state', async (t) => {
   const log = muteLog(t)
   await countTheBirds({ input: BASIC, state: 'Vermont' })
-  assert.deepEqual(log.mock.calls.at(-1).arguments, [14])
+  assert.deepEqual(log.mock.calls.at(-1).arguments, [21])
 })
 
 test('countTheBirds { county } counts only that county', async (t) => {
   const log = muteLog(t)
   await countTheBirds({ input: BASIC, county: 'Chittenden' })
-  assert.deepEqual(log.mock.calls.at(-1).arguments, [9])
+  assert.deepEqual(log.mock.calls.at(-1).arguments, [14])
 })
 
 test('countTheBirds ignores "X" and blank counts, and truncates decimals', async (t) => {
@@ -514,7 +528,17 @@ test('countTheBirds logs 0 when the filters match nothing', async (t) => {
   assert.deepEqual(log.mock.calls.at(-1).arguments, [0])
 })
 
-test.todo('countTheBirds includes individuals reported as spuhs/slashes/hybrids (the 5 + 50 "gull sp." in basic.csv are not counted because getData strips those rows, index.js:915)')
+test('countTheBirds includes individuals reported as spuhs/slashes/hybrids', async (t) => {
+  const file = await tmpCsv(t, `${HEADER}
+S1,gull sp.,Larinae sp.,5,US-VT,Chittenden,X,44.4759,-73.2121,2022-01-01,,Incidental,,0
+S1,Alder/Willow Flycatcher,Empidonax alnorum/traillii,2,US-VT,Chittenden,X,44.4759,-73.2121,2022-01-01,,Incidental,,0
+S1,Brewster's Warbler (hybrid),Vermivora chrysoptera x cyanoptera,1,US-VT,Chittenden,X,44.4759,-73.2121,2022-01-01,,Incidental,,0
+S1,Blue Jay,Cyanocitta cristata,3,US-VT,Chittenden,X,44.4759,-73.2121,2022-01-01,,Incidental,,0
+`)
+  const log = muteLog(t)
+  await countTheBirds({ input: file })
+  assert.deepEqual(log.mock.calls.at(-1).arguments, [11])
+})
 
 // ===========================================================================
 // datesSpeciesObserved
@@ -528,7 +552,7 @@ test('datesSpeciesObserved logs "Species: <distinct days of year seen>", most-se
   assert.equal(log.mock.calls.length, 1)
   assert.deepEqual(log.mock.calls[0].arguments[0], [
     'Alpha Test Bird: 3',
-    'Beta Test Bird: 1',
+    'Beta Test Bird: 2',
     'Gamma Test Bird: 1',
     'Epsilon Test Bird: 1'
   ])
@@ -582,11 +606,45 @@ test('datesSpeciesObserved logs [] when there are no Vermont rows', async (t) =>
   assert.deepEqual(log.mock.calls[0].arguments[0], [])
 })
 
-test.todo('datesSpeciesObserved supports MM/DD/YYYY dates like the rest of the toolkit (index.js:945 splits on "-" only, so slash-dates.csv throws a TypeError reading observedDates[undefined])')
+test('datesSpeciesObserved supports MM/DD/YYYY dates like the rest of the toolkit', async (t) => {
+  freezeNow(t, 2025, 6, 15)
+  const log = muteLog(t)
+  await datesSpeciesObserved({ input: SLASH_DATES })
+  assert.deepEqual(log.mock.calls[0].arguments[0], [
+    'Alpha Test Bird: 1',
+    'Beta Test Bird: 1'
+  ])
+})
 
-test.todo('datesSpeciesObserved counts a Feb 29 sighting when the current year is not a leap year (month lengths come from moment() at index.js:953, so 29 is outside the February chart and Beta Test Bird in dates.csv reports 1 day instead of 2)')
+test('datesSpeciesObserved counts a Feb 29 sighting when the current year is not a leap year', async (t) => {
+  // Beta Test Bird: 2022-01-01 and 2024-02-29.
+  freezeNow(t, 2025, 6, 15)
+  const log = muteLog(t)
+  await datesSpeciesObserved({ input: DATES })
+  assert.ok(log.mock.calls[0].arguments[0].includes('Beta Test Bird: 2'))
+})
 
-test.todo('datesSpeciesObserved reports correct day counts when the current year is a leap year (index.js:968 hard-codes 365 while the chart built at index.js:953 has 366 days, so every count is one too low)')
+test('datesSpeciesObserved reports correct day counts when the current year is a leap year', async (t) => {
+  freezeNow(t, 2024, 6, 15)
+  const log = muteLog(t)
+  await datesSpeciesObserved({ input: DATES })
+  assert.deepEqual(log.mock.calls[0].arguments[0], [
+    'Alpha Test Bird: 3',
+    'Beta Test Bird: 2',
+    'Gamma Test Bird: 1',
+    'Epsilon Test Bird: 1'
+  ])
+})
+
+test('datesSpeciesObserved gives the same counts in leap and non-leap years', async (t) => {
+  const log = muteLog(t)
+  freezeNow(t, 2023, 6, 15)
+  await datesSpeciesObserved({ input: DATES })
+  t.mock.timers.reset()
+  freezeNow(t, 2024, 6, 15)
+  await datesSpeciesObserved({ input: DATES })
+  assert.deepEqual(log.mock.calls[0].arguments[0], log.mock.calls[1].arguments[0])
+})
 
 // ===========================================================================
 // getLastDate
