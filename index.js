@@ -151,9 +151,9 @@ async function towns (opts) {
   }
   const dateFormat = helpers.parseDateFormat('day')
   let data = f.orderByDate(f.locationFilter(f.dateFilter(f.durationFilter(f.completeChecklistFilter(await getData(opts.input), opts), opts), opts), opts), opts)
-  var speciesSeenInVermont = []
+  let speciesSeenInVermont = []
   _.forEach(countUniqueSpecies(data, dateFormat), (o) => {
-    var mapped = _.map(o, 'Common Name')
+    const mapped = _.map(o, 'Common Name')
     speciesSeenInVermont.push(mapped)
   })
   speciesSeenInVermont = _.flatten(speciesSeenInVermont)
@@ -226,7 +226,7 @@ async function counties (opts) {
 
   // Again, as above es6 probably has a better way of doing this.
   const newObj = {}
-  counties.forEach(c => newObj[c.county] = c)
+  counties.forEach(c => { newObj[c.county] = c })
 
   function countyTicks () {
     const total = Object.keys(newObj).reduce((prev, cur) => {
@@ -346,7 +346,6 @@ async function regions (opts) {
   // fs.writeFile('vt_region_counts.json', JSON.stringify(regions), 'utf8')
 }
 
-
 /* node cli.js count -i=MyEBirdData.csv --town="Fayston" --state=Vermont
 As this is set up, it will currently return only the first time I saw species in each town provided, in Vermont */
 async function state (opts) {
@@ -383,10 +382,10 @@ async function radialSearch (opts) {
 
   // Get a total list of species that you have seen in Vermont
   // TODO Get a list of all species ever seen in Vermont, here.
-  var speciesSeenInVermont = []
+  let speciesSeenInVermont = []
   opts.state = 'Vermont'
   _.forEach(countUniqueSpecies(f.dateFilter(f.locationFilter(data, opts), opts), dateFormat), (o) => {
-    var mapped = _.map(o, 'Common Name')
+    const mapped = _.map(o, 'Common Name')
     speciesSeenInVermont.push(mapped)
   })
   speciesSeenInVermont = _.flatten(speciesSeenInVermont)
@@ -522,7 +521,6 @@ async function isSpeciesSightingRare (opts) {
   opts.manual = true
   return rare(opts)
 }
-
 
 async function rareAZ (opts) {
   let data
@@ -928,7 +926,7 @@ async function datesSpeciesObserved (opts) {
     let totalDates = 0
 
     // Create keys in observedDates for months
-    Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0')).forEach(key => observedDates[key] = [])
+    Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0')).forEach(key => { observedDates[key] = [] })
     // Filter and add all days observed to the chart
     data.filter(x => x['Common Name'] === species)
       .forEach(x => {
@@ -971,7 +969,7 @@ async function daylistTargets (opts) {
     const unbirdedDates = {}
 
     // Create keys in observedDates for months
-    Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0')).forEach(key => observedDates[key] = [])
+    Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0')).forEach(key => { observedDates[key] = [] })
     // Filter and add all days observed in Vermont to the chart
     data.filter(x => x['Common Name'] === species && x['State/Province'] === 'US-VT')
       .forEach(x => {

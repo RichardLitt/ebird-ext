@@ -866,7 +866,7 @@ test('weeksYouveBirdedAtHotspot rejects with ENOENT when the eBird export is mis
 test('weeksYouveBirdedAtHotspot warns and stops when no --id is given', async (t) => {
   const { ret, lines } = await runWeeks(t, { input: myEBirdData })
   assert.equal(ret, undefined)
-  assert.deepEqual(lines,['Get the ID for this location first, manually. Send it as --id.'])
+  assert.deepEqual(lines, ['Get the ID for this location first, manually. Send it as --id.'])
 })
 
 test('weeksYouveBirdedAtHotspot falls back to the generic message after 52 weeks at a non-hotspot location', async (t) => {

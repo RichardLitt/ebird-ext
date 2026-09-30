@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 import removeEmptyLines from 'remove-blank-lines'
 
 async function getData (input) {
-  let results = {}
+  const results = {}
   if (fs) {
     // Normalise CRLF first: remove-blank-lines would otherwise strip every "\n".
     const text = (await fs.readFile(input, 'utf8')).replace(/\r\n/g, '\n')
@@ -17,13 +17,13 @@ async function getData (input) {
     results.sampleSize = input.filter(s => s.includes('Sample Size'))[0].split('\t').slice(1).filter(x => x !== '')
     // Species rows are everything after the "Sample Size" line.
     input = input.slice(input.findIndex(s => s.includes('Sample Size')) + 1).map(species => {
-      let dict = {}
-      let speciesMatch = species.split('\t')[0].match(/(?<species>.*) \(.*>(?<latin>.*)</)
-      let speciesName = speciesMatch.groups.species
-      let scientificName = speciesMatch.groups.latin
-      let frequency = species.split('\t').slice(1).filter(x => x !== '')
+      const dict = {}
+      const speciesMatch = species.split('\t')[0].match(/(?<species>.*) \(.*>(?<latin>.*)</)
+      const speciesName = speciesMatch.groups.species
+      const scientificName = speciesMatch.groups.latin
+      const frequency = species.split('\t').slice(1).filter(x => x !== '')
       // Basically, remove spuh
-      let paraspecial = ['sp.', '/']
+      const paraspecial = ['sp.', '/']
       if (!paraspecial.some(s => speciesName.includes(s))) {
         console.log(speciesName)
         dict[speciesName] = {
