@@ -875,7 +875,7 @@ async function subspecies (opts) {
 
 /* Return a unique list of checklists IDs */
 async function checklists (opts) {
-  let data = f.orderByDate(f.durationFilter(f.completeChecklistFilter(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts), opts), opts)
+  let data = f.orderByDate(f.durationFilter(f.completeChecklistFilter(f.dateFilter(f.locationFilter(await getData(opts.input, { keepSpuh: true }), opts), opts), opts), opts), opts)
   // Intentionally not returning a URL to make this simpler, and to avoid another flag
   data = _.uniqBy(data.map(x => {
     return {
@@ -897,7 +897,7 @@ async function getLastDate (opts) {
 }
 
 async function countTheBirds (opts) {
-  const data = f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts)
+  const data = f.dateFilter(f.locationFilter(await getData(opts.input, { keepSpuh: true }), opts), opts)
   const sum = _.sumBy(data, o => {
     if (_.isInteger(parseInt(o.Count))) {
       return parseInt(o.Count)
