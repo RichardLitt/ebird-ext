@@ -742,12 +742,21 @@ test('state on an empty CSV logs 0 and nothing else', async (t) => {
   assert.deepEqual(logged(), [[0]])
 })
 
-test('state resolves to undefined', async (t) => {
+test('state resolves to { species, speciesByDate }', async (t) => {
   quiet(t)
-  assert.equal(await state({ input: SIGHTINGS }), undefined)
+  const result = await state({ input: SIGHTINGS })
+  assert.deepEqual(Object.keys(result).sort(), ['species', 'speciesByDate'])
+  assert.equal(result.species.length, 21)
+  assert.deepEqual(result.species.slice(0, 4), ['American Robin', 'Black-capped Chickadee', 'Blue Jay', 'Dark-eyed Junco (Slate-colored)'])
+  assert.equal(new Set(result.species).size, 21)
 })
 
-test.todo('state builds { species, speciesByDate } but never returns it (return commented out at index.js:395), so callers can only scrape console output')
+test('state returns speciesByDate keyed by date with the first-seen rows', async (t) => {
+  quiet(t)
+  const result = await state({ input: SIGHTINGS, year: 2024 })
+  assert.equal(result.species.length, 10)
+  assert.deepEqual(result.speciesByDate['2024-01-15'].map(r => r['Common Name']), ['Snow Bunting', 'American Robin', 'Bohemian Waxwing'])
+})
 
 // ===========================================================================
 // radialSearch

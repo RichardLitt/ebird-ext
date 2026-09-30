@@ -376,9 +376,8 @@ async function state (opts) {
   Object.keys(newObj.speciesByDate).forEach(d => {
     console.log(`${d}: ${newObj.speciesByDate[d].map(submission => submission['Common Name']).join(', ')}.`)
   })
-  // console.log(newObj)
-  // return newObj
   // fs.writeFile('vt_region_counts.json', JSON.stringify(regions), 'utf8')
+  return newObj
 }
 
 async function radialSearch (opts) {
@@ -610,7 +609,7 @@ async function rareAZ (opts) {
     console.log(output)
   }
 
-  // return output
+  return output
 }
 
 async function rare (opts) {

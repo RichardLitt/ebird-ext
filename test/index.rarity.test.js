@@ -102,12 +102,13 @@ async function tmpCsv (t, rows, { trailingNewline = false } = {}) {
   return { file, dir }
 }
 
-// rareAZ doesn't return anything; it console.logs its output object.
+// rareAZ returns its output object (and console.logs it when there is no
+// opts.output). Silence the logging and keep the calls for inspection.
 async function runRareAZ (t, opts) {
   t.mock.method(console, 'log', () => {})
   const ret = await rareAZ(opts)
-  const calls = console.log.mock.calls
-  return { ret, calls, output: calls.length ? calls[calls.length - 1].arguments[0] : undefined }
+  const calls = console.log.mock.calls.filter(c => !(typeof c.arguments[0] === 'string' && c.arguments[0].startsWith('Wrong state')))
+  return { ret, calls, output: ret }
 }
 
 // ===========================================================================
@@ -676,17 +677,25 @@ test.todo('isSpeciesSightingRare should handle an unknown town gracefully: index
 // rareAZ
 // ===========================================================================
 
-test('rareAZ resolves to undefined and console.logs its output instead', async (t) => {
-  const { ret, calls, output } = await runRareAZ(t, { manual: true, data: [] })
-  assert.equal(ret, undefined)
+test('rareAZ resolves to the output object it console.logs', async (t) => {
+  const { ret, calls } = await runRareAZ(t, { manual: true, data: [] })
   assert.equal(calls.length, 1)
-  assert.deepEqual(Object.keys(output), AZ_BUCKETS)
+  assert.equal(calls[0].arguments[0], ret)
+  assert.deepEqual(Object.keys(ret), AZ_BUCKETS)
 })
 
-test.todo('rareAZ should return its output object like rare() does; the "return output" at index.js:628 is commented out, so callers get undefined', async (t) => {
+test('rareAZ returns its output object like rare() does', async (t) => {
   t.mock.method(console, 'log', () => {})
   const out = await rareAZ({ manual: true, data: [] })
   assert.deepEqual(Object.keys(out), AZ_BUCKETS)
+})
+
+test('rareAZ with opts.output still returns the output object', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ebird-ext-rareaz-'))
+  t.after(() => fs.rm(dir, { recursive: true, force: true }))
+  const e = { 'Scientific Name': 'Dendrocygna bicolor', Date: '2024-02-01' }
+  const { ret } = await runRareAZ(t, { manual: true, data: [e], output: path.join(dir, 'az') })
+  assert.deepEqual(bucketsOf(ret, e), ['Arizona'])
 })
 
 test('rareAZ with manual: true and no data puts the Pine Marten spoof in Unknown', async (t) => {
