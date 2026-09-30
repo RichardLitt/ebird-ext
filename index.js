@@ -279,7 +279,7 @@ async function winterFinch (opts) {
   }
 
   const owls = [
-    'Eastern Screech-owl',
+    'Eastern Screech-Owl',
     'Great Horned Owl',
     'Snowy Owl',
     'Barred Owl',
@@ -308,7 +308,11 @@ async function winterFinch (opts) {
     'American Tree Sparrow'
   ]
 
-  const data = await counties(opts)
+  let data = await counties(opts)
+  if (opts.county) {
+    // counties returns a single county entry (or undefined) when opts.county is set
+    data = (data) ? { [data.county]: data } : {}
+  }
   Object.keys(data).forEach(county => {
     const intersection = sortedList(_.intersection(cleanCommonName(data[county].species), winterFinches), winterFinches)
     console.log(`${county} (${intersection.length})${(intersection.length !== 0) ? `: ${intersection.join(', ')}.` : ''}`)

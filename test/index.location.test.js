@@ -1123,7 +1123,7 @@ test('winterFinch lists owls in the second block', async (t) => {
   quiet(t)
   await winterFinch({ input: SIGHTINGS })
   const owls = loggedLines().slice(15)
-  assert.ok(owls.find(l => l.startsWith('Washington')).includes(': Barred Owl'))
+  assert.ok(owls.find(l => l.startsWith('Washington')).includes('Barred Owl'))
   assert.equal(owls.filter(l => !l.endsWith('(0)')).length, 1)
 })
 
@@ -1148,6 +1148,28 @@ test('winterFinch resolves to undefined', async (t) => {
   assert.equal(await winterFinch({ input: SIGHTINGS }), undefined)
 })
 
-test.todo('winterFinch never matches Eastern Screech-Owl: its owl list spells it "Eastern Screech-owl" (index.js:289) but eBird uses "Eastern Screech-Owl", so the Fayston screech-owl is missing from the Washington owl line')
+test('winterFinch matches Eastern Screech-Owl (eBird capitalisation) in the owl block', async (t) => {
+  quiet(t)
+  await winterFinch({ input: SIGHTINGS })
+  const owls = loggedLines().slice(15)
+  assert.equal(owls.find(l => l.startsWith('Washington')), 'Washington (2): Eastern Screech-Owl, Barred Owl.')
+})
 
-test.todo('winterFinch { county } throws "Cannot read properties of undefined (reading \'map\')": counties returns a single county entry when opts.county is set (index.js:270-272), and winterFinch (index.js:318-320) iterates its keys as if they were county names')
+test('winterFinch { county } prints just that county\'s finch and owl lines', async (t) => {
+  quiet(t)
+  await winterFinch({ input: SIGHTINGS, county: 'washington' })
+  // counties { county } also logs the county entry object; keep the text lines.
+  const lines = logged().filter(args => typeof args[0] === 'string').map(args => args.join(' '))
+  assert.deepEqual(lines, [
+    'Washington (3): Evening Grosbeak, Pine Grosbeak, Red Crossbill.',
+    '',
+    'Washington (2): Eastern Screech-Owl, Barred Owl.'
+  ])
+})
+
+test('winterFinch { county } for an unknown county prints only the blank separator', async (t) => {
+  quiet(t)
+  await winterFinch({ input: SIGHTINGS, county: 'Grafton' })
+  const lines = logged().filter(args => typeof args[0] === 'string').map(args => args.join(' '))
+  assert.deepEqual(lines, [''])
+})
