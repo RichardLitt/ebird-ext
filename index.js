@@ -912,6 +912,8 @@ async function datesSpeciesObserved (opts) {
 // You have not seen ${opts.id} on:`)
 
   const data = await getData(opts.input)
+  // Every month-day of a leap year (366), matching the chart built below
+  const daysInChart = _.sumBy(_.range(1, 13), helpers.leapYearDaysInMonth)
 
   const speciesList = data.filter(x => x['State/Province'] === 'US-VT').map(x => x['Common Name']).filter((v, i, a) => a.indexOf(v) === i)
   const speciesArray = []
@@ -935,7 +937,7 @@ async function datesSpeciesObserved (opts) {
 
     // Create a full year chart, and then find days that weren't in days observed
     Object.keys(observedDates).forEach(month => {
-      fullYearChart[month.toString().padStart(2, '0')] = Array.from({ length: moment().month(month - 1).daysInMonth() }, (_, i) => i + 1)
+      fullYearChart[month.toString().padStart(2, '0')] = Array.from({ length: helpers.leapYearDaysInMonth(month) }, (_, i) => i + 1)
       unbirdedDates[month] = _.difference(fullYearChart[month], observedDates[month].sort((a, b) => a - b))
       totalDates += unbirdedDates[month].length
     })
@@ -950,7 +952,7 @@ async function datesSpeciesObserved (opts) {
 
   console.log(speciesArray.sort(function (a, b) {
     return a[1] - b[1]
-  }).map(x => `${x[0]}: ${365 - x[1]}`).slice(0, 20))
+  }).map(x => `${x[0]}: ${daysInChart - x[1]}`).slice(0, 20))
 }
 
 async function daylistTargets (opts) {
@@ -978,7 +980,7 @@ async function daylistTargets (opts) {
 
     // Create a full year chart, and then find days that weren't in days observed
     Object.keys(observedDates).forEach(month => {
-      fullYearChart[month.toString().padStart(2, '0')] = Array.from({ length: moment().month(month - 1).daysInMonth() }, (_, i) => i + 1)
+      fullYearChart[month.toString().padStart(2, '0')] = Array.from({ length: helpers.leapYearDaysInMonth(month) }, (_, i) => i + 1)
       unbirdedDates[month] = _.difference(fullYearChart[month], observedDates[month].sort((a, b) => a - b))
     })
 

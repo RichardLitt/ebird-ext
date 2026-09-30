@@ -552,7 +552,7 @@ test('datesSpeciesObserved logs "Species: <distinct days of year seen>", most-se
   assert.equal(log.mock.calls.length, 1)
   assert.deepEqual(log.mock.calls[0].arguments[0], [
     'Alpha Test Bird: 3',
-    'Beta Test Bird: 1',
+    'Beta Test Bird: 2',
     'Gamma Test Bird: 1',
     'Epsilon Test Bird: 1'
   ])
@@ -616,9 +616,35 @@ test('datesSpeciesObserved supports MM/DD/YYYY dates like the rest of the toolki
   ])
 })
 
-test.todo('datesSpeciesObserved counts a Feb 29 sighting when the current year is not a leap year (month lengths come from moment() at index.js:953, so 29 is outside the February chart and Beta Test Bird in dates.csv reports 1 day instead of 2)')
+test('datesSpeciesObserved counts a Feb 29 sighting when the current year is not a leap year', async (t) => {
+  // Beta Test Bird: 2022-01-01 and 2024-02-29.
+  freezeNow(t, 2025, 6, 15)
+  const log = muteLog(t)
+  await datesSpeciesObserved({ input: DATES })
+  assert.ok(log.mock.calls[0].arguments[0].includes('Beta Test Bird: 2'))
+})
 
-test.todo('datesSpeciesObserved reports correct day counts when the current year is a leap year (index.js:968 hard-codes 365 while the chart built at index.js:953 has 366 days, so every count is one too low)')
+test('datesSpeciesObserved reports correct day counts when the current year is a leap year', async (t) => {
+  freezeNow(t, 2024, 6, 15)
+  const log = muteLog(t)
+  await datesSpeciesObserved({ input: DATES })
+  assert.deepEqual(log.mock.calls[0].arguments[0], [
+    'Alpha Test Bird: 3',
+    'Beta Test Bird: 2',
+    'Gamma Test Bird: 1',
+    'Epsilon Test Bird: 1'
+  ])
+})
+
+test('datesSpeciesObserved gives the same counts in leap and non-leap years', async (t) => {
+  const log = muteLog(t)
+  freezeNow(t, 2023, 6, 15)
+  await datesSpeciesObserved({ input: DATES })
+  t.mock.timers.reset()
+  freezeNow(t, 2024, 6, 15)
+  await datesSpeciesObserved({ input: DATES })
+  assert.deepEqual(log.mock.calls[0].arguments[0], log.mock.calls[1].arguments[0])
+})
 
 // ===========================================================================
 // getLastDate

@@ -38,9 +38,16 @@ function monthAndDay (dateStr) {
   return [date.format('MM'), date.format('DD')]
 }
 
+// Days in a month (1-12) of a leap year, so month-day charts that span every
+// year have a slot for Feb 29 whatever the current year is.
+function leapYearDaysInMonth (month) {
+  return moment([2000, Number(month) - 1]).daysInMonth()
+}
+
 export {
   capitalizeFirstLetters,
   parseDateFormat,
   momentFormat,
-  monthAndDay
+  monthAndDay,
+  leapYearDaysInMonth
 }

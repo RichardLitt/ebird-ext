@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { capitalizeFirstLetters, parseDateFormat, momentFormat, monthAndDay } from '../helpers.js'
+import { capitalizeFirstLetters, parseDateFormat, momentFormat, monthAndDay, leapYearDaysInMonth } from '../helpers.js'
 
 test('capitalizeFirstLetters title-cases lowercase words', () => {
   assert.equal(capitalizeFirstLetters('hello world'), 'Hello World')
@@ -96,4 +96,18 @@ test('monthAndDay returns undefined for an impossible date', () => {
 
 test('monthAndDay throws on undelimited input (via momentFormat)', () => {
   assert.throws(() => monthAndDay('20231001'), /Invalid Date String/)
+})
+
+test('leapYearDaysInMonth gives February 29 days', () => {
+  assert.equal(leapYearDaysInMonth(2), 29)
+  assert.equal(leapYearDaysInMonth('02'), 29)
+})
+
+test('leapYearDaysInMonth covers 366 days in total', () => {
+  let total = 0
+  for (let m = 1; m <= 12; m++) total += leapYearDaysInMonth(m)
+  assert.equal(total, 366)
+  assert.equal(leapYearDaysInMonth(1), 31)
+  assert.equal(leapYearDaysInMonth(4), 30)
+  assert.equal(leapYearDaysInMonth('12'), 31)
 })
