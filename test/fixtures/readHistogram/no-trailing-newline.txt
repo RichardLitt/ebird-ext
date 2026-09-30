@@ -1,0 +1,8 @@
+Frequency of observations in the selected location(s).:
+Number of taxa: 	2
+
+	Jan				Feb				Mar				
+Sample Size:	49.0	42.0	71.0	105.0	81.0	86.0	0.0	0.0	
+
+Snow Goose (<em class="sci">Anser caerulescens</em>)	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	
+Black-capped Chickadee (<em class="sci">Poecile atricapillus</em>)	0.6326531	0.6190476	0.5774648	0.4761905	0.4691358	0.5	0.0	0.0	

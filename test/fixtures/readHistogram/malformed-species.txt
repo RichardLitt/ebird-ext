@@ -1,0 +1,9 @@
+Frequency of observations in the selected location(s).:
+Number of taxa: 	2
+
+	Jan				Feb				Mar				
+Sample Size:	49.0	42.0	71.0	105.0	81.0	86.0	0.0	0.0	
+
+Snow Goose (<em class="sci">Anser caerulescens</em>)	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	
+Canada Goose	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	
+

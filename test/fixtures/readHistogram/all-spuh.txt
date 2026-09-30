@@ -1,0 +1,10 @@
+Frequency of observations in the selected location(s).:
+Number of taxa: 	3
+
+	Jan				Feb				Mar				
+Sample Size:	49.0	42.0	71.0	105.0	81.0	86.0	0.0	0.0	
+
+Cackling/Canada Goose (<em class="sci">Branta hutchinsii/canadensis</em>)	0.0	0.0	0.009434	0.0	0.0	0.0	0.0	0.0	
+duck sp. (<em class="sci">Anatinae sp.</em>)	0.0	0.0238095	0.0	0.0	0.0	0.0	0.0	0.0	
+bird sp. (<em class="sci">Aves sp.</em>)	0.0	0.0	0.0	0.0095238	0.0	0.0	0.0	0.0	
+
