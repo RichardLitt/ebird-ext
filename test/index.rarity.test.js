@@ -393,7 +393,33 @@ test('rare: no bundled record uses Reporting "B", so the Burlington bucket is al
   assert.equal(out.Burlington.length, 0)
 })
 
-test.todo('rare: the Reporting "B" town list (index.js:710) is mixed case ("Burlington"), but rows from a CSV get an upper-case Town ("BURLINGTON") from pointLookup, so every CSV sighting of a "B" species would be flagged, even ones inside Burlington')
+// No bundled record uses 'B', so temporarily give King Eider (normally 'V',
+// no occurrence limit) Reporting 'B' for these tests.
+function withReportingB (t) {
+  const record = VermontRecords.find(r => r['Scientific Name'] === 'Somateria spectabilis')
+  const original = record.Reporting
+  record.Reporting = 'B'
+  t.after(() => { record.Reporting = original })
+}
+
+test('rare: a "B" species from a CSV is not flagged inside the Burlington area (upper-case Town)', async (t) => {
+  withReportingB(t)
+  const { file } = await tmpCsv(t, [
+    { id: 'T1', sci: 'Somateria spectabilis' },
+    { id: 'T2', sci: 'Somateria spectabilis', county: 'Washington', lat: '44.2601', lon: '-72.5754' }
+  ])
+  const out = await rare({ input: file })
+  assert.deepEqual(summarize(out), { Burlington: ['T2'] })
+  assert.equal(out.Burlington[0].Town, 'MONTPELIER')
+})
+
+test('rare: the "B" town check ignores case for manual entries too', async (t) => {
+  withReportingB(t)
+  const inside = ['Burlington', 'south burlington', 'WINOOSKI'].map(Town => sighting({ 'Scientific Name': 'Somateria spectabilis', Town }))
+  const outside = sighting({ 'Scientific Name': 'Somateria spectabilis', Town: 'Montpelier' })
+  const out = await rareManual(...inside, outside)
+  assert.deepEqual(out.Burlington, [outside])
+})
 
 // ---------------------------------------------------------------------------
 // Subspecies

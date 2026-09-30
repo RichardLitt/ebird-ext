@@ -556,7 +556,19 @@ test('counties { output } writes an array of county entries', async (t) => {
   assert.deepEqual(written.find(c => c.county === 'Essex'), result.Essex)
 })
 
-test.todo('counties { county: "washington" } returns undefined: locationFilter matches the county case-insensitively but the result lookup at index.js:272 (newObj[opts.county]) is case-sensitive')
+test('counties { county } matches the county name case-insensitively', async (t) => {
+  quiet(t)
+  const lower = await counties({ input: SIGHTINGS, county: 'washington' })
+  assert.equal(lower.county, 'Washington')
+  assert.equal(lower.speciesTotal, 7)
+  const upper = await counties({ input: SIGHTINGS, county: 'ESSEX' })
+  assert.deepEqual(upper.species, ['Boreal Chickadee', 'Canada Jay'])
+})
+
+test('counties { county } for a county not in Vermont returns undefined', async (t) => {
+  quiet(t)
+  assert.equal(await counties({ input: SIGHTINGS, county: 'Grafton' }), undefined)
+})
 
 // ===========================================================================
 // regions

@@ -253,8 +253,10 @@ async function counties (opts) {
   }
 
   if (opts.county) {
-    console.log(newObj[opts.county])
-    return newObj[opts.county]
+    // locationFilter matched the county case-insensitively, so look it up the same way
+    const county = Object.keys(newObj).find(c => c.toLowerCase() === opts.county.toLowerCase())
+    console.log(newObj[county])
+    return newObj[county]
   }
 
   if (opts.output) {
@@ -691,8 +693,9 @@ async function rare (opts) {
         output.Vermont.push(e)
       } else if (recordEntry.Reporting === 'B') {
         // Outside of Burlington
-        const towns = ['Burlington', 'South Burlington', 'Essex', 'Colchester', 'Winooski', 'Shelburne']
-        if (!towns.includes(e.Town)) {
+        // Upper case, to match the geojson town names that locationFilter sets
+        const towns = ['BURLINGTON', 'SOUTH BURLINGTON', 'ESSEX', 'COLCHESTER', 'WINOOSKI', 'SHELBURNE']
+        if (!towns.includes((e.Town || '').toUpperCase())) {
           output.Burlington.push(e)
         }
       } else if (recordEntry.Reporting === 'C') {
