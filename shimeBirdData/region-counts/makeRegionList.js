@@ -1,8 +1,8 @@
 // This just makes a list from the console log output of joinRegionJson.js.
 // Not a great way to do it, but it's where I am at right now, so whatever.
 
-const fs = require('fs').promises
-const Papa = require('papaparse')
+import { promises as fs } from 'node:fs'
+import Papa from 'papaparse'
 
 const regions = [
   'Champlain Hills',

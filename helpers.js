@@ -26,7 +26,7 @@ function momentFormat (dateStr) {
   }
 }
 
-module.exports = {
+export {
   capitalizeFirstLetters,
   parseDateFormat,
   momentFormat

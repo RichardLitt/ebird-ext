@@ -1,12 +1,12 @@
-const VermontHotspots = require('./data/hotspots.json')
-const townBoundaries = require('./geojson/vt_towns.json')
-const _ = require('lodash')
-const fs = require('fs').promises
-const moment = require('moment')
-const Papa = require('papaparse')
-const main = require('./index')
-const helpers = require('./helpers')
-const f = require('./filters')
+import VermontHotspots from './data/hotspots.json' with { type: 'json' }
+import townBoundaries from './geojson/vt_towns.json' with { type: 'json' }
+import _ from 'lodash'
+import { promises as fs } from 'node:fs'
+import moment from 'moment'
+import Papa from 'papaparse'
+import * as main from './index.js'
+import * as helpers from './helpers.js'
+import * as f from './filters.js'
 
 // Get new hotspots lists
 // curl --location -g --request GET 'https://api.ebird.org/v2/ref/hotspot/US-VT' > data/hotspots.csv
@@ -180,7 +180,15 @@ You've birded at ${VermontHotspots.find(h => h.ID === opts.id).Name} every week 
   console.log()
 }
 
-module.exports = {
+export {
+  csvToJsonHotspots,
+  unbirdedHotspots,
+  townHotspots,
+  weeksYouveBirdedAtHotspot,
+  hotspotsForTown
+}
+
+export default {
   csvToJsonHotspots,
   unbirdedHotspots,
   townHotspots,

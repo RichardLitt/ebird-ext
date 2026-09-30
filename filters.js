@@ -1,16 +1,16 @@
-const Town_boundaries = require('./geojson/vt_towns.json')
-const Vermont_regions = require('./geojson/Polygon_VT_Biophysical_Regions.json')
-const CountyBarcharts = require('./data/countyBarcharts.json')
-const GeoJsonGeometriesLookup = require('geojson-geometries-lookup')
+import Town_boundaries from './geojson/vt_towns.json' with { type: 'json' }
+import Vermont_regions from './geojson/Polygon_VT_Biophysical_Regions.json' with { type: 'json' }
+import CountyBarcharts from './data/countyBarcharts.json' with { type: 'json' }
+import GeoJsonGeometriesLookup from 'geojson-geometries-lookup'
 const vermontTowns = new GeoJsonGeometriesLookup(Town_boundaries)
 const vermontRegions = new GeoJsonGeometriesLookup(Vermont_regions)
-const _ = require('lodash')
-const moment = require('moment')
-const provinces = require('provinces')
-const helpers = require('./helpers')
-const nearestPoint = require('@turf/nearest-point')
-const turf = require('turf')
-// const centerOfMass = require('@turf/center-of-mass')
+import _ from 'lodash'
+import moment from 'moment'
+import provinces from 'provinces'
+import * as helpers from './helpers.js'
+import nearestPoint from '@turf/nearest-point'
+import turf from 'turf'
+// import * as centerOfMass from '@turf/center-of-mass'
 
 // Why eBird uses this format I have no idea.
 const eBirdCountyIds = {
@@ -39,7 +39,7 @@ function getTownCentroids (town) {
     let center
     // This center of West Haven is in New York.
     if (feature.properties.town === 'West Haven'.toUpperCase()) {
-      // This breaks the whole thing! 
+      // This breaks the whole thing!
       center = turf.center(feature) //centerOfMass.default(feature)
       // TODO Unfortunately, the enclaves are broken. All Rutland counts are in Rutland City.
     } else if (feature.properties.town.includes('Rutland'.toUpperCase())) {
@@ -287,7 +287,7 @@ function removeSpuhFromCounties (countyBarcharts) {
   return newObj
 }
 
-module.exports = {
+export {
   orderByDate,
   durationFilter,
   completeChecklistFilter,

@@ -1,12 +1,17 @@
-const fs = require('fs')
-const banding = require('../bandingCodes')
-const helpers = require('../helpers')
+import fs from 'node:fs'
+import { createRequire } from 'node:module'
+import * as banding from '../bandingCodes.js'
+import * as helpers from '../helpers.js'
+
+const require = createRequire(import.meta.url)
 
 let files
 
 const areas = process.argv[2]
 
 // Easier to just hardcode than figure this out.
+// Conditional JSON loading kept via createRequire because these per-county files
+// are produced on-demand from readEBirdDb.js and are not committed.
 if (areas === 'towns') {
   files = [
     require('./vtTown-001.json'),

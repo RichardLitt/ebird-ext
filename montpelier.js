@@ -1,13 +1,13 @@
-const fetch = require('node-fetch')
-const VermontHotspots = require('./data/hotspots.json')
-// const eBirdDataAsJSON = require('./data/washCoHotspotObservations.json')
+import fetch from 'node-fetch'
+import VermontHotspots from './data/hotspots.json' with { type: 'json' }
+// import eBirdDataAsJSON from './data/washCoHotspotObservations.json' with { type: 'json' }
 // TODO Implement this, instead
-const hotspotDates = require('./data/hotspotsDates.json')
-const _ = require('lodash')
-const moment = require('moment')
-const difference = require('compare-latlong')
-const f = require('./filters')
-const fs = require('fs')
+import hotspotDates from './data/hotspotsDates.json' with { type: 'json' }
+import _ from 'lodash'
+import moment from 'moment'
+import difference from 'compare-latlong'
+import * as f from './filters.js'
+import fs from 'node:fs'
 
 const eBirdApiToken = 'a6ebaopct2l3'
 

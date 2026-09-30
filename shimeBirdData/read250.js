@@ -1,10 +1,14 @@
 // This entire script is rather silly. You can find it here: https://ebird.org/top100?region=Vermont&locInfo.regionCode=US-VT&year=2022&rankedBy=spp
 
+import { createRequire } from 'node:module'
+import _ from 'lodash'
+// import * as banding from '../bandingCodes.js'
+// import { promises as fs } from 'node:fs'
+// import * as eBird from '../index.js'
+
+const require = createRequire(import.meta.url)
+// vt-250-clean.json is generated on demand by readEBirdDb.js, not committed.
 const data = require('./vt-250-clean.json')
-const _ = require('lodash')
-// const banding = require('../bandingCodes')
-// const fs = require('fs').promises
-// const eBird = require('../')
 
 const observerIds = {
   obsr27544: 'Records of Vermont Birds Data',

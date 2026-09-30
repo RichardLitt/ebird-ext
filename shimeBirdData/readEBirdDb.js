@@ -1,12 +1,12 @@
 // This function reads only the eBird database files, requestable from eBird.
-const fs = require('fs')
-const stream = require('stream');
-const JSONStream = require('JSONStream'); // Make sure to install this package: 'npm install JSONStream'
-const csv = require('csv-parse')
-const f = require('../filters')
-const helpers = require('../helpers')
-const banding = require('../bandingCodes')
-const _ = require('lodash')
+import fs from 'node:fs'
+import stream from 'node:stream'
+import JSONStream from 'JSONStream' // Make sure to install this package: 'npm install JSONStream'
+import csv from 'csv-parse'
+import * as f from '../filters.js'
+import * as helpers from '../helpers.js'
+import * as banding from '../bandingCodes.js'
+import _ from 'lodash'
 const parser = csv({
   delimiter: '\t',
   record_delimiter: '\n',

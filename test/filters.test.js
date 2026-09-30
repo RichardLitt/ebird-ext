@@ -1,7 +1,7 @@
-const test = require('node:test')
-const assert = require('node:assert/strict')
-const { dateFilter, completeChecklistFilter, locationFilter } = require('../filters')
-const fixture = require('./fixtures/checklists')
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { dateFilter, completeChecklistFilter, locationFilter } from '../filters.js'
+import fixture from './fixtures/checklists.js'
 
 // locationFilter mutates checklists in place (adds .State, .Country, .Region, .Town),
 // so each test gets a deep-cloned copy.

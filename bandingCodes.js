@@ -1,4 +1,4 @@
-const codes = require('./data/ibpAlphaCodes2021.json')
+import codes from './data/ibpAlphaCodes2021.json' with { type: 'json' }
 
 // NB: When I converted this, I replaced true_alpha with alpha
 // {
@@ -100,7 +100,7 @@ function unfurlObjToSpecies (obj) {
 // commonNameToCode('Bells Vireo')
 // speciesNameToCode('Bucephala clangula')
 
-module.exports = {
+export {
   codeToCommonName,
   commonNameToCode,
   speciesNameToCode,

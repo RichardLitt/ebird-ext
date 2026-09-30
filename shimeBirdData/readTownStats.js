@@ -1,11 +1,15 @@
 // The functions here read only the output of town stats.
 // There are many different little functions - turn on them on the bottom or not as needed
 
+import { createRequire } from 'node:module'
+import _ from 'lodash'
+import * as banding from '../bandingCodes.js'
+import { promises as fs } from 'node:fs'
+import * as eBird from '../index.js'
+
+const require = createRequire(import.meta.url)
+// vtTowns-clean.json is generated on demand by readEBirdDb.js, not committed.
 const data = require('./vtTowns-clean.json')
-const _ = require('lodash')
-const banding = require('../bandingCodes')
-const fs = require('fs').promises
-const eBird = require('../')
 
 // Data object format
 // [

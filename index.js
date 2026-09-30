@@ -1,21 +1,21 @@
-const townBoundaries = require('./geojson/vt_towns.json')
-let vermontRegions = require('./geojson/Polygon_VT_Biophysical_Regions.json')
-const VermontRecords = require('./data/vermont_records.json')
-const ArizonaRecords = require('./data/arizona_records.json')
-const CountyBarcharts = require('./data/countyBarcharts.json')
-const VermontSubspecies = require('./data/vermont_records_subspecies.json')
-const GeoJsonGeometriesLookup = require('geojson-geometries-lookup')
-vermontRegions = new GeoJsonGeometriesLookup(vermontRegions)
-const fs = require('fs').promises
-const _ = require('lodash')
-const Papa = require('papaparse')
-const moment = require('moment')
-const difference = require('compare-latlong')
-const appearsDuringExpectedDates = require('./appearsDuringExpectedDates.js')
-const helpers = require('./helpers')
-const f = require('./filters')
-const banding = require('./bandingCodes')
-const townDataFor2022 = require('./data/townDataFor2022-May-Export.json')
+import townBoundaries from './geojson/vt_towns.json' with { type: 'json' }
+import vermontRegionsRaw from './geojson/Polygon_VT_Biophysical_Regions.json' with { type: 'json' }
+import VermontRecords from './data/vermont_records.json' with { type: 'json' }
+import ArizonaRecords from './data/arizona_records.json' with { type: 'json' }
+import CountyBarcharts from './data/countyBarcharts.json' with { type: 'json' }
+import VermontSubspecies from './data/vermont_records_subspecies.json' with { type: 'json' }
+import GeoJsonGeometriesLookup from 'geojson-geometries-lookup'
+const vermontRegions = new GeoJsonGeometriesLookup(vermontRegionsRaw)
+import { promises as fs } from 'node:fs'
+import _ from 'lodash'
+import Papa from 'papaparse'
+import moment from 'moment'
+import difference from 'compare-latlong'
+import appearsDuringExpectedDates from './appearsDuringExpectedDates.js'
+import * as helpers from './helpers.js'
+import * as f from './filters.js'
+import * as banding from './bandingCodes.js'
+import townDataFor2022 from './data/townDataFor2022-May-Export.json' with { type: 'json' }
 
 // Why eBird uses this format I have no idea.
 const eBirdCountyIds = {
@@ -1022,9 +1022,35 @@ async function daylistTargets (opts) {
 // - Did I get new audio birds today?
 // }
 
-// Switch this for CLI testing
-// export default {
-module.exports = {
+export {
+  biggestTime,
+  firstTimeList,
+  firstTimes,
+  quadBirds,
+  radialSearch,
+  rare,
+  rareAZ,
+  regions,
+  towns,
+  counties,
+  state,
+  winterFinch,
+  vt251,
+  subspecies,
+  checklists,
+  getLastDate,
+  countTheBirds,
+  isSpeciesSightingRare,
+  getData,
+  eBirdCountyIds,
+  getAllTowns,
+  datesSpeciesObserved,
+  daylistTargets,
+  countUniqueSpecies,
+  f
+}
+
+export default {
   biggestTime,
   firstTimeList,
   firstTimes,
