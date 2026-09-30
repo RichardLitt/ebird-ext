@@ -17,3 +17,6 @@ results.json
 
 # Coverage reports (npx c8)
 coverage/
+
+# Stray eBird API dumps
+test.json

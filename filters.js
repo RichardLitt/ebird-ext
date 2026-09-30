@@ -9,8 +9,8 @@ import moment from 'moment'
 import provinces from 'provinces'
 import * as helpers from './helpers.js'
 import nearestPoint from '@turf/nearest-point'
-import turf from 'turf'
-// import * as centerOfMass from '@turf/center-of-mass'
+import turfCenter from '@turf/center'
+import { point as turfPoint, featureCollection } from '@turf/helpers'
 
 // Why eBird uses this format I have no idea.
 const eBirdCountyIds = {
@@ -40,13 +40,13 @@ function getTownCentroids (town) {
     // This center of West Haven is in New York.
     if (feature.properties.town === 'West Haven'.toUpperCase()) {
       // This breaks the whole thing!
-      center = turf.center(feature) //centerOfMass.default(feature)
+      center = turfCenter(feature)
       // TODO Unfortunately, the enclaves are broken. All Rutland counts are in Rutland City.
     } else if (feature.properties.town.includes('Rutland'.toUpperCase())) {
-      center = turf.center(feature)
+      center = turfCenter(feature)
       // console.log(feature.properties.town, center.geometry.coordinates.reverse())
     } else {
-      center = turf.center(feature)
+      center = turfCenter(feature)
     }
     // console.log(feature.properties, center)
     center.properties = feature.properties
@@ -86,7 +86,7 @@ function getPoint (map, coordinates, countyCode) {
         const countyCenters = townCentroids.filter(f => f.properties.county === countyCode);
         const long = coordinates.LONGITUDE || coordinates.Longitude
         const lat = coordinates.LATITUDE || coordinates.Latitude
-        const newCoords = nearestPoint(turf.point([long, lat]), turf.featureCollection(countyCenters));
+        const newCoords = nearestPoint(turfPoint([long, lat]), featureCollection(countyCenters));
         coordinates = {
             Longitude: newCoords.geometry.coordinates[0],
             Latitude: newCoords.geometry.coordinates[1]
