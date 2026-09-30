@@ -56,36 +56,21 @@ function cleanCommonName (arr) {
   return arr.map(s => s.split('(')[0].trim())
 }
 
-async function getData (input) {
-  if (fs) {
-    // Read and parse
-    const fileContent = await fs.readFile(input, 'utf8');
-    const parseResult = Papa.parse(fileContent, { 
-      header: true, 
-      skipEmptyLines: true, // consider skipping empty lines
-      complete: function(results) {
-        // console.log("Parsing complete:", results);
-      },
-      error: function(error) {
-        // console.error("Parsing error:", error);
-        // console.log(fileContent)
-        // Consider throwing the error if it's critical and should stop the flow
-        // throw new Error(error);
-      }
-    });
-
-    // Check for parsing errors
-    if (parseResult.errors && parseResult.errors.length > 0) {
-      // Log or handle errors as you see fit
-      parseResult.errors.forEach(err => {
-        // console.error("Error during parsing:", err);
-        // Additional handling can be done here (e.g., deciding whether to continue or stop)
-      });
-    }
-    return f.removeSpuh(parseResult.data)
+// input is a path to a "My eBird Data" CSV, or already-parsed rows.
+// Spuhs, slashes and hybrids are removed unless opts.keepSpuh is set: callers
+// counting checklists, visits or individuals need them, species counts don't.
+async function getData (input, opts = {}) {
+  let data = input
+  if (typeof input === 'string') {
+    // Strip a UTF-8 BOM (spreadsheet-resaved exports have one), or Papa keeps
+    // it on the first header and row['Submission ID'] is undefined.
+    const fileContent = (await fs.readFile(input, 'utf8')).replace(/^\uFEFF/, '')
+    data = Papa.parse(fileContent, {
+      header: true,
+      skipEmptyLines: true
+    }).data
   }
-
-  return f.removeSpuh(input)
+  return opts.keepSpuh ? data : f.removeSpuh(data)
 }
 
 async function biggestTime (timespan, opts) {

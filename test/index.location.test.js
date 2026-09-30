@@ -183,9 +183,10 @@ test('towns { all } on an empty CSV gives every town an empty array', async (t) 
 test('towns { all } lists banding codes in first-seen order for Burlington', async (t) => {
   quiet(t)
   const result = await towns({ input: SIGHTINGS, all: true })
-  // 2023-05-10 checklist first, then the new species from 2024-01-15.
+  // 2023-05-10 checklist first, then the Lake Champlain loon (2023-09-09,
+  // credited via the nearest-town fallback), then the new species from 2024-01-15.
   assert.deepEqual(result.BURLINGTON, [
-    'AMRO', 'BCCH', 'BLJA', 'Dark-eyed Junco (Slate-colored)', 'SNBU', 'BOWA'
+    'AMRO', 'BCCH', 'BLJA', 'Dark-eyed Junco (Slate-colored)', 'COLO', 'SNBU', 'BOWA'
   ])
 })
 
@@ -299,7 +300,13 @@ test('towns { all, output } appends .json when the output path has no extension'
   assert.deepEqual(written.BRIGHTON, ['BOCH', 'CAJA'])
 })
 
-test.todo('towns { all } drops sightings whose town came from the nearest-town fallback: filters.js:159 stores the fallback as "Burlington" (capitalizeFirstLetters) but index.js:198 matches against the upper-case geojson key "BURLINGTON", so the Lake Champlain Common Loon is never credited to BURLINGTON')
+test('towns { all } credits a sighting outside every town polygon to the nearest town', async (t) => {
+  quiet(t)
+  // The Lake Champlain point is outside every town boundary; filters.js falls
+  // back to the nearest town, which must use the same upper-case key.
+  const result = await towns({ input: SIGHTINGS, all: true })
+  assert.ok(result.BURLINGTON.includes('COLO'))
+})
 
 test.todo('towns { all } stores subspecies-level common names like "Dark-eyed Junco (Slate-colored)" or "Red Crossbill (Type 10)" verbatim (index.js:200) instead of reducing them to the species banding code (DEJU, RECR), so town lists mix codes and names and can double-count against the 2022 base data')
 
@@ -360,7 +367,12 @@ test('towns { town, output } writes the species-by-date object', async (t) => {
   assert.deepEqual(written['2024-02-20'].map(r => r['Common Name']), ['Evening Grosbeak', 'Black-capped Chickadee'])
 })
 
-test.todo('towns { town: "Burlington" } omits the Lake Champlain Common Loon: locationFilter accepts it (case-insensitive "Burlington"), but index.js:216 then requires x.Town === "BURLINGTON" and the fallback town is title-cased (filters.js:159)')
+test('towns { town: "Burlington" } includes the Lake Champlain Common Loon (nearest-town fallback)', async (t) => {
+  quiet(t)
+  await towns({ input: SIGHTINGS, town: 'Burlington' })
+  const lines = loggedLines().filter(l => /^\d+ \|/.test(l))
+  assert.ok(lines.some(l => l.includes('Common Loon - Gavia immer')))
+})
 
 // ===========================================================================
 // counties
