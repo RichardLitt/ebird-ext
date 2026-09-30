@@ -802,15 +802,24 @@ test('daylistTargets logs nothing for a header-only CSV', async (t) => {
   assert.equal(console.log.mock.calls.length, 0)
 })
 
-test('daylistTargets rejects on MM/DD/YYYY dates (current behavior)', async (t) => {
-  // x.Date.split('-') leaves month undefined, so observedDates[undefined]
-  // is undefined and .indexOf throws.
+test('daylistTargets accepts MM/DD/YYYY dates like the rest of index.js', async (t) => {
+  // A slash-dated file must give the same result as the same rows dash-dated.
   today(t, 2024, 9, 1)
-  const file = await csv([row('Blue Jay', 'Cyanocitta cristata', '10/01/2023')])
-  await assert.rejects(daylistTargets({ input: file, today: true }), TypeError)
+  const dashed = await csv([
+    row('Blue Jay', 'Cyanocitta cristata', '2023-10-01'),
+    row('Snow Bunting', 'Plectrophenax nivalis', '2023-12-31')
+  ])
+  const slashed = await csv([
+    row('Blue Jay', 'Cyanocitta cristata', '10/01/2023'),
+    row('Snow Bunting', 'Plectrophenax nivalis', '12/31/2023')
+  ])
+  await daylistTargets({ input: dashed, today: true })
+  const expected = logged()
+  console.log.mock.resetCalls()
+  await daylistTargets({ input: slashed, today: true })
+  assert.deepEqual(logged(), expected)
+  assert.equal(expected.length, 1)
 })
-
-test.todo('daylistTargets should accept MM/DD/YYYY dates like the rest of index.js (helpers.momentFormat); it splits Date on "-" and throws a TypeError otherwise (index.js:986)')
 
 test('daylistTargets rejects with ENOENT for a missing input file', async () => {
   await assert.rejects(

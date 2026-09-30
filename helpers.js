@@ -1,3 +1,5 @@
+import moment from 'moment'
+
 function capitalizeFirstLetters (string) {
   return string.toLowerCase().split(' ').map(x => x.charAt(0).toUpperCase() + x.slice(1)).join(' ')
 }
@@ -26,8 +28,19 @@ function momentFormat (dateStr) {
   }
 }
 
+// Month and day ('MM', 'DD') of an eBird Date in either YYYY-MM-DD or
+// MM/DD/YYYY form. Returns undefined for an impossible date like 2023-02-29.
+function monthAndDay (dateStr) {
+  const date = moment(dateStr, momentFormat(dateStr))
+  if (!date.isValid()) {
+    return undefined
+  }
+  return [date.format('MM'), date.format('DD')]
+}
+
 export {
   capitalizeFirstLetters,
   parseDateFormat,
-  momentFormat
+  momentFormat,
+  monthAndDay
 }

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { capitalizeFirstLetters, parseDateFormat, momentFormat } from '../helpers.js'
+import { capitalizeFirstLetters, parseDateFormat, momentFormat, monthAndDay } from '../helpers.js'
 
 test('capitalizeFirstLetters title-cases lowercase words', () => {
   assert.equal(capitalizeFirstLetters('hello world'), 'Hello World')
@@ -73,4 +73,27 @@ test('momentFormat detects slash-delimited US dates', () => {
 
 test('momentFormat throws on undelimited input', () => {
   assert.throws(() => momentFormat('nodelim'), /Invalid Date String/)
+})
+
+test('monthAndDay reads a YYYY-MM-DD date', () => {
+  assert.deepEqual(monthAndDay('2023-10-01'), ['10', '01'])
+})
+
+test('monthAndDay reads an MM/DD/YYYY date', () => {
+  assert.deepEqual(monthAndDay('12/31/2022'), ['12', '31'])
+})
+
+test('monthAndDay accepts Feb 29 in a leap year', () => {
+  assert.deepEqual(monthAndDay('2024-02-29'), ['02', '29'])
+  assert.deepEqual(monthAndDay('02/29/2024'), ['02', '29'])
+})
+
+test('monthAndDay returns undefined for an impossible date', () => {
+  assert.equal(monthAndDay('2023-02-29'), undefined)
+  assert.equal(monthAndDay('2023-04-31'), undefined)
+  assert.equal(monthAndDay('13/01/2023'), undefined)
+})
+
+test('monthAndDay throws on undelimited input (via momentFormat)', () => {
+  assert.throws(() => monthAndDay('20231001'), /Invalid Date String/)
 })

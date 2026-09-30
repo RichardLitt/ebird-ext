@@ -606,7 +606,15 @@ test('datesSpeciesObserved logs [] when there are no Vermont rows', async (t) =>
   assert.deepEqual(log.mock.calls[0].arguments[0], [])
 })
 
-test.todo('datesSpeciesObserved supports MM/DD/YYYY dates like the rest of the toolkit (index.js:945 splits on "-" only, so slash-dates.csv throws a TypeError reading observedDates[undefined])')
+test('datesSpeciesObserved supports MM/DD/YYYY dates like the rest of the toolkit', async (t) => {
+  freezeNow(t, 2025, 6, 15)
+  const log = muteLog(t)
+  await datesSpeciesObserved({ input: SLASH_DATES })
+  assert.deepEqual(log.mock.calls[0].arguments[0], [
+    'Alpha Test Bird: 1',
+    'Beta Test Bird: 1'
+  ])
+})
 
 test.todo('datesSpeciesObserved counts a Feb 29 sighting when the current year is not a leap year (month lengths come from moment() at index.js:953, so 29 is outside the February chart and Beta Test Bird in dates.csv reports 1 day instead of 2)')
 

@@ -927,8 +927,8 @@ async function datesSpeciesObserved (opts) {
     // Filter and add all days observed to the chart
     data.filter(x => x['Common Name'] === species)
       .forEach(x => {
-        const [month, day] = x.Date.split('-').slice(1)
-        if (observedDates[month].indexOf(Number(day)) === -1) {
+        const [month, day] = helpers.monthAndDay(x.Date) || []
+        if (month && observedDates[month].indexOf(Number(day)) === -1) {
           observedDates[month].push(Number(day))
         }
       })
@@ -970,8 +970,8 @@ async function daylistTargets (opts) {
     // Filter and add all days observed to the chart
     data.filter(x => x['Common Name'] === species)
       .forEach(x => {
-        const [month, day] = x.Date.split('-').slice(1)
-        if (observedDates[month].indexOf(Number(day)) === -1) {
+        const [month, day] = helpers.monthAndDay(x.Date) || []
+        if (month && observedDates[month].indexOf(Number(day)) === -1) {
           observedDates[month].push(Number(day))
         }
       })
