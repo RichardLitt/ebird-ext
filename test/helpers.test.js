@@ -14,6 +14,20 @@ test('capitalizeFirstLetters on empty string returns empty string', () => {
   assert.equal(capitalizeFirstLetters(''), '')
 })
 
+// eBird common names include hyphens and apostrophes; the function splits only
+// on whitespace so these inner punctuation marks must be preserved verbatim.
+test('capitalizeFirstLetters preserves hyphens (Red-tailed Hawk)', () => {
+  assert.equal(capitalizeFirstLetters('RED-TAILED HAWK'), 'Red-tailed Hawk')
+})
+
+test("capitalizeFirstLetters preserves apostrophes (Bell's Vireo)", () => {
+  assert.equal(capitalizeFirstLetters("BELL'S VIREO"), "Bell's Vireo")
+})
+
+test('capitalizeFirstLetters on a single word capitalizes it', () => {
+  assert.equal(capitalizeFirstLetters('vermont'), 'Vermont')
+})
+
 test('parseDateFormat maps year to YYYY', () => {
   assert.equal(parseDateFormat('year'), 'YYYY')
 })
@@ -32,6 +46,21 @@ test('parseDateFormat returns undefined for undefined input', () => {
 
 test('parseDateFormat throws on unrecognized timespan', () => {
   assert.throws(() => parseDateFormat('invalid'), /Unable to parse timespan/)
+})
+
+// Any falsy timespan (empty string, null, 0) short-circuits to undefined
+// rather than throwing -- callers rely on this to mean "no formatting".
+test('parseDateFormat returns undefined for empty string', () => {
+  assert.equal(parseDateFormat(''), undefined)
+})
+
+test('parseDateFormat returns undefined for null', () => {
+  assert.equal(parseDateFormat(null), undefined)
+})
+
+// Case matters: 'year' is recognized, 'YEAR' is not.
+test('parseDateFormat throws on uppercase YEAR', () => {
+  assert.throws(() => parseDateFormat('YEAR'), /Unable to parse timespan/)
 })
 
 test('momentFormat detects dash-delimited ISO dates', () => {
