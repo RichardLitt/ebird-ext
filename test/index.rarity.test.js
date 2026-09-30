@@ -778,13 +778,7 @@ test('rareAZ with opts.output writes <output>.json and logs where it wrote', asy
   const { calls } = await runRareAZ(t, { manual: true, data: [{ 'Scientific Name': 'Dendrocygna bicolor', Date: '2024-02-01' }], output: target })
   assert.equal(calls.length, 1)
   assert.equal(calls[0].arguments[0], `Wrote ${target}.json.`)
-  // The write is not awaited by rareAZ, so poll briefly for it.
-  let text
-  for (let i = 0; i < 50 && !text; i++) {
-    text = await fs.readFile(`${target}.json`, 'utf8').catch(() => undefined)
-    if (!text) await new Promise(resolve => setTimeout(resolve, 20))
-  }
-  const written = JSON.parse(text)
+  const written = JSON.parse(await fs.readFile(`${target}.json`, 'utf8'))
   assert.deepEqual(Object.keys(written), AZ_BUCKETS)
   assert.equal(written.Arizona[0]['Scientific Name'], 'Dendrocygna bicolor')
 })
@@ -797,7 +791,19 @@ test('rareAZ with an opts.output that already ends in .json does not double the 
   assert.equal(calls[0].arguments[0], `Wrote ${target}.`)
 })
 
-test.todo('rareAZ should await its file write: index.js:622 calls fs.writeFile without await, so it logs "Wrote ..." and resolves before the file exists, and a failed write becomes an unhandled rejection')
+test('rareAZ with opts.output has written the file by the time it resolves', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ebird-ext-rareaz-'))
+  t.after(() => fs.rm(dir, { recursive: true, force: true }))
+  const target = path.join(dir, 'az-rare')
+  await runRareAZ(t, { manual: true, data: [{ 'Scientific Name': 'Dendrocygna bicolor', Date: '2024-02-01' }], output: target })
+  const written = JSON.parse(await fs.readFile(`${target}.json`, 'utf8'))
+  assert.equal(written.Arizona[0]['Scientific Name'], 'Dendrocygna bicolor')
+})
+
+test('rareAZ with opts.output rejects when the file write fails', async (t) => {
+  t.mock.method(fs, 'writeFile', async () => { throw new Error('disk full') })
+  await assert.rejects(runRareAZ(t, { manual: true, data: [], output: 'unused' }), /disk full/)
+})
 
 // ===========================================================================
 // subspecies: identification categories and life-list leaves

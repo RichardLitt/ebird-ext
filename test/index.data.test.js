@@ -668,4 +668,24 @@ test('vt251 merges in the May 2022 base data without duplicates', async (t) => {
   }
 })
 
-test.todo('vt251 resolves only after data/vt_town_counts.json is written (towns() calls fs.writeFile without await at index.js:211, so vt251 resolves early and write errors become unhandled rejections)')
+test('vt251 resolves only after data/vt_town_counts.json is written', async (t) => {
+  muteLog(t)
+  let finishWrite
+  t.mock.method(fsp, 'writeFile', () => new Promise(resolve => { finishWrite = resolve }))
+  let settled = false
+  const run = vt251(VT251).then(() => { settled = true })
+  // Let towns() read and process the CSV until it is waiting on the write.
+  for (let i = 0; i < 1000 && !finishWrite; i++) await new Promise(resolve => setTimeout(resolve, 5))
+  assert.ok(finishWrite, 'writeFile was never called')
+  await new Promise(resolve => setTimeout(resolve, 20))
+  assert.equal(settled, false, 'vt251 resolved before the write finished')
+  finishWrite()
+  await run
+  assert.equal(settled, true)
+})
+
+test('vt251 rejects when writing data/vt_town_counts.json fails', async (t) => {
+  muteLog(t)
+  t.mock.method(fsp, 'writeFile', async () => { throw new Error('disk full') })
+  await assert.rejects(vt251(VT251), /disk full/)
+})

@@ -193,7 +193,7 @@ async function towns (opts) {
     }
 
     if (opts.output) {
-      fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(towns), 'utf8')
+      await fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(towns), 'utf8')
     }
     return towns
   } else if (opts.town) {
@@ -201,7 +201,7 @@ async function towns (opts) {
     data = countUniqueSpecies(data.filter(x => x.Town === opts.town.toUpperCase()), dateFormat)
 
     if (opts.output) {
-      fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(data), 'utf8')
+      await fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(data), 'utf8')
     }
 
     let i = 1
@@ -258,7 +258,7 @@ async function counties (opts) {
   }
 
   if (opts.output) {
-    fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(counties), 'utf8')
+    await fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(counties), 'utf8')
   }
 
   return newObj
@@ -604,7 +604,7 @@ async function rareAZ (opts) {
   })
 
   if (opts.output) {
-    fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(output), 'utf8')
+    await fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(output), 'utf8')
     console.log(`Wrote ${opts.output.toString().replace('.json', '')}.json.`)
   } else {
     console.log(output)

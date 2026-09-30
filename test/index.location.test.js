@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { promises as fsp } from 'node:fs'
 import moment from 'moment'
 import {
   towns,
@@ -80,20 +81,15 @@ function quiet (t) {
 const logged = () => console.log.mock.calls.map(c => c.arguments)
 const loggedLines = () => console.log.mock.calls.map(c => c.arguments.join(' '))
 
-// Several functions call fs.writeFile without awaiting it, so the output file
-// may appear slightly after the returned promise resolves. Poll for it.
-async function waitForJson (path, ms = 3000) {
-  const end = Date.now() + ms
-  let lastError
-  while (Date.now() < end) {
-    try {
-      return JSON.parse(await readFile(path, 'utf8'))
-    } catch (err) {
-      lastError = err
-      await new Promise(resolve => setTimeout(resolve, 20))
-    }
-  }
-  throw lastError
+// towns and counties await their fs.writeFile, so the output file must exist
+// as soon as the returned promise resolves: read it once, without polling.
+async function readJson (path) {
+  return JSON.parse(await readFile(path, 'utf8'))
+}
+
+// Replace fs.promises.writeFile (what index.js writes with) for one test.
+function failWrites (t) {
+  return t.mock.method(fsp, 'writeFile', async () => { throw new Error('disk full') })
 }
 
 async function tempDir (t) {
@@ -288,7 +284,7 @@ test('towns { all, output } writes the result to <output>.json', async (t) => {
   quiet(t)
   const dir = await tempDir(t)
   const result = await towns({ input: SIGHTINGS, all: true, output: join(dir, 'towns.json') })
-  const written = await waitForJson(join(dir, 'towns.json'))
+  const written = await readJson(join(dir, 'towns.json'))
   assert.deepEqual(written, result)
 })
 
@@ -296,7 +292,7 @@ test('towns { all, output } appends .json when the output path has no extension'
   quiet(t)
   const dir = await tempDir(t)
   await towns({ input: SIGHTINGS, all: true, output: join(dir, 'towns') })
-  const written = await waitForJson(join(dir, 'towns.json'))
+  const written = await readJson(join(dir, 'towns.json'))
   assert.deepEqual(written.BRIGHTON, ['BOCH', 'CAJA'])
 })
 
@@ -310,7 +306,23 @@ test('towns { all } credits a sighting outside every town polygon to the nearest
 
 test.todo('towns { all } stores subspecies-level common names like "Dark-eyed Junco (Slate-colored)" or "Red Crossbill (Type 10)" verbatim (index.js:200) instead of reducing them to the species banding code (DEJU, RECR), so town lists mix codes and names and can double-count against the 2022 base data')
 
-test.todo('towns/counties call fs.writeFile without awaiting it (index.js:211, index.js:219, index.js:276): the output file may not exist when the promise resolves, and a write error becomes an unhandled rejection')
+test('towns { all, output } rejects when the file write fails', async (t) => {
+  quiet(t)
+  failWrites(t)
+  await assert.rejects(towns({ input: SIGHTINGS, all: true, output: 'unused.json' }), /disk full/)
+})
+
+test('towns { town, output } rejects when the file write fails', async (t) => {
+  quiet(t)
+  failWrites(t)
+  await assert.rejects(towns({ input: SIGHTINGS, town: 'Montpelier', output: 'unused.json' }), /disk full/)
+})
+
+test('counties { output } rejects when the file write fails', async (t) => {
+  quiet(t)
+  failWrites(t)
+  await assert.rejects(counties({ input: SIGHTINGS, output: 'unused.json' }), /disk full/)
+})
 
 // ---------------------------------------------------------------------------
 // towns { town } -- console output
@@ -362,7 +374,7 @@ test('towns { town, output } writes the species-by-date object', async (t) => {
   quiet(t)
   const dir = await tempDir(t)
   await towns({ input: SIGHTINGS, town: 'Montpelier', output: join(dir, 'montpelier') })
-  const written = await waitForJson(join(dir, 'montpelier.json'))
+  const written = await readJson(join(dir, 'montpelier.json'))
   assert.deepEqual(Object.keys(written), ['2023-06-01', '2024-02-20'])
   assert.deepEqual(written['2024-02-20'].map(r => r['Common Name']), ['Evening Grosbeak', 'Black-capped Chickadee'])
 })
@@ -538,7 +550,7 @@ test('counties { output } writes an array of county entries', async (t) => {
   quiet(t)
   const dir = await tempDir(t)
   const result = await counties({ input: SIGHTINGS, output: join(dir, 'counties.json') })
-  const written = await waitForJson(join(dir, 'counties.json'))
+  const written = await readJson(join(dir, 'counties.json'))
   assert.ok(Array.isArray(written))
   assert.equal(written.length, 14)
   assert.deepEqual(written.find(c => c.county === 'Essex'), result.Essex)
