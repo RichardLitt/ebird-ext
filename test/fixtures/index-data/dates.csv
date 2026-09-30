@@ -1,0 +1,13 @@
+Submission ID,Common Name,Scientific Name,Count,State/Province,County,Location,Latitude,Longitude,Date,Time,Protocol,Duration (Min),All Obs Reported
+S920000001,Alpha Test Bird,Testus alpha,1,US-VT,Chittenden,Test Park,44.4759,-73.2121,2020-05-01,,Incidental,,0
+S920000002,Alpha Test Bird,Testus alpha,1,US-VT,Chittenden,Test Park,44.4759,-73.2121,2021-05-01,,Incidental,,0
+S920000003,Alpha Test Bird,Testus alpha,1,US-VT,Chittenden,Test Park,44.4759,-73.2121,2022-05-01,,Incidental,,0
+S920000004,Alpha Test Bird,Testus alpha,1,US-VT,Chittenden,Test Park,44.4759,-73.2121,2022-06-15,,Incidental,,0
+S920000005,Alpha Test Bird,Testus alpha,1,US-VT,Chittenden,Test Park,44.4759,-73.2121,2022-12-31,,Incidental,,0
+S920000006,Beta Test Bird,Testus beta,1,US-VT,Chittenden,Test Park,44.4759,-73.2121,2022-01-01,,Incidental,,0
+S920000007,Beta Test Bird,Testus beta,1,US-VT,Chittenden,Test Park,44.4759,-73.2121,2024-02-29,,Incidental,,0
+S920000008,Gamma Test Bird,Testus gamma,1,US-VT,Chittenden,Test Park,44.4759,-73.2121,2022-03-01,,Incidental,,0
+S920000008,Gamma Test Bird,Testus gamma,1,US-VT,Chittenden,Test Park,44.4759,-73.2121,2022-03-01,,Incidental,,0
+S920000009,Delta Test Bird,Testus delta,1,US-NY,New York,Test Meadow,40.7831,-73.9712,2022-04-01,,Incidental,,0
+S920000010,test bird sp.,Testus sp.,1,US-VT,Chittenden,Test Park,44.4759,-73.2121,2022-04-02,,Incidental,,0
+S920000011,Epsilon Test Bird,Testus epsilon,1,US-VT,Chittenden,,,,2022-04-03,,Incidental,,0
