@@ -14,8 +14,8 @@ import {
   getTownCentroids
 } from '../filters.js'
 import GeoJsonGeometriesLookup from 'geojson-geometries-lookup'
-import vt_towns from '../geojson/vt_towns.json' with { type: 'json' }
-import vt_regions from '../geojson/Polygon_VT_Biophysical_Regions.json' with { type: 'json' }
+import vtTowns from '../geojson/vt_towns.json' with { type: 'json' }
+import vtRegions from '../geojson/Polygon_VT_Biophysical_Regions.json' with { type: 'json' }
 import fixture from './fixtures/checklists.js'
 
 // Many of these functions mutate their input. Each test gets a fresh deep clone.
@@ -234,8 +234,8 @@ test('createPeriodArray counts unique species via SpeciesTotal', () => {
 
 test('createPeriodArray sorts descending by SpeciesTotal', () => {
   const grouped = {
-    'small': [{ 'Scientific Name': 'Poecile atricapillus' }],
-    'big': [
+    small: [{ 'Scientific Name': 'Poecile atricapillus' }],
+    big: [
       { 'Scientific Name': 'Poecile atricapillus' },
       { 'Scientific Name': 'Turdus migratorius' },
       { 'Scientific Name': 'Spinus tristis' }
@@ -381,27 +381,27 @@ test('removeSpuhFromCounties species lists contain no sp./hybrid markers', () =>
 // pointLookup
 // ===========================================================================
 
-const townsLookup = new GeoJsonGeometriesLookup(vt_towns)
-const regionsLookup = new GeoJsonGeometriesLookup(vt_regions)
+const townsLookup = new GeoJsonGeometriesLookup(vtTowns)
+const regionsLookup = new GeoJsonGeometriesLookup(vtRegions)
 
 test('pointLookup resolves Burlington from its coordinates', () => {
-  const result = pointLookup(vt_towns, townsLookup, { Latitude: 44.4759, Longitude: -73.2121 })
+  const result = pointLookup(vtTowns, townsLookup, { Latitude: 44.4759, Longitude: -73.2121 })
   assert.equal(result, 'BURLINGTON')
 })
 
 test('pointLookup resolves Montpelier from its coordinates', () => {
-  const result = pointLookup(vt_towns, townsLookup, { Latitude: 44.2601, Longitude: -72.5754 })
+  const result = pointLookup(vtTowns, townsLookup, { Latitude: 44.2601, Longitude: -72.5754 })
   assert.equal(result, 'MONTPELIER')
 })
 
 test('pointLookup returns undefined for a point outside any Vermont polygon', () => {
   // Times Square, NY -- not in any VT town polygon.
-  const result = pointLookup(vt_towns, townsLookup, { Latitude: 40.7831, Longitude: -73.9712 })
+  const result = pointLookup(vtTowns, townsLookup, { Latitude: 40.7831, Longitude: -73.9712 })
   assert.equal(result, undefined)
 })
 
 test('pointLookup accepts a GeoJSON Point shape directly', () => {
-  const result = pointLookup(vt_towns, townsLookup, {
+  const result = pointLookup(vtTowns, townsLookup, {
     type: 'Point',
     coordinates: [-73.2121, 44.4759]
   })
@@ -410,7 +410,7 @@ test('pointLookup accepts a GeoJSON Point shape directly', () => {
 
 test('pointLookup resolves a biophysical region for Burlington coordinates', () => {
   // Burlington sits in the Champlain Valley region.
-  const result = pointLookup(vt_regions, regionsLookup, { Latitude: 44.4759, Longitude: -73.2121 })
+  const result = pointLookup(vtRegions, regionsLookup, { Latitude: 44.4759, Longitude: -73.2121 })
   assert.equal(result, 'Champlain Valley')
 })
 

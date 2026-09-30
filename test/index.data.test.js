@@ -181,17 +181,17 @@ test('getData handles CRLF line endings', async (t) => {
 })
 
 test('getData still parses non-leading columns when the file starts with a UTF-8 BOM', async (t) => {
-  const file = await tmpCsv(t, `﻿${HEADER}\nS1,Mallard,Anas platyrhynchos,1,US-VT,Chittenden,X,44.4759,-73.2121,2022-01-01,,Incidental,,0\n`)
+  const file = await tmpCsv(t, `\uFEFF${HEADER}\nS1,Mallard,Anas platyrhynchos,1,US-VT,Chittenden,X,44.4759,-73.2121,2022-01-01,,Incidental,,0\n`)
   const [first] = await getData(file)
   assert.equal(first['Common Name'], 'Mallard')
   assert.equal(first.Date, '2022-01-01')
 })
 
 test('getData strips a UTF-8 BOM so the first header is "Submission ID"', async (t) => {
-  const file = await tmpCsv(t, `﻿${HEADER}\nS1,Mallard,Anas platyrhynchos,1,US-VT,Chittenden,X,44.4759,-73.2121,2022-01-01,,Incidental,,0\n`)
+  const file = await tmpCsv(t, `\uFEFF${HEADER}\nS1,Mallard,Anas platyrhynchos,1,US-VT,Chittenden,X,44.4759,-73.2121,2022-01-01,,Incidental,,0\n`)
   const [first] = await getData(file)
   assert.equal(first['Submission ID'], 'S1')
-  assert.ok(!Object.keys(first).some(k => k.startsWith('﻿')))
+  assert.ok(!Object.keys(first).some(k => k.startsWith('\uFEFF')))
 })
 
 test('getData rejects with ENOENT for a missing file', async () => {
@@ -733,6 +733,8 @@ test('vt251 resolves only after data/vt_town_counts.json is written', async (t) 
   let settled = false
   const run = vt251(VT251).then(() => { settled = true })
   // Let towns() read and process the CSV until it is waiting on the write.
+  // finishWrite is set by the writeFile mock, which the loop's awaits let run
+  // eslint-disable-next-line no-unmodified-loop-condition
   for (let i = 0; i < 1000 && !finishWrite; i++) await new Promise(resolve => setTimeout(resolve, 5))
   assert.ok(finishWrite, 'writeFile was never called')
   await new Promise(resolve => setTimeout(resolve, 20))

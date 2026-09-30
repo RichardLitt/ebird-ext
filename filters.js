@@ -1,9 +1,9 @@
-import Town_boundaries from './geojson/vt_towns.json' with { type: 'json' }
-import Vermont_regions from './geojson/Polygon_VT_Biophysical_Regions.json' with { type: 'json' }
+import townBoundaries from './geojson/vt_towns.json' with { type: 'json' }
+import vermontRegionsGeojson from './geojson/Polygon_VT_Biophysical_Regions.json' with { type: 'json' }
 import CountyBarcharts from './data/countyBarcharts.json' with { type: 'json' }
 import GeoJsonGeometriesLookup from 'geojson-geometries-lookup'
-const vermontTowns = new GeoJsonGeometriesLookup(Town_boundaries)
-const vermontRegions = new GeoJsonGeometriesLookup(Vermont_regions)
+const vermontTowns = new GeoJsonGeometriesLookup(townBoundaries)
+const vermontRegions = new GeoJsonGeometriesLookup(vermontRegionsGeojson)
 import _ from 'lodash'
 import moment from 'moment'
 import provinces from 'provinces'
@@ -35,7 +35,7 @@ const townCentroids = getTownCentroids()
 
 // Defaults to all
 function getTownCentroids (town) {
-  const centers = Town_boundaries.features.map(feature => {
+  const centers = townBoundaries.features.map(feature => {
     let center
     // This center of West Haven is in New York.
     if (feature.properties.town === 'West Haven'.toUpperCase()) {
@@ -69,9 +69,9 @@ function getPoint (map, coordinates, countyCode) {
   function getContainer (map, coordinates) {
     let point
     if (map === 'towns') {
-      point = pointLookup(Town_boundaries, vermontTowns, coordinates)
+      point = pointLookup(townBoundaries, vermontTowns, coordinates)
     } else if (map === 'regions') {
-      point = pointLookup(Vermont_regions, vermontRegions, coordinates)
+      point = pointLookup(vermontRegionsGeojson, vermontRegions, coordinates)
     }
     return point
   }
@@ -81,22 +81,22 @@ function getPoint (map, coordinates, countyCode) {
   // If it is on a river or across a border or something, get the nearest town
   if (point === undefined) {
     try {
-        // Only check towns in the relevant county
-        // TODO What if I don't have the relevant county?
-        const countyCenters = townCentroids.filter(f => f.properties.county === countyCode);
-        const long = coordinates.LONGITUDE || coordinates.Longitude
-        const lat = coordinates.LATITUDE || coordinates.Latitude
-        const newCoords = nearestPoint(turfPoint([long, lat]), featureCollection(countyCenters));
-        coordinates = {
-            Longitude: newCoords.geometry.coordinates[0],
-            Latitude: newCoords.geometry.coordinates[1]
-        };
-        point = getContainer(map, coordinates);
-        // console.log('Previously undefined point:', point);
+      // Only check towns in the relevant county
+      // TODO What if I don't have the relevant county?
+      const countyCenters = townCentroids.filter(f => f.properties.county === countyCode)
+      const long = coordinates.LONGITUDE || coordinates.Longitude
+      const lat = coordinates.LATITUDE || coordinates.Latitude
+      const newCoords = nearestPoint(turfPoint([long, lat]), featureCollection(countyCenters))
+      coordinates = {
+        Longitude: newCoords.geometry.coordinates[0],
+        Latitude: newCoords.geometry.coordinates[1]
+      }
+      point = getContainer(map, coordinates)
+      // console.log('Previously undefined point:', point);
     } catch (error) {
-        console.error("Error occurred while processing newCoords:", error);
-        // You can handle the error or just log it, as done above.
-        // The script will continue to run even if this block throws an error.
+      console.error('Error occurred while processing newCoords:', error)
+      // You can handle the error or just log it, as done above.
+      // The script will continue to run even if this block throws an error.
     }
   }
   return point
@@ -146,8 +146,8 @@ function locationFilter (list, opts) {
     if (checklist.State === 'Vermont') {
       // This option takes 25 seconds to do, every time, on my data
       let point
-      checklist.Region = pointLookup(Vermont_regions, vermontRegions, checklist)
-      checklist.Town = pointLookup(Town_boundaries, vermontTowns, checklist)
+      checklist.Region = pointLookup(vermontRegionsGeojson, vermontRegions, checklist)
+      checklist.Town = pointLookup(townBoundaries, vermontTowns, checklist)
 
       // These should only apply to literal edge cases
       if (!checklist.Town) {
@@ -243,7 +243,7 @@ function createPeriodArray (data) {
 
 function removeSpuh (arr, reverse) {
   const newArr = []
-  for (var i in arr) {
+  for (const i in arr) {
     if (arr[i]['Scientific Name'] &&
       !arr[i]['Scientific Name'].includes('sp.') &&
       !arr[i]['Scientific Name'].includes(' x ') && // Get rid of hybrids

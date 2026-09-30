@@ -26,9 +26,14 @@
     "norwich": "node norwich.js",
     "updateHotspots": "sh scripts/updateHotspots.sh",
     "test": "node --test \"test/**/*.test.js\"",
-    "test:spec": "node --test --test-reporter=spec \"test/**/*.test.js\""
+    "test:spec": "node --test --test-reporter=spec \"test/**/*.test.js\"",
+    "lint": "eslint ."
   },
   "engines": {
     "node": ">=22"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.5",
+    "neostandard": "^0.13.0"
   }
 }
