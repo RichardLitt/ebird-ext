@@ -41,8 +41,8 @@ import townBoundaries from '../geojson/vt_towns.json' with { type: 'json' }
 // townHotspots and weeksYouveBirdedAtHotspot read the *bundled* hotspot list
 // (the static JSON import of data/hotspots.json). That is read-only public
 // hotspot data, so those tests use it as-is and derive their expectations from
-// it. townHotspots mutates that shared in-memory array (see the bug todos
-// below), so a pristine copy is restored before every test.
+// it. townHotspots used to mutate that shared in-memory array, so a pristine
+// copy is still restored before every test as a guard.
 //
 // The final test in this file re-hashes the committed data/ files and asserts
 // they are byte-for-byte unchanged.
@@ -299,7 +299,7 @@ test('csvToJsonHotspots rejects with ENOENT when the input file does not exist',
   await assert.rejects(fs.access(path.join(sandboxDir, 'data/hotspots.json')))
 })
 
-test.todo('csvToJsonHotspots should strip \\r from CRLF input (hotspots.js:21 splits on "\\n" only, so the last column, Species, keeps a trailing "\\r")', async () => {
+test('csvToJsonHotspots strips \\r from CRLF input (the last column, Species, used to keep a trailing "\\r")', async () => {
   const crlf = (await seedFixture('hotspots-api.csv')).replace(/\n/g, '\r\n')
   await sandbox({ 'crlf.csv': crlf })
   await csvToJsonHotspots({ input: path.join(sandboxDir, 'crlf.csv') })
@@ -369,7 +369,7 @@ test('hotspotsForTown on an empty hotspot list returns []', async () => {
   assert.deepEqual(await hotspotsForTown({ town: 'Montpelier' }), [])
 })
 
-test.todo('hotspotsForTown should work on the data/hotspots.json that csvToJsonHotspots writes (hotspots.js:35-36 read x.lat / x.lng, but that file uses Latitude / Longitude, so every record loses its coordinates and the result is always [])', async () => {
+test('hotspotsForTown works on the data/hotspots.json that csvToJsonHotspots writes (Latitude / Longitude records)', async () => {
   await sandbox({ 'data/hotspots.json': await seedFixture('hotspots.json') })
   const result = await hotspotsForTown({ town: 'Montpelier' })
   assert.deepEqual(result.map(x => x.ID), ['L9000001', 'L9000002'])
@@ -442,9 +442,9 @@ test('unbirdedHotspots on an empty list prints []', async (t) => {
 
 test('unbirdedHotspots { input } drops hotspots you have a checklist at', async (t) => {
   const { logs } = await runUnbirded(t, { input: myEBirdData })
-  // L9000001 and L9000002 have real-species checklists in MyEBirdData.csv.
+  // L9000001 and L9000002 have real-species checklists in MyEBirdData.csv;
+  // L9000004 has a spuh-only checklist, which still counts as a visit.
   assert.deepEqual(logs[0][0], [
-    'Test Park (Rutland), 2010-03-13 16:20',
     'Test Field (Burlington), 2021-09-10 07:15'
   ])
 })
@@ -460,7 +460,7 @@ test('unbirdedHotspots { input } rejects with ENOENT when the eBird export is mi
   await assert.rejects(unbirdedHotspots({ input: path.join(sandboxDir, 'missing.csv') }), { code: 'ENOENT' })
 })
 
-test.todo('unbirdedHotspots { input } should count a checklist that only recorded a spuh as a visit (main.getData runs removeSpuh, so the "duck sp."-only checklist at L9000004 is dropped and the hotspot is still reported as unbirded; hotspots.js:47)', async (t) => {
+test('unbirdedHotspots { input } counts a checklist that only recorded a spuh as a visit (the "duck sp."-only checklist at L9000004)', async (t) => {
   const { logs } = await runUnbirded(t, { input: myEBirdData })
   assert.ok(!logs[0][0].some(line => line.startsWith('Test Park (Rutland)')))
 })
@@ -525,21 +525,16 @@ test('unbirdedHotspots { sinceYear } understands MM/DD/YYYY dates', async (t) =>
   assert.deepEqual(logs[0][0], ['Old US Format, 03/13/2010'])
 })
 
-test('unbirdedHotspots { sinceYear } currently drops never-visited hotspots', async (t) => {
-  const { logs } = await runUnbirded(t, { sinceYear: 2019 }, [hs('L1', '', 'Never Visited')])
-  assert.deepEqual(logs[0][0], [])
-})
-
-test.todo('unbirdedHotspots { sinceYear } should keep never-visited hotspots, like { currentYear } does (hotspots.js:75 returns false for them, although a hotspot nobody has visited has not been visited since any year)', async (t) => {
+test('unbirdedHotspots { sinceYear } keeps never-visited hotspots, like { currentYear } does', async (t) => {
   const { logs } = await runUnbirded(t, { sinceYear: 2019 }, [hs('L1', '', 'Never Visited')])
   assert.deepEqual(logs[0][0], ['Never Visited, '])
 })
 
 test('unbirdedHotspots combines { sinceYear } with { input }', async (t) => {
   const { logs } = await runUnbirded(t, { sinceYear: 2021, input: myEBirdData })
-  // 2019 Fake Marsh is dropped by the eBird export; 2023 Test Pond by sinceYear.
+  // 2019 Fake Marsh and 2010 Test Park (spuh-only) are dropped by the eBird
+  // export; 2023 Test Pond by sinceYear.
   assert.deepEqual(logs[0][0], [
-    'Test Park (Rutland), 2010-03-13 16:20',
     'Test Field (Burlington), 2021-09-10 07:15'
   ])
 })
@@ -552,10 +547,10 @@ test('unbirdedHotspots combines { currentYear } with { sinceYear }', async (t) =
     hs('L3', `${thisYear - 10}-01-02 08:00`, 'Ten Years Ago'),
     hs('L4', '', 'Never')
   ])
-  assert.deepEqual(logs[0][0], [`Ten Years Ago, ${thisYear - 10}-01-02 08:00`])
+  assert.deepEqual(logs[0][0], ['Never, ', `Ten Years Ago, ${thisYear - 10}-01-02 08:00`])
 })
 
-test.todo('unbirdedHotspots should sort a list mixing visited and never-visited hotspots consistently (hotspots.js:90-97: the comparator returns 0 whenever either side lacks a date, which is not a valid ordering, so a never-visited hotspot in the middle blocks the dated ones from being sorted)', async (t) => {
+test('unbirdedHotspots sorts a list mixing visited and never-visited hotspots consistently', async (t) => {
   const { logs } = await runUnbirded(t, {}, [
     hs('L1', '2020-01-01 08:00', 'Newer'),
     hs('L2', '', 'Never'),
@@ -563,6 +558,16 @@ test.todo('unbirdedHotspots should sort a list mixing visited and never-visited 
   ])
   const dated = logs[0][0].filter(line => !line.endsWith(', '))
   assert.deepEqual(dated, ['Older, 2010-01-01 08:00', 'Newer, 2020-01-01 08:00'])
+})
+
+test('unbirdedHotspots lists never-visited hotspots first, then oldest visit first', async (t) => {
+  const { logs } = await runUnbirded(t, {}, [
+    hs('L1', '2020-01-01 08:00', 'Newer'),
+    hs('L2', '', 'Never'),
+    hs('L3', '2010-01-01 08:00', 'Older'),
+    hs('L4', '', 'Also Never')
+  ])
+  assert.deepEqual(logs[0][0], ['Never, ', 'Also Never, ', 'Older, 2010-01-01 08:00', 'Newer, 2020-01-01 08:00'])
 })
 
 // ===========================================================================
@@ -722,19 +727,17 @@ test('townHotspots { town } logs [] for a name that is not a Vermont town', asyn
   assert.deepEqual(logs()[0][0], [])
 })
 
-test('townHotspots mutates the shared bundled hotspot records', async (t) => {
+test('townHotspots does not mutate the shared bundled hotspot records', async (t) => {
   captureLog(t)
-  await townHotspots({})
-  assert.equal(VermontHotspots[0].State, 'Vermont')
-  assert.ok(VermontHotspots[0].Town)
-  assert.ok(!VermontHotspots[0].Region.startsWith('US-VT-'))
+  await townHotspots({ noVisits: true })
+  assert.deepEqual(VermontHotspots, pristineHotspots)
 })
 
-test.todo('townHotspots should be callable twice in one process (hotspots.js:109-111 mutate the bundled VermontHotspots: locationFilter overwrites Region with a biophysical region name, so on the next call Region.split("US-VT-")[1] is undefined, County becomes undefined, and the nearest-town fallback throws a TypeError)', async (t) => {
+test('townHotspots is callable twice in one process, with the same result', async (t) => {
   captureLog(t)
-  t.mock.method(console, 'error', () => {}) // filters.getPoint logs the failure it hits on the second call
-  await townHotspots({ noVisits: true })
-  await assert.doesNotReject(townHotspots({ noVisits: true }))
+  const first = await townHotspots({ noVisits: true })
+  const second = await townHotspots({ noVisits: true })
+  assert.deepEqual(second, first)
 })
 
 test('townHotspots { all } counts every hotspot, including towns resolved by the nearest-town fallback', async (t) => {
@@ -812,16 +815,32 @@ test('weeksYouveBirdedAtHotspot with no checklists at the location lists all 52 
   assert.deepEqual(unbirdedWeeks(lines), range(1, 52))
 })
 
-test('weeksYouveBirdedAtHotspot says when the next unbirded week starts (in the current year)', async (t) => {
-  t.mock.timers.enable({ apis: ['Date'], now: new Date('2024-06-01T12:00:00') })
-  const { lines } = await runWeeks(t, { id: 'L9000001', input: myEBirdData })
-  assert.ok(lines.includes('The next unbirded week (#2) starts on Sunday, January 7th.'))
-})
-
 test('weeksYouveBirdedAtHotspot "next unbirded week" follows the mocked year', async (t) => {
   t.mock.timers.enable({ apis: ['Date'], now: new Date('2023-06-01T12:00:00') })
   const { lines } = await runWeeks(t, { id: 'L9999999', input: myEBirdData })
-  assert.ok(lines.includes('The next unbirded week (#1) starts on Sunday, January 1st.'))
+  // 2023-06-01 is a Thursday in week 22; week 23 starts Sunday, June 4th.
+  assert.ok(lines.includes('The next unbirded week (#23) starts on Sunday, June 4th.'))
+})
+
+test('weeksYouveBirdedAtHotspot "next unbirded week" skips weeks you have birded', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: new Date('2024-03-06T12:00:00') })
+  const { lines } = await runWeeks(t, { id: 'L9000001', input: myEBirdData })
+  // 2024-03-06 is in week 10; week 11 is birded, so the next is week 12 (Sunday, March 17th).
+  assert.ok(lines.includes('The next unbirded week (#12) starts on Sunday, March 17th.'))
+})
+
+test('weeksYouveBirdedAtHotspot "next unbirded week" wraps to next year after the last unbirded week', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: new Date('2023-12-28T12:00:00') })
+  const { lines } = await runWeeks(t, { id: 'L9000001', input: myEBirdData })
+  // 2023-12-28 is in week 52; week 1 is birded, so the next is week 2 of 2024.
+  assert.ok(lines.includes('The next unbirded week (#2) starts on Sunday, January 7th.'))
+})
+
+test('weeksYouveBirdedAtHotspot "next unbirded week" uses the week-year for late-December days in week 1', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: new Date('2023-12-31T12:00:00') })
+  const { lines } = await runWeeks(t, { id: 'L9999999', input: myEBirdData })
+  // Sunday 2023-12-31 starts week 1 of 2024, so the next unbirded week is week 2 of 2024.
+  assert.ok(lines.includes('The next unbirded week (#2) starts on Sunday, January 7th.'))
 })
 
 test('weeksYouveBirdedAtHotspot frames its output with blank lines and a caveat', async (t) => {
@@ -839,49 +858,44 @@ test('weeksYouveBirdedAtHotspot congratulates you by hotspot name after all 52 w
   assert.equal(unbirdedLine(lines), undefined)
 })
 
-test('weeksYouveBirdedAtHotspot warns when no --id is given (and still runs)', async (t) => {
-  const { lines } = await runWeeks(t, { input: myEBirdData })
-  assert.equal(lines[0], 'Get the ID for this location first, manually. Send it as --id.')
-  assert.deepEqual(unbirdedWeeks(lines), range(1, 52))
-})
-
 test('weeksYouveBirdedAtHotspot rejects with ENOENT when the eBird export is missing', async (t) => {
   captureLog(t)
   await assert.rejects(weeksYouveBirdedAtHotspot({ id: 'L1', input: path.join(os.tmpdir(), 'ebird-ext-does-not-exist.csv') }), { code: 'ENOENT' })
 })
 
-test.todo('weeksYouveBirdedAtHotspot should stop after warning that --id is missing (hotspots.js:147-149 log the warning but fall through and report all 52 weeks as unbirded for location "undefined")', async (t) => {
-  const { lines } = await runWeeks(t, { input: myEBirdData })
-  assert.deepEqual(lines, ['Get the ID for this location first, manually. Send it as --id.'])
+test('weeksYouveBirdedAtHotspot warns and stops when no --id is given', async (t) => {
+  const { ret, lines } = await runWeeks(t, { input: myEBirdData })
+  assert.equal(ret, undefined)
+  assert.deepEqual(lines,['Get the ID for this location first, manually. Send it as --id.'])
 })
 
-test.todo('weeksYouveBirdedAtHotspot should fall back to the generic message after 52 weeks at a non-hotspot location (hotspots.js:169 calls .Name on the result of VermontHotspots.find(), which is undefined for personal locations, so it throws a TypeError)', async (t) => {
+test('weeksYouveBirdedAtHotspot falls back to the generic message after 52 weeks at a non-hotspot location', async (t) => {
   const { lines } = await runWeeks(t, { id: 'L1234567' }, wednesdays2023.map(date => ({ loc: 'L1234567', date })))
   assert.ok(lines.includes("You've birded at this location every week of the year!"))
 })
 
-test.todo('weeksYouveBirdedAtHotspot should handle locale week 53 (moment().week() returns 53 for e.g. 2022-12-31, but hotspots.js:153 only lists weeks 1-52 and :167 checks length === 52; so all 52 weeks plus a week-53 visit gives 53 observed weeks, an empty unbirded list, and a TypeError at :177 when moment().week(undefined) returns a number)', async (t) => {
+test('weeksYouveBirdedAtHotspot folds locale week 53 (e.g. 2022-12-31) into week 52', async (t) => {
   const hotspot = pristineHotspots[0]
   const dates = [...wednesdays2023, '2022-12-31']
   const { lines } = await runWeeks(t, { id: hotspot.ID }, dates.map(date => ({ loc: hotspot.ID, date })))
   assert.ok(lines.includes(`\nYou've birded at ${hotspot.Name} every week of the calendar year!`))
 })
 
-test.todo('weeksYouveBirdedAtHotspot should not claim "every week" when a week is missing but a week-53 visit pads the count to 52 (hotspots.js:167)', async (t) => {
+test('weeksYouveBirdedAtHotspot does not claim "every week" when a week is missing but a week-53 visit is present', async (t) => {
   const hotspot = pristineHotspots[0]
   const dates = [...wednesdays2023.filter((_, i) => i !== 29), '2022-12-31']
   const { lines } = await runWeeks(t, { id: hotspot.ID }, dates.map(date => ({ loc: hotspot.ID, date })))
   assert.deepEqual(unbirdedWeeks(lines), [30])
 })
 
-test.todo('weeksYouveBirdedAtHotspot "next unbirded week" should be the next one after today, not the first of the year (hotspots.js:177 always uses unbirdedWeeks[0], so in June it points back to January)', async (t) => {
+test('weeksYouveBirdedAtHotspot "next unbirded week" is the next one after today, not the first of the year', async (t) => {
   t.mock.timers.enable({ apis: ['Date'], now: new Date('2024-06-01T12:00:00') })
   const { lines } = await runWeeks(t, { id: 'L9000001', input: myEBirdData })
   // 2024-06-01 is a Saturday in week 22; week 23 starts Sunday, June 2nd.
   assert.ok(lines.includes('The next unbirded week (#23) starts on Sunday, June 2nd.'))
 })
 
-test.todo('weeksYouveBirdedAtHotspot should count a week whose only checklist recorded a spuh (main.getData runs removeSpuh, hotspots.js:151)', async (t) => {
+test('weeksYouveBirdedAtHotspot counts a week whose only checklist recorded a spuh', async (t) => {
   const { lines } = await runWeeks(t, { id: 'L9000004', input: myEBirdData })
   // The only checklist at L9000004 is a "duck sp." on 2023-05-10 (week 19).
   assert.ok(!unbirdedWeeks(lines).includes(19))

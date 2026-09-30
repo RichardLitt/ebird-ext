@@ -18,7 +18,7 @@ async function csvToJsonHotspots (opts) {
   let input
   if (fs) {
     input = await fs.readFile(opts.input, 'utf8')
-    input = input.split('\n')
+    input = input.split(/\r?\n/)
     input.unshift('ID,Country,State/Province,Region,Latitude,Longitude,Name,Last visited,Species')
     input = input.join('\n').trim()
     input = Papa.parse(input, { header: true })
@@ -32,8 +32,9 @@ async function csvToJsonHotspots (opts) {
 async function hotspotsForTown (opts) {
   const hotspots = JSON.parse(await fs.readFile('data/hotspots.json', 'utf8'))
   return f.locationFilter(hotspots.map(x => {
-    x.Latitude = x.lat
-    x.Longitude = x.lng
+    // eBird API records use lat / lng; csvToJsonHotspots writes Latitude / Longitude
+    if (x.Latitude === undefined) { x.Latitude = x.lat }
+    if (x.Longitude === undefined) { x.Longitude = x.lng }
     x.State = 'Vermont'
     return x
   }), opts)
@@ -44,7 +45,8 @@ async function unbirdedHotspots (opts) {
   let data
   if (!opts.state) { opts.state = 'Vermont' }
   if (opts.input) {
-    data = await main.getData(opts.input)
+    // Keep spuh-only checklists: you still birded there
+    data = await main.getData(opts.input, { keepSpuh: true })
   }
 
   let hotspots = JSON.parse(await fs.readFile('data/hotspots.json', 'utf8'))
@@ -72,7 +74,7 @@ async function unbirdedHotspots (opts) {
         const visitedthisYear = moment(x['Last visited'], helpers.momentFormat(x['Last visited'])).format('YYYY') > year
         return !visitedthisYear
       } else {
-        return false
+        return true
       }
     })
   }
@@ -87,12 +89,16 @@ async function unbirdedHotspots (opts) {
 
   // .filter(x => x.Region === 'US-VT-023')
   // Print out the most unrecent in your county, basically
+  // Never-visited hotspots first, then oldest visit first
   console.log(hotspots.sort((a, b) => {
     if (a['Last visited'] && b['Last visited']) {
       const check = moment(a['Last visited']).diff(moment(b['Last visited']))
       return check
+    } else if (a['Last visited']) {
+      return 1
+    } else if (b['Last visited']) {
+      return -1
     } else {
-      // Not really sure how to deal with this, doesn't seem to work well.
       return 0
     }
   }).map(x => `${x.Name}, ${x['Last visited']}`))
@@ -106,10 +112,10 @@ async function townHotspots (opts) {
   if (!opts.state) { opts.state = 'Vermont' }
 
   // LocationFilter really shouldn't be used on these, as they're not checklists, but it works (for now...)
+  // Work on copies: locationFilter overwrites Region, which would break the next call
   let data = f.locationFilter(VermontHotspots.map(x => {
     // Otherwise it messes up and writes over the region
-    x.County = main.eBirdCountyIds[Number(x.Region.split('US-VT-')[1])]
-    return x
+    return { ...x, County: main.eBirdCountyIds[Number(x.Region.split('US-VT-')[1])] }
   }), opts)
 
   if (opts.noVisits) {
@@ -146,15 +152,18 @@ async function townHotspots (opts) {
 async function weeksYouveBirdedAtHotspot (opts) {
   if (!opts.id) {
     console.log('Get the ID for this location first, manually. Send it as --id.')
+    return
   }
 
-  const data = await main.getData(opts.input)
+  // Keep spuh-only checklists: you still birded there that week
+  const data = await main.getData(opts.input, { keepSpuh: true })
   const observedDates = []
   const unbirdedDates = Array.from({ length: 52 }, (_, i) => i + 1)
 
   // Filter and add all days observed to the chart
   data.filter(x => x['Location ID'] === opts.id).forEach(x => {
-    const week = moment(x.Date).week()
+    // Fold locale week 53 (the last few days of some years) into week 52
+    const week = Math.min(moment(x.Date).week(), 52)
     if (observedDates.indexOf(week) === -1) {
       observedDates.push(week)
     }
@@ -165,16 +174,23 @@ async function weeksYouveBirdedAtHotspot (opts) {
   console.log()
 
   if (observedDates.length === 52) {
-    // Note - this assumes the location is a hotspot
-    if (VermontHotspots.find(h => h.ID === opts.id).Name) {
+    const hotspot = VermontHotspots.find(h => h.ID === opts.id)
+    if (hotspot && hotspot.Name) {
       console.log(`
-You've birded at ${VermontHotspots.find(h => h.ID === opts.id).Name} every week of the calendar year!`)
+You've birded at ${hotspot.Name} every week of the calendar year!`)
     } else {
       console.log("You've birded at this location every week of the year!")
     }
   } else {
     console.log(`You've not birded here on weeks: ${unbirdedWeeks.join(', ')}.`)
-    console.log(`The next unbirded week (#${unbirdedWeeks[0]}) starts on ${moment().startOf('year').week(unbirdedWeeks[0]).startOf('week').format('dddd, MMMM Do')}.`)
+    // The next unbirded week after this one, wrapping to next year if needed
+    let weekYear = moment().weekYear()
+    let nextWeek = unbirdedWeeks.find(w => w > moment().week())
+    if (!nextWeek) {
+      nextWeek = unbirdedWeeks[0]
+      weekYear += 1
+    }
+    console.log(`The next unbirded week (#${nextWeek}) starts on ${moment().year(weekYear).startOf('year').week(nextWeek).startOf('week').format('dddd, MMMM Do')}.`)
   }
   console.log('Note this only takes into account your bird sightings, not the databases.')
   console.log()
