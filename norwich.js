@@ -26,25 +26,26 @@ const cli = meow(`
   Examples
     $ node cli.js
 `, {
+  importMeta: import.meta,
   flags: {
     input: {
       type: 'string',
-      alias: 'i'
+      shortFlag: 'i'
     },
     year: {
       type: 'string'
     },
     all: {
       type: 'boolean',
-      alias: 'a'
+      shortFlag: 'a'
     },
     complete: {
       type: 'boolean',
-      alias: 'c'
+      shortFlag: 'c'
     },
     town: {
       type: 'string',
-      alias: 't'
+      shortFlag: 't'
     }
   }
 })

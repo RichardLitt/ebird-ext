@@ -10,14 +10,14 @@ Run:
 git clone https://github.com/RichardLitt/ebird-ext
 cd ebird-ext
 npm install
-npm run norwich
+npm run norwich -- --input=path/to/MyEBirdData.csv
 ```
 
-To gather the output of the data: `npm run norwich > output.txt`
+To gather the output of the data: `npm run norwich -- --input=path/to/MyEBirdData.csv > output.txt`
 
 ## Testing
 
-Requires Node 18+.
+Requires Node 22+.
 
 ```sh
 npm test
