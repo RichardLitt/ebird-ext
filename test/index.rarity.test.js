@@ -102,12 +102,13 @@ async function tmpCsv (t, rows, { trailingNewline = false } = {}) {
   return { file, dir }
 }
 
-// rareAZ doesn't return anything; it console.logs its output object.
+// rareAZ returns its output object (and console.logs it when there is no
+// opts.output). Silence the logging and keep the calls for inspection.
 async function runRareAZ (t, opts) {
   t.mock.method(console, 'log', () => {})
   const ret = await rareAZ(opts)
-  const calls = console.log.mock.calls
-  return { ret, calls, output: calls.length ? calls[calls.length - 1].arguments[0] : undefined }
+  const calls = console.log.mock.calls.filter(c => !(typeof c.arguments[0] === 'string' && c.arguments[0].startsWith('Wrong state')))
+  return { ret, calls, output: ret }
 }
 
 // ===========================================================================
@@ -392,7 +393,33 @@ test('rare: no bundled record uses Reporting "B", so the Burlington bucket is al
   assert.equal(out.Burlington.length, 0)
 })
 
-test.todo('rare: the Reporting "B" town list (index.js:710) is mixed case ("Burlington"), but rows from a CSV get an upper-case Town ("BURLINGTON") from pointLookup, so every CSV sighting of a "B" species would be flagged, even ones inside Burlington')
+// No bundled record uses 'B', so temporarily give King Eider (normally 'V',
+// no occurrence limit) Reporting 'B' for these tests.
+function withReportingB (t) {
+  const record = VermontRecords.find(r => r['Scientific Name'] === 'Somateria spectabilis')
+  const original = record.Reporting
+  record.Reporting = 'B'
+  t.after(() => { record.Reporting = original })
+}
+
+test('rare: a "B" species from a CSV is not flagged inside the Burlington area (upper-case Town)', async (t) => {
+  withReportingB(t)
+  const { file } = await tmpCsv(t, [
+    { id: 'T1', sci: 'Somateria spectabilis' },
+    { id: 'T2', sci: 'Somateria spectabilis', county: 'Washington', lat: '44.2601', lon: '-72.5754' }
+  ])
+  const out = await rare({ input: file })
+  assert.deepEqual(summarize(out), { Burlington: ['T2'] })
+  assert.equal(out.Burlington[0].Town, 'MONTPELIER')
+})
+
+test('rare: the "B" town check ignores case for manual entries too', async (t) => {
+  withReportingB(t)
+  const inside = ['Burlington', 'south burlington', 'WINOOSKI'].map(Town => sighting({ 'Scientific Name': 'Somateria spectabilis', Town }))
+  const outside = sighting({ 'Scientific Name': 'Somateria spectabilis', Town: 'Montpelier' })
+  const out = await rareManual(...inside, outside)
+  assert.deepEqual(out.Burlington, [outside])
+})
 
 // ---------------------------------------------------------------------------
 // Subspecies
@@ -659,34 +686,58 @@ test('isSpeciesSightingRare resolves a lower-case town, capitalizing only the Lo
   assert.equal(opts.data[0].Location, 'Rutland City')
 })
 
-test('isSpeciesSightingRare currently rejects with a TypeError for a town not in Vermont', async (t) => {
+test('isSpeciesSightingRare rejects with a clear Error naming a town not in Vermont', async (t) => {
   t.mock.method(console, 'log', () => {})
   await assert.rejects(
     isSpeciesSightingRare({ species: 'King Eider', town: 'Atlantis', date: '2024-01-15' }),
-    TypeError
+    (err) => {
+      assert.ok(!(err instanceof TypeError), 'not a TypeError')
+      assert.ok(err instanceof Error)
+      assert.match(err.message, /Atlantis/)
+      assert.match(err.message, /Vermont town/)
+      return true
+    }
   )
 })
 
-test.todo('isSpeciesSightingRare should handle an unknown town gracefully: index.js:523 reads f.getTownCentroids(opts.town).geometry, and getTownCentroids returns undefined for towns not in vt_towns.json, so the call throws "Cannot read properties of undefined (reading \'geometry\')"', async (t) => {
+test('isSpeciesSightingRare rejects with a clear Error when no town is given', async (t) => {
   t.mock.method(console, 'log', () => {})
-  await assert.doesNotReject(isSpeciesSightingRare({ species: 'King Eider', town: 'Atlantis', date: '2024-01-15' }))
+  await assert.rejects(
+    isSpeciesSightingRare({ species: 'King Eider', date: '2024-01-15' }),
+    (err) => !(err instanceof TypeError) && /Unknown town/.test(err.message)
+  )
+})
+
+test('isSpeciesSightingRare does not build opts.data for an unknown town', async (t) => {
+  t.mock.method(console, 'log', () => {})
+  const opts = { species: 'King Eider', town: 'Atlantis', date: '2024-01-15' }
+  await assert.rejects(isSpeciesSightingRare(opts))
+  assert.equal(opts.data, undefined)
 })
 
 // ===========================================================================
 // rareAZ
 // ===========================================================================
 
-test('rareAZ resolves to undefined and console.logs its output instead', async (t) => {
-  const { ret, calls, output } = await runRareAZ(t, { manual: true, data: [] })
-  assert.equal(ret, undefined)
+test('rareAZ resolves to the output object it console.logs', async (t) => {
+  const { ret, calls } = await runRareAZ(t, { manual: true, data: [] })
   assert.equal(calls.length, 1)
-  assert.deepEqual(Object.keys(output), AZ_BUCKETS)
+  assert.equal(calls[0].arguments[0], ret)
+  assert.deepEqual(Object.keys(ret), AZ_BUCKETS)
 })
 
-test.todo('rareAZ should return its output object like rare() does; the "return output" at index.js:628 is commented out, so callers get undefined', async (t) => {
+test('rareAZ returns its output object like rare() does', async (t) => {
   t.mock.method(console, 'log', () => {})
   const out = await rareAZ({ manual: true, data: [] })
   assert.deepEqual(Object.keys(out), AZ_BUCKETS)
+})
+
+test('rareAZ with opts.output still returns the output object', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ebird-ext-rareaz-'))
+  t.after(() => fs.rm(dir, { recursive: true, force: true }))
+  const e = { 'Scientific Name': 'Dendrocygna bicolor', Date: '2024-02-01' }
+  const { ret } = await runRareAZ(t, { manual: true, data: [e], output: path.join(dir, 'az') })
+  assert.deepEqual(bucketsOf(ret, e), ['Arizona'])
 })
 
 test('rareAZ with manual: true and no data puts the Pine Marten spoof in Unknown', async (t) => {
@@ -750,7 +801,7 @@ test('rareAZ: classifies every row of the Arizona fixture CSV, newest first', as
   assert.deepEqual(summarize(output), {
     Breeding: ['A900000006', 'A900000003'],
     Arizona: ['A900000002', 'A900000001', 'A900000009'],
-    Unknown: ['A900000008', 'A900000007']
+    Unknown: ['A900000007']
   })
 })
 
@@ -765,10 +816,11 @@ test('rareAZ: opts.year keeps only that year\'s sightings', async (t) => {
   assert.deepEqual(ids(output.Arizona), ['A900000002', 'A900000001'])
 })
 
-test.todo('rareAZ should only consider Arizona sightings: unlike rare(), the CSV path at index.js:546 never applies f.locationFilter, so a Vermont King Eider in the input is reported as an Arizona Unknown', async (t) => {
+test('rareAZ only considers Arizona sightings from the CSV (the Vermont King Eider is dropped)', async (t) => {
   const { output } = await runRareAZ(t, { input: AZ_CSV })
   const all = Object.values(output).flat().map(x => x['Submission ID'])
   assert.ok(!all.includes('A900000008'))
+  assert.ok(Object.values(output).flat().every(x => x.State === 'Arizona'))
 })
 
 test('rareAZ with opts.output writes <output>.json and logs where it wrote', async (t) => {
@@ -778,13 +830,7 @@ test('rareAZ with opts.output writes <output>.json and logs where it wrote', asy
   const { calls } = await runRareAZ(t, { manual: true, data: [{ 'Scientific Name': 'Dendrocygna bicolor', Date: '2024-02-01' }], output: target })
   assert.equal(calls.length, 1)
   assert.equal(calls[0].arguments[0], `Wrote ${target}.json.`)
-  // The write is not awaited by rareAZ, so poll briefly for it.
-  let text
-  for (let i = 0; i < 50 && !text; i++) {
-    text = await fs.readFile(`${target}.json`, 'utf8').catch(() => undefined)
-    if (!text) await new Promise(resolve => setTimeout(resolve, 20))
-  }
-  const written = JSON.parse(text)
+  const written = JSON.parse(await fs.readFile(`${target}.json`, 'utf8'))
   assert.deepEqual(Object.keys(written), AZ_BUCKETS)
   assert.equal(written.Arizona[0]['Scientific Name'], 'Dendrocygna bicolor')
 })
@@ -797,7 +843,19 @@ test('rareAZ with an opts.output that already ends in .json does not double the 
   assert.equal(calls[0].arguments[0], `Wrote ${target}.`)
 })
 
-test.todo('rareAZ should await its file write: index.js:622 calls fs.writeFile without await, so it logs "Wrote ..." and resolves before the file exists, and a failed write becomes an unhandled rejection')
+test('rareAZ with opts.output has written the file by the time it resolves', async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ebird-ext-rareaz-'))
+  t.after(() => fs.rm(dir, { recursive: true, force: true }))
+  const target = path.join(dir, 'az-rare')
+  await runRareAZ(t, { manual: true, data: [{ 'Scientific Name': 'Dendrocygna bicolor', Date: '2024-02-01' }], output: target })
+  const written = JSON.parse(await fs.readFile(`${target}.json`, 'utf8'))
+  assert.equal(written.Arizona[0]['Scientific Name'], 'Dendrocygna bicolor')
+})
+
+test('rareAZ with opts.output rejects when the file write fails', async (t) => {
+  t.mock.method(fs, 'writeFile', async () => { throw new Error('disk full') })
+  await assert.rejects(runRareAZ(t, { manual: true, data: [], output: 'unused' }), /disk full/)
+})
 
 // ===========================================================================
 // subspecies: identification categories and life-list leaves
@@ -939,9 +997,21 @@ test('subspecies: a trailing blank line is ignored when no date filter is given'
   assert.deepEqual(out.allIdentifications, ['Anser caerulescens'])
 })
 
-test.todo('subspecies should accept opts.year on a normal CSV that ends in a newline: index.js:755 parses without skipEmptyLines, so the blank last row reaches f.dateFilter (index.js:759, before locationFilter drops it) and helpers.momentFormat(undefined) throws "Cannot read properties of undefined (reading \'includes\')"', async (t) => {
+test('subspecies accepts opts.year on a normal CSV that ends in a newline', async (t) => {
   const out = await runSubspecies(t, { input: LIFE_CSV, year: 2024 })
   assert.ok(!out.species.includes('Branta bernicla'))
+  assert.ok(out.species.includes('Anser caerulescens'))
+})
+
+test('subspecies: opts.year and opts.after work on a temp CSV with a trailing newline', async (t) => {
+  const { file } = await tmpCsv(t, [
+    { sci: 'Branta bernicla', date: '2023-05-01' },
+    { sci: 'Anser caerulescens', date: '2024-01-01' }
+  ], { trailingNewline: true })
+  const byYear = await runSubspecies(t, { input: file, year: 2024 })
+  assert.deepEqual(byYear.species, ['Anser caerulescens'])
+  const after = await subspecies({ input: file, after: '2023-06-01' })
+  assert.deepEqual(after.species, ['Anser caerulescens'])
 })
 
 test('subspecies: "Anatinae sp." with no dabbling duck seen logs an "Unsure" warning', async (t) => {

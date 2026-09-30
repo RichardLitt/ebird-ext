@@ -163,7 +163,13 @@ async function towns (opts) {
       towns[t] = []
       const speciesByDate = countUniqueSpecies(data.filter(x => x.Town === t), dateFormat)
       _.sortBy(f.createPeriodArray(speciesByDate), 'Date').forEach((e) => {
-        e.Species.forEach((species) => towns[t].push(banding.commonNameToCode(species['Common Name'])))
+        e.Species.forEach((species) => {
+          // "Dark-eyed Junco (Slate-colored)" and "Red Crossbill (Type 10)" count as DEJU and RECR
+          const code = banding.commonNameToCode(cleanCommonName([species['Common Name']])[0])
+          if (!towns[t].includes(code)) {
+            towns[t].push(code)
+          }
+        })
       })
     })
 
@@ -174,7 +180,7 @@ async function towns (opts) {
     }
 
     if (opts.output) {
-      fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(towns), 'utf8')
+      await fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(towns), 'utf8')
     }
     return towns
   } else if (opts.town) {
@@ -182,7 +188,7 @@ async function towns (opts) {
     data = countUniqueSpecies(data.filter(x => x.Town === opts.town.toUpperCase()), dateFormat)
 
     if (opts.output) {
-      fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(data), 'utf8')
+      await fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(data), 'utf8')
     }
 
     let i = 1
@@ -234,12 +240,14 @@ async function counties (opts) {
   }
 
   if (opts.county) {
-    console.log(newObj[opts.county])
-    return newObj[opts.county]
+    // locationFilter matched the county case-insensitively, so look it up the same way
+    const county = Object.keys(newObj).find(c => c.toLowerCase() === opts.county.toLowerCase())
+    console.log(newObj[county])
+    return newObj[county]
   }
 
   if (opts.output) {
-    fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(counties), 'utf8')
+    await fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(counties), 'utf8')
   }
 
   return newObj
@@ -252,7 +260,7 @@ async function winterFinch (opts) {
   }
 
   const owls = [
-    'Eastern Screech-owl',
+    'Eastern Screech-Owl',
     'Great Horned Owl',
     'Snowy Owl',
     'Barred Owl',
@@ -281,7 +289,11 @@ async function winterFinch (opts) {
     'American Tree Sparrow'
   ]
 
-  const data = await counties(opts)
+  let data = await counties(opts)
+  if (opts.county) {
+    // counties returns a single county entry (or undefined) when opts.county is set
+    data = (data) ? { [data.county]: data } : {}
+  }
   Object.keys(data).forEach(county => {
     const intersection = sortedList(_.intersection(cleanCommonName(data[county].species), winterFinches), winterFinches)
     console.log(`${county} (${intersection.length})${(intersection.length !== 0) ? `: ${intersection.join(', ')}.` : ''}`)
@@ -357,14 +369,13 @@ async function state (opts) {
   Object.keys(newObj.speciesByDate).forEach(d => {
     console.log(`${d}: ${newObj.speciesByDate[d].map(submission => submission['Common Name']).join(', ')}.`)
   })
-  // console.log(newObj)
-  // return newObj
   // fs.writeFile('vt_region_counts.json', JSON.stringify(regions), 'utf8')
+  return newObj
 }
 
 async function radialSearch (opts) {
   const dateFormat = helpers.parseDateFormat('day')
-  const radius = opts.distance || 10 // miles
+  const radius = opts.distance ?? 10 // miles
   const lat = opts.coordinates[0]
   const long = opts.coordinates[1]
   console.log(dateFormat, lat, long)
@@ -380,7 +391,11 @@ async function radialSearch (opts) {
   })
   speciesSeenInVermont = _.flatten(speciesSeenInVermont)
 
-  data = f.orderByDate(data, opts).filter((d) => {
+  data = f.orderByDate(f.dateFilter(data, opts), opts).filter((d) => {
+    // Blank coordinates would be measured from 0,0; skip them, as locationFilter does
+    if (String(d.Latitude ?? '').trim() === '' || String(d.Longitude ?? '').trim() === '') {
+      return false
+    }
     const distance = difference.distance(lat, long, d.Latitude, d.Longitude, 'M')
     return distance <= radius
   })
@@ -482,11 +497,17 @@ async function isSpeciesSightingRare (opts) {
     }
   }
 
+  // getTownCentroids returns every centroid when called without a town
+  const townCentroid = opts.town && f.getTownCentroids(opts.town)
+  if (!townCentroid) {
+    throw new Error(`Unknown town: "${opts.town}" is not a Vermont town.`)
+  }
+
   // TODO Add a way to get Breeding Codes
   opts.data = [{
     County: await getCountyForTown(opts.town),
     Date: opts.date,
-    Region: f.pointLookup(vermontRegions, vermontRegions, f.getTownCentroids(opts.town).geometry),
+    Region: f.pointLookup(vermontRegions, vermontRegions, townCentroid.geometry),
     'Scientific Name': species['Scientific Name'],
     Species: species.Species,
     Subspecies: opts.subspecies,
@@ -509,7 +530,7 @@ async function rareAZ (opts) {
   // Use only data from this year
   if (!opts.manual) {
     // console.log(opts)
-    data = f.orderByDate(f.dateFilter(await getData(opts.input), opts), opts).reverse()
+    data = f.orderByDate(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts).reverse()
   } else {
     // This will incorrectly flag as 'Unknown' TODO. OUt of area.
     if (opts.data) {
@@ -585,13 +606,13 @@ async function rareAZ (opts) {
   })
 
   if (opts.output) {
-    fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(output), 'utf8')
+    await fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(output), 'utf8')
     console.log(`Wrote ${opts.output.toString().replace('.json', '')}.json.`)
   } else {
     console.log(output)
   }
 
-  // return output
+  return output
 }
 
 async function rare (opts) {
@@ -673,8 +694,9 @@ async function rare (opts) {
         output.Vermont.push(e)
       } else if (recordEntry.Reporting === 'B') {
         // Outside of Burlington
-        const towns = ['Burlington', 'South Burlington', 'Essex', 'Colchester', 'Winooski', 'Shelburne']
-        if (!towns.includes(e.Town)) {
+        // Upper case, to match the geojson town names that locationFilter sets
+        const towns = ['BURLINGTON', 'SOUTH BURLINGTON', 'ESSEX', 'COLCHESTER', 'WINOOSKI', 'SHELBURNE']
+        if (!towns.includes((e.Town || '').toUpperCase())) {
           output.Burlington.push(e)
         }
       } else if (recordEntry.Reporting === 'C') {
@@ -718,7 +740,7 @@ async function subspecies (opts) {
   let data = opts.input
   if (fs) {
     const input = await fs.readFile(opts.input, 'utf8')
-    data = Papa.parse(input, { header: true }).data
+    data = Papa.parse(input, { header: true, skipEmptyLines: true }).data
   }
 
   // const dateFormat = helpers.parseDateFormat('day')

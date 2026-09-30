@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { promises as fsp } from 'node:fs'
 import moment from 'moment'
 import {
   towns,
@@ -80,20 +81,15 @@ function quiet (t) {
 const logged = () => console.log.mock.calls.map(c => c.arguments)
 const loggedLines = () => console.log.mock.calls.map(c => c.arguments.join(' '))
 
-// Several functions call fs.writeFile without awaiting it, so the output file
-// may appear slightly after the returned promise resolves. Poll for it.
-async function waitForJson (path, ms = 3000) {
-  const end = Date.now() + ms
-  let lastError
-  while (Date.now() < end) {
-    try {
-      return JSON.parse(await readFile(path, 'utf8'))
-    } catch (err) {
-      lastError = err
-      await new Promise(resolve => setTimeout(resolve, 20))
-    }
-  }
-  throw lastError
+// towns and counties await their fs.writeFile, so the output file must exist
+// as soon as the returned promise resolves: read it once, without polling.
+async function readJson (path) {
+  return JSON.parse(await readFile(path, 'utf8'))
+}
+
+// Replace fs.promises.writeFile (what index.js writes with) for one test.
+function failWrites (t) {
+  return t.mock.method(fsp, 'writeFile', async () => { throw new Error('disk full') })
 }
 
 async function tempDir (t) {
@@ -186,7 +182,7 @@ test('towns { all } lists banding codes in first-seen order for Burlington', asy
   // 2023-05-10 checklist first, then the Lake Champlain loon (2023-09-09,
   // credited via the nearest-town fallback), then the new species from 2024-01-15.
   assert.deepEqual(result.BURLINGTON, [
-    'AMRO', 'BCCH', 'BLJA', 'Dark-eyed Junco (Slate-colored)', 'COLO', 'SNBU', 'BOWA'
+    'AMRO', 'BCCH', 'BLJA', 'DEJU', 'COLO', 'SNBU', 'BOWA'
   ])
 })
 
@@ -233,10 +229,52 @@ test('towns { all } discards rows that have no coordinates', async (t) => {
   assert.ok(Object.values(result).every(list => !list.includes('RWBL')))
 })
 
-test('towns { all } falls back to the raw common name when no banding code exists', async (t) => {
+// An already-parsed row at the Burlington test point, for towns({ input: [...] }).
+function burlingtonRow (common, sci, date = '2023-05-10') {
+  return {
+    'Submission ID': 'S999999999',
+    'Common Name': common,
+    'Scientific Name': sci,
+    'State/Province': 'US-VT',
+    County: 'Chittenden',
+    Latitude: '44.4759',
+    Longitude: '-73.2121',
+    Date: date
+  }
+}
+
+test('towns { all } reduces subspecies-level common names to the species banding code', async (t) => {
   quiet(t)
   const result = await towns({ input: SIGHTINGS, all: true })
-  assert.deepEqual(result.FAYSTON, ['PIGR', 'Red Crossbill (Type 10)', 'EASO'])
+  assert.deepEqual(result.FAYSTON, ['PIGR', 'RECR', 'EASO'])
+  assert.ok(result.BURLINGTON.includes('DEJU'))
+  assert.ok(Object.values(result).flat().every(code => !code.includes('(')))
+})
+
+test('towns { all } lists a species once when it was seen both as a subspecies and plain', async (t) => {
+  quiet(t)
+  const result = await towns({
+    input: [
+      burlingtonRow('Dark-eyed Junco (Slate-colored)', 'Junco hyemalis hyemalis/carolinensis'),
+      burlingtonRow('Dark-eyed Junco', 'Junco hyemalis', '2023-06-01')
+    ],
+    all: true
+  })
+  assert.deepEqual(result.BURLINGTON, ['DEJU'])
+})
+
+test('towns { all, baseData } does not double-count a subspecies against the 2022 base data', async (t) => {
+  quiet(t)
+  assert.ok(townDataFor2022.BURLINGTON.includes('DEJU'))
+  const result = await towns({ input: SIGHTINGS, all: true, baseData: true })
+  assert.equal(result.BURLINGTON.filter(c => c === 'DEJU').length, 1)
+  assert.ok(!result.BURLINGTON.includes('Dark-eyed Junco (Slate-colored)'))
+})
+
+test('towns { all } falls back to the raw common name when no banding code exists', async (t) => {
+  quiet(t)
+  const result = await towns({ input: [burlingtonRow('Zzyzx Test Bird', 'Testus zzyzx')], all: true })
+  assert.deepEqual(result.BURLINGTON, ['Zzyzx Test Bird'])
 })
 
 // ---------------------------------------------------------------------------
@@ -288,7 +326,7 @@ test('towns { all, output } writes the result to <output>.json', async (t) => {
   quiet(t)
   const dir = await tempDir(t)
   const result = await towns({ input: SIGHTINGS, all: true, output: join(dir, 'towns.json') })
-  const written = await waitForJson(join(dir, 'towns.json'))
+  const written = await readJson(join(dir, 'towns.json'))
   assert.deepEqual(written, result)
 })
 
@@ -296,7 +334,7 @@ test('towns { all, output } appends .json when the output path has no extension'
   quiet(t)
   const dir = await tempDir(t)
   await towns({ input: SIGHTINGS, all: true, output: join(dir, 'towns') })
-  const written = await waitForJson(join(dir, 'towns.json'))
+  const written = await readJson(join(dir, 'towns.json'))
   assert.deepEqual(written.BRIGHTON, ['BOCH', 'CAJA'])
 })
 
@@ -308,9 +346,23 @@ test('towns { all } credits a sighting outside every town polygon to the nearest
   assert.ok(result.BURLINGTON.includes('COLO'))
 })
 
-test.todo('towns { all } stores subspecies-level common names like "Dark-eyed Junco (Slate-colored)" or "Red Crossbill (Type 10)" verbatim (index.js:200) instead of reducing them to the species banding code (DEJU, RECR), so town lists mix codes and names and can double-count against the 2022 base data')
+test('towns { all, output } rejects when the file write fails', async (t) => {
+  quiet(t)
+  failWrites(t)
+  await assert.rejects(towns({ input: SIGHTINGS, all: true, output: 'unused.json' }), /disk full/)
+})
 
-test.todo('towns/counties call fs.writeFile without awaiting it (index.js:211, index.js:219, index.js:276): the output file may not exist when the promise resolves, and a write error becomes an unhandled rejection')
+test('towns { town, output } rejects when the file write fails', async (t) => {
+  quiet(t)
+  failWrites(t)
+  await assert.rejects(towns({ input: SIGHTINGS, town: 'Montpelier', output: 'unused.json' }), /disk full/)
+})
+
+test('counties { output } rejects when the file write fails', async (t) => {
+  quiet(t)
+  failWrites(t)
+  await assert.rejects(counties({ input: SIGHTINGS, output: 'unused.json' }), /disk full/)
+})
 
 // ---------------------------------------------------------------------------
 // towns { town } -- console output
@@ -362,7 +414,7 @@ test('towns { town, output } writes the species-by-date object', async (t) => {
   quiet(t)
   const dir = await tempDir(t)
   await towns({ input: SIGHTINGS, town: 'Montpelier', output: join(dir, 'montpelier') })
-  const written = await waitForJson(join(dir, 'montpelier.json'))
+  const written = await readJson(join(dir, 'montpelier.json'))
   assert.deepEqual(Object.keys(written), ['2023-06-01', '2024-02-20'])
   assert.deepEqual(written['2024-02-20'].map(r => r['Common Name']), ['Evening Grosbeak', 'Black-capped Chickadee'])
 })
@@ -538,13 +590,25 @@ test('counties { output } writes an array of county entries', async (t) => {
   quiet(t)
   const dir = await tempDir(t)
   const result = await counties({ input: SIGHTINGS, output: join(dir, 'counties.json') })
-  const written = await waitForJson(join(dir, 'counties.json'))
+  const written = await readJson(join(dir, 'counties.json'))
   assert.ok(Array.isArray(written))
   assert.equal(written.length, 14)
   assert.deepEqual(written.find(c => c.county === 'Essex'), result.Essex)
 })
 
-test.todo('counties { county: "washington" } returns undefined: locationFilter matches the county case-insensitively but the result lookup at index.js:272 (newObj[opts.county]) is case-sensitive')
+test('counties { county } matches the county name case-insensitively', async (t) => {
+  quiet(t)
+  const lower = await counties({ input: SIGHTINGS, county: 'washington' })
+  assert.equal(lower.county, 'Washington')
+  assert.equal(lower.speciesTotal, 7)
+  const upper = await counties({ input: SIGHTINGS, county: 'ESSEX' })
+  assert.deepEqual(upper.species, ['Boreal Chickadee', 'Canada Jay'])
+})
+
+test('counties { county } for a county not in Vermont returns undefined', async (t) => {
+  quiet(t)
+  assert.equal(await counties({ input: SIGHTINGS, county: 'Grafton' }), undefined)
+})
 
 // ===========================================================================
 // regions
@@ -730,12 +794,21 @@ test('state on an empty CSV logs 0 and nothing else', async (t) => {
   assert.deepEqual(logged(), [[0]])
 })
 
-test('state resolves to undefined', async (t) => {
+test('state resolves to { species, speciesByDate }', async (t) => {
   quiet(t)
-  assert.equal(await state({ input: SIGHTINGS }), undefined)
+  const result = await state({ input: SIGHTINGS })
+  assert.deepEqual(Object.keys(result).sort(), ['species', 'speciesByDate'])
+  assert.equal(result.species.length, 21)
+  assert.deepEqual(result.species.slice(0, 4), ['American Robin', 'Black-capped Chickadee', 'Blue Jay', 'Dark-eyed Junco (Slate-colored)'])
+  assert.equal(new Set(result.species).size, 21)
 })
 
-test.todo('state builds { species, speciesByDate } but never returns it (return commented out at index.js:395), so callers can only scrape console output')
+test('state returns speciesByDate keyed by date with the first-seen rows', async (t) => {
+  quiet(t)
+  const result = await state({ input: SIGHTINGS, year: 2024 })
+  assert.equal(result.species.length, 10)
+  assert.deepEqual(result.speciesByDate['2024-01-15'].map(r => r['Common Name']), ['Snow Bunting', 'American Robin', 'Bohemian Waxwing'])
+})
 
 // ===========================================================================
 // radialSearch
@@ -832,15 +905,16 @@ test('radialSearch with a large radius covers every located sighting but not the
   assert.equal(result.speciesTotal, 22) // 21 Vermont species + Tufted Titmouse
 })
 
-test('radialSearch currently places a row with blank coordinates at 0,0 ("Null Island")', async (t) => {
+test('radialSearch skips a row with blank coordinates instead of placing it at 0,0 ("Null Island")', async (t) => {
   quiet(t)
-  // compare-latlong coerces '' to 0, so the no-coordinates row is ~5,400 miles
-  // from Burlington rather than being skipped.
+  // compare-latlong would coerce '' to 0, so the no-coordinates row must be
+  // skipped before measuring.
   const nearNullIsland = await radialSearch({ input: SIGHTINGS, coordinates: [0, 0], distance: 1 })
-  assert.deepEqual(nearNullIsland.species, ['Red-winged Blackbird'])
+  assert.deepEqual(nearNullIsland.species, [])
+  const everywhere = await radialSearch({ input: SIGHTINGS, coordinates: [0, 0], distance: 100000 })
+  assert.ok(!everywhere.species.includes('Red-winged Blackbird'))
+  assert.equal(everywhere.speciesTotal, 22)
 })
-
-test.todo('radialSearch should skip rows with blank Latitude/Longitude (as locationFilter does) instead of measuring them from 0,0: the distance filter at index.js:417-420 passes the empty strings straight to compare-latlong, so a large enough radius (or a centre near 0,0) includes them')
 
 test('radialSearch with a centre far from every sighting returns nothing', async (t) => {
   quiet(t)
@@ -856,9 +930,29 @@ test('radialSearch on an empty CSV returns an empty result', async (t) => {
   assert.equal(result.speciesTotal, 0)
 })
 
-test.todo('radialSearch ignores opts.year / opts.after for its results: dateFilter is only applied to the unused speciesSeenInVermont list (index.js:411), while the radius results come from the unfiltered data (index.js:417)')
+test('radialSearch { year } keeps only that year\'s sightings', async (t) => {
+  quiet(t)
+  const result = await radialSearch({ input: SIGHTINGS, coordinates: BURLINGTON, year: 2024 })
+  assert.deepEqual(result.species, ['Snow Bunting', 'American Robin', 'Bohemian Waxwing'])
+  assert.deepEqual(Object.keys(result.speciesByDate), ['2024-01-15'])
+})
 
-test.todo('radialSearch { distance: 0 } silently becomes a 10-mile radius because of `opts.distance || 10` (index.js:401)')
+test('radialSearch { after } keeps only sightings after that date', async (t) => {
+  quiet(t)
+  const result = await radialSearch({ input: SIGHTINGS, coordinates: BURLINGTON, after: '2023-06-01' })
+  assert.deepEqual(Object.keys(result.speciesByDate), ['2023-09-09', '2024-01-15'])
+  assert.deepEqual(result.species, ['Common Loon', 'Snow Bunting', 'American Robin', 'Bohemian Waxwing'])
+})
+
+test('radialSearch { distance: 0 } is a zero-mile radius, not the 10-mile default', async (t) => {
+  quiet(t)
+  // Only the sightings exactly at the centre; the lake point ~6 miles away is out.
+  const atCentre = await radialSearch({ input: SIGHTINGS, coordinates: BURLINGTON, distance: 0 })
+  assert.equal(atCentre.speciesTotal, 6)
+  assert.ok(!atCentre.species.includes('Common Loon'))
+  const nearby = await radialSearch({ input: SIGHTINGS, coordinates: [44.48, -73.21], distance: 0 })
+  assert.equal(nearby.speciesTotal, 0)
+})
 
 // ===========================================================================
 // quadBirds
@@ -1029,7 +1123,7 @@ test('winterFinch lists owls in the second block', async (t) => {
   quiet(t)
   await winterFinch({ input: SIGHTINGS })
   const owls = loggedLines().slice(15)
-  assert.ok(owls.find(l => l.startsWith('Washington')).includes(': Barred Owl'))
+  assert.ok(owls.find(l => l.startsWith('Washington')).includes('Barred Owl'))
   assert.equal(owls.filter(l => !l.endsWith('(0)')).length, 1)
 })
 
@@ -1054,6 +1148,28 @@ test('winterFinch resolves to undefined', async (t) => {
   assert.equal(await winterFinch({ input: SIGHTINGS }), undefined)
 })
 
-test.todo('winterFinch never matches Eastern Screech-Owl: its owl list spells it "Eastern Screech-owl" (index.js:289) but eBird uses "Eastern Screech-Owl", so the Fayston screech-owl is missing from the Washington owl line')
+test('winterFinch matches Eastern Screech-Owl (eBird capitalisation) in the owl block', async (t) => {
+  quiet(t)
+  await winterFinch({ input: SIGHTINGS })
+  const owls = loggedLines().slice(15)
+  assert.equal(owls.find(l => l.startsWith('Washington')), 'Washington (2): Eastern Screech-Owl, Barred Owl.')
+})
 
-test.todo('winterFinch { county } throws "Cannot read properties of undefined (reading \'map\')": counties returns a single county entry when opts.county is set (index.js:270-272), and winterFinch (index.js:318-320) iterates its keys as if they were county names')
+test('winterFinch { county } prints just that county\'s finch and owl lines', async (t) => {
+  quiet(t)
+  await winterFinch({ input: SIGHTINGS, county: 'washington' })
+  // counties { county } also logs the county entry object; keep the text lines.
+  const lines = logged().filter(args => typeof args[0] === 'string').map(args => args.join(' '))
+  assert.deepEqual(lines, [
+    'Washington (3): Evening Grosbeak, Pine Grosbeak, Red Crossbill.',
+    '',
+    'Washington (2): Eastern Screech-Owl, Barred Owl.'
+  ])
+})
+
+test('winterFinch { county } for an unknown county prints only the blank separator', async (t) => {
+  quiet(t)
+  await winterFinch({ input: SIGHTINGS, county: 'Grafton' })
+  const lines = logged().filter(args => typeof args[0] === 'string').map(args => args.join(' '))
+  assert.deepEqual(lines, [''])
+})
