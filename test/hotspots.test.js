@@ -737,7 +737,7 @@ test.todo('townHotspots should be callable twice in one process (hotspots.js:109
   await assert.doesNotReject(townHotspots({ noVisits: true }))
 })
 
-test.todo('townHotspots { all } should count every hotspot (towns resolved by the nearest-town fallback come back Title Case, e.g. "Canaan", while getAllTowns keys are UPPERCASE, so hotspots.js:136 and :141 silently skip them)', async (t) => {
+test('townHotspots { all } counts every hotspot, including towns resolved by the nearest-town fallback', async (t) => {
   const logs = captureLog(t)
   await townHotspots({ all: true })
   const total = logs().slice(1).reduce((sum, args) => sum + Number(args[0].split(': ')[1]), 0)

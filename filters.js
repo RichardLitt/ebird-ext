@@ -156,7 +156,8 @@ function locationFilter (list, opts) {
           Latitude: checklist.Latitude
           // This is ugly but it should work.
         }, Number(Object.keys(eBirdCountyIds).filter(key => eBirdCountyIds[key] === checklist.County)[0]))
-        checklist.Town = helpers.capitalizeFirstLetters(point)
+        // Upper case, to match the geojson town keys that every caller compares against
+        checklist.Town = point.toUpperCase()
       }
       if (!checklist.Region) {
         point = getPoint('regions', {

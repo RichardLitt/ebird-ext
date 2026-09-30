@@ -185,13 +185,42 @@ test('getData still parses non-leading columns when the file starts with a UTF-8
   assert.equal(first.Date, '2022-01-01')
 })
 
-test.todo('getData strips a UTF-8 BOM so the first header is "Submission ID" (index.js:62 reads the file as utf8 and Papa keeps the BOM, so the key becomes "\\ufeffSubmission ID" and row["Submission ID"] is undefined; spreadsheet-resaved exports usually have a BOM)')
+test('getData strips a UTF-8 BOM so the first header is "Submission ID"', async (t) => {
+  const file = await tmpCsv(t, `﻿${HEADER}\nS1,Mallard,Anas platyrhynchos,1,US-VT,Chittenden,X,44.4759,-73.2121,2022-01-01,,Incidental,,0\n`)
+  const [first] = await getData(file)
+  assert.equal(first['Submission ID'], 'S1')
+  assert.ok(!Object.keys(first).some(k => k.startsWith('﻿')))
+})
 
 test('getData rejects with ENOENT for a missing file', async () => {
   await assert.rejects(getData(fixture('does-not-exist.csv')), { code: 'ENOENT' })
 })
 
-test.todo('getData(array) returns removeSpuh(array) as the fallback branch intends (index.js:60 `if (fs)` is always truthy, so index.js:88 is dead code and passing an array rejects in fs.readFile)')
+test('getData(array) skips reading and removes spuhs from the given rows', async () => {
+  const rows = [
+    { 'Common Name': 'Mallard', 'Scientific Name': 'Anas platyrhynchos' },
+    { 'Common Name': 'duck sp.', 'Scientific Name': 'Anatinae sp.' }
+  ]
+  const out = await getData(rows)
+  assert.deepEqual(out.map(r => r['Common Name']), ['Mallard'])
+})
+
+test('getData(rows, { keepSpuh: true }) keeps spuhs, slashes and hybrids', async () => {
+  const rows = [
+    { 'Common Name': 'Mallard', 'Scientific Name': 'Anas platyrhynchos' },
+    { 'Common Name': 'duck sp.', 'Scientific Name': 'Anatinae sp.' },
+    { 'Common Name': 'Mallard x American Black Duck (hybrid)', 'Scientific Name': 'Anas platyrhynchos x rubripes' }
+  ]
+  const out = await getData(rows, { keepSpuh: true })
+  assert.equal(out.length, 3)
+})
+
+test('getData(file, { keepSpuh: true }) keeps spuh rows from a CSV', async () => {
+  const all = await getData(fixture('basic.csv'), { keepSpuh: true })
+  const species = await getData(fixture('basic.csv'))
+  assert.ok(all.length > species.length)
+  assert.ok(all.some(r => r['Scientific Name'].includes('sp.')))
+})
 
 // ===========================================================================
 // countUniqueSpecies
