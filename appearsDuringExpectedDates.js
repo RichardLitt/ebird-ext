@@ -206,7 +206,20 @@ function getTimespans (occurrence) {
   return timespans.concat(carryOverTimespans.flat())
 }
 
+// One or more comma-separated week ranges like "3A-5C" or single weeks like
+// "5D", with an optional trailing "+". Weeks are A-E; months are 1-12.
+const occurrencePattern = /^(?:[1-9]|1[0-2])[A-E](?:-(?:[1-9]|1[0-2])[A-E])?(?:, (?:[1-9]|1[0-2])[A-E](?:-(?:[1-9]|1[0-2])[A-E])?)*\+?$/
+
 function appearsDuringExpectedDates(date, speciesRecord) {
+  // Whitespace-only means no restriction, like an empty string
+  if (typeof speciesRecord === 'string') {
+    speciesRecord = speciesRecord.trim()
+    // Malformed occurrences return false, so the caller flags the record for
+    // review instead of silently accepting it or crashing the whole report
+    if (speciesRecord !== '' && !occurrencePattern.test(speciesRecord)) {
+      return false
+    }
+  }
   const timespans = getTimespans(speciesRecord)
   if (timespans.length !== 0) {
     let isInTimespan = timespans.map(x => {

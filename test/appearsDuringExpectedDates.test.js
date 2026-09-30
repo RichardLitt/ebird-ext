@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
 import appearsDuringExpectedDates from '../appearsDuringExpectedDates.js'
 
 // The "Occurrence" string in vermont_records.json encodes when a species is
@@ -10,7 +11,9 @@ import appearsDuringExpectedDates from '../appearsDuringExpectedDates.js'
 //   "10B-5B"       winter wrap: Oct week 2 through May week 2 (next year)
 //   "3A-12C+"      open-ended: trailing "+" anywhere returns true
 //   "1A-12D"       full-year shortcut
-//   "" / null      no restriction
+//   "" / null      no restriction (as is a whitespace-only string)
+//
+// Any other string that does not match this grammar returns false.
 //
 // Letter codes (week-of-month): A=1, B=2, C=3, D=4, E=6 (intentional gap at 5).
 //
@@ -280,15 +283,45 @@ test('return value is always a strict boolean (plus-suffix case)', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Known issues (documented as todos so the bugs are visible in test output)
+// Whitespace and malformed input
 // ---------------------------------------------------------------------------
 
-test.todo('whitespace-only occurrence currently crashes (TypeError on null match)', () => {
-  // fn('2024-02-15', '   ') throws: Cannot read properties of null (reading '0')
-  // The function should probably treat whitespace as no-restriction.
+test('whitespace-only occurrence is treated as no restriction', () => {
+  assert.strictEqual(fn('2024-02-15', '   '), true)
+  assert.strictEqual(fn('2024-08-15', '\t \n'), true)
 })
 
-test.todo('a malformed occurrence with an unknown letter should be rejected gracefully', () => {
-  // fn('2024-04-15', '3Z-5Z') currently treats Z as A (default fallthrough
-  // in getWeek), silently accepting bad input.
+test('surrounding whitespace on a valid occurrence is ignored', () => {
+  assert.strictEqual(fn('2024-04-15', '  3A-5C  '), true)
+  assert.strictEqual(fn('2024-08-15', '  3A-5C  '), false)
+})
+
+test('a malformed occurrence with an unknown letter returns false', () => {
+  // Previously Z fell through getWeek's default and was treated as A, so
+  // '3Z-5Z' silently behaved like '3A-5A'. Returning false makes the caller
+  // (index.js) flag the record as OutsideExpectedDates for manual review.
+  assert.strictEqual(fn('2024-04-15', '3Z-5Z'), false)
+  assert.strictEqual(fn('2024-04-15', '3A-5Z'), false)
+})
+
+test('malformed occurrences are rejected even with a "+" suffix', () => {
+  assert.strictEqual(fn('2024-04-15', '3Z-5Z+'), false)
+})
+
+test('other malformed occurrences return false instead of throwing', () => {
+  for (const bad of ['garbage', '13A-5C', '0A-5C', '3a-5c', '3A-', '3A-5C,', '3A--5C']) {
+    assert.doesNotThrow(() => fn('2024-04-15', bad), bad)
+    assert.strictEqual(fn('2024-04-15', bad), false, bad)
+  }
+})
+
+test('every Occurrence value in vermont_records.json is accepted as well-formed', () => {
+  // Guards the validation pattern against rejecting real data: a well-formed
+  // value must match somewhere in the year, and only malformed ones are false
+  // on every date.
+  const records = JSON.parse(fs.readFileSync(new URL('../data/vermont_records.json', import.meta.url), 'utf8'))
+  const dates = Array.from({ length: 12 }, (_, m) => `2024-${String(m + 1).padStart(2, '0')}-15`)
+  for (const { Occurrence } of records) {
+    assert.ok(dates.some(d => fn(d, Occurrence)), Occurrence)
+  }
 })

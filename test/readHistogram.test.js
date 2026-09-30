@@ -16,14 +16,15 @@ import readHistogram, { washingtonCounty2020 } from '../readHistogram.js'
 //   Snow Goose (<em class="sci">Anser caerulescens</em>)\t0.0\t...\t
 //   ...
 //
-// The parser is positional: it skips exactly four header lines and drops the
-// final line (the empty string left after the file's trailing newline).
+// CRLF line endings are normalised to LF first. Species rows are every
+// non-blank line after the "Sample Size" line, so the number of header lines
+// and the presence of a trailing newline do not matter.
 //
 // Only washingtonCounty2020 is exported. getData is module-private, so it is
-// exercised through washingtonCounty2020, which reads the path
-// 'data/ebird_US-VT-023__2020_2020_1_12_barchart.txt' relative to the current
-// working directory. For fixture tests we chdir into a temp directory holding
-// a data/ file with that exact name, then restore the cwd and clean up.
+// exercised through washingtonCounty2020, which reads
+// data/ebird_US-VT-023__2020_2020_1_12_barchart.txt relative to the module.
+// For fixture tests we mock fs.promises.readFile (the same object the module
+// imports as `promises`) to return the fixture content.
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(here, '..')
@@ -37,17 +38,12 @@ const fixture = (name) => fs.readFileSync(path.join(fixtureDir, name), 'utf8')
 // to console.log.
 async function parse (t, content) {
   const logMock = t.mock.method(console, 'log', () => {})
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'readHistogram-'))
-  const cwd = process.cwd()
+  const readMock = t.mock.method(fs.promises, 'readFile', async () => content)
   try {
-    fs.mkdirSync(path.join(dir, 'data'))
-    fs.writeFileSync(path.join(dir, 'data', BUNDLED), content)
-    process.chdir(dir)
     const result = await washingtonCounty2020()
     return { result, logs: logMock.mock.calls.map(c => c.arguments[0]) }
   } finally {
-    process.chdir(cwd)
-    fs.rmSync(dir, { recursive: true, force: true })
+    readMock.mock.restore()
     logMock.mock.restore()
   }
 }
@@ -83,16 +79,34 @@ test('getData is not exported (only reachable through washingtonCounty2020)', as
 
 async function parseBundled (t) {
   const logMock = t.mock.method(console, 'log', () => {})
-  const cwd = process.cwd()
   try {
-    process.chdir(repoRoot)
     const result = await washingtonCounty2020()
     return { result, logs: logMock.mock.calls.map(c => c.arguments[0]) }
   } finally {
-    process.chdir(cwd)
     logMock.mock.restore()
   }
 }
+
+test('bundled file: resolved relative to the module, not the working directory', async (t) => {
+  t.mock.method(console, 'log', () => {})
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'readHistogram-'))
+  const cwd = process.cwd()
+  try {
+    process.chdir(dir)
+    const result = await washingtonCounty2020()
+    assert.equal(result.taxa, '167')
+  } finally {
+    process.chdir(cwd)
+    fs.rmSync(dir, { recursive: true, force: true })
+  }
+})
+
+test('bundled file: reads the absolute path of data/ next to the module', async (t) => {
+  t.mock.method(console, 'log', () => {})
+  const spy = t.mock.method(fs.promises, 'readFile')
+  await washingtonCounty2020()
+  assert.equal(spy.mock.calls[0].arguments[0], path.join(repoRoot, 'data', BUNDLED))
+})
 
 test('bundled file: reports 167 taxa as a string', async (t) => {
   const { result } = await parseBundled(t)
@@ -221,7 +235,7 @@ test('hybrids are kept (only "sp." and "/" are filtered)', async (t) => {
   assert.deepEqual(entry(result, 'Mallard x American Black Duck (hybrid)'), {
     species: 'Mallard x American Black Duck (hybrid)',
     'Scientific Name': 'Anas platyrhynchos x rubripes',
-    frequency: ['0.0204082', '0.0', '0.0', '0.0', '0.0', '0.0', '0.0', '0.0', '']
+    frequency: ['0.0204082', '0.0', '0.0', '0.0', '0.0', '0.0', '0.0', '0.0']
   })
 })
 
@@ -250,13 +264,22 @@ test('a species seen in zero weeks is still kept with all-zero frequencies', asy
   assert.ok(goose.frequency.slice(0, 8).every(f => f === '0.0'))
 })
 
-test('frequency keeps the empty trailing-tab cell (unlike sampleSize)', async (t) => {
-  // Current behaviour: rows end in a tab, so split('\t') leaves a final ''.
-  // sampleSize filters it out, frequency does not. See the todo below.
+test('frequency drops the empty trailing-tab cell, matching sampleSize', async (t) => {
+  // Rows end in a tab, so split('\t') leaves a final '' that is filtered out.
   const { result } = await parse(t, fixture('basic.txt'))
-  const f = entry(result, 'Canada Goose').frequency
-  assert.equal(f.length, 9)
-  assert.equal(f.at(-1), '')
+  for (const s of result.species) {
+    const f = Object.values(s)[0].frequency
+    assert.equal(f.length, result.sampleSize.length)
+    assert.ok(!f.includes(''))
+  }
+  assert.equal(entry(result, 'Canada Goose').frequency.at(-1), '0.0')
+})
+
+test('bundled file: every frequency array has one entry per sampled week', async (t) => {
+  const { result } = await parseBundled(t)
+  for (const s of result.species) {
+    assert.equal(Object.values(s)[0].frequency.length, 48)
+  }
 })
 
 test('rows without a trailing tab have exactly one frequency per week', async (t) => {
@@ -307,15 +330,10 @@ test('does not log spuh or slash taxa', async (t) => {
 
 test('rejects with ENOENT when the data file is missing', async (t) => {
   t.mock.method(console, 'log', () => {})
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'readHistogram-'))
-  const cwd = process.cwd()
-  try {
-    process.chdir(dir)
-    await assert.rejects(washingtonCounty2020(), { code: 'ENOENT' })
-  } finally {
-    process.chdir(cwd)
-    fs.rmSync(dir, { recursive: true, force: true })
-  }
+  t.mock.method(fs.promises, 'readFile', async (p) => {
+    throw Object.assign(new Error(`ENOENT: no such file or directory, open '${p}'`), { code: 'ENOENT' })
+  })
+  await assert.rejects(washingtonCounty2020(), { code: 'ENOENT' })
 })
 
 test('rejects with a TypeError on an empty file', async (t) => {
@@ -334,48 +352,51 @@ test('rejects with a TypeError on a species row without <em> markup', async (t) 
   await assert.rejects(parse(t, fixture('malformed-species.txt')), TypeError)
 })
 
-test('an extra header line shifts the positional slice and crashes on it', async (t) => {
-  // Current behaviour: the parser assumes exactly four header lines. A fifth
-  // non-blank line before the species is treated as a species row.
+// ---------------------------------------------------------------------------
+// Header layout, line endings and trailing newline
+// ---------------------------------------------------------------------------
+
+const BASIC_NAMES = [
+  'Snow Goose',
+  'Canada Goose',
+  'Mallard (Domestic type)',
+  'Mallard x American Black Duck (hybrid)',
+  'Black-capped Chickadee',
+  'American Robin'
+]
+
+test('an extra header line before "Sample Size" does not shift the species rows', async (t) => {
   const content = fixture('basic.txt').replace('Sample Size:', 'Extra line\nSample Size:')
-  await assert.rejects(parse(t, content), TypeError)
+  const { result } = await parse(t, content)
+  assert.deepEqual(names(result), BASIC_NAMES)
 })
 
-test('a missing "Frequency of observations" line silently drops the first species', async (t) => {
-  // Current behaviour: with only three header lines, slice(4) skips the first
-  // species row. Pinned so a change to the positional logic is noticed.
+test('a missing "Frequency of observations" line keeps the first species', async (t) => {
   const content = fixture('basic.txt').replace(/^Frequency of observations.*\n/m, '')
   const { result } = await parse(t, content)
-  assert.equal(names(result)[0], 'Canada Goose')
+  assert.deepEqual(names(result), BASIC_NAMES)
 })
 
-// ---------------------------------------------------------------------------
-// Known bugs
-// ---------------------------------------------------------------------------
-
-test('a file without a trailing newline currently loses its last species', async (t) => {
-  // Pins the bug described in the todo below: slice(4, -1) always drops the
-  // last line, which is a real species row when there is no final newline.
-  const { result } = await parse(t, fixture('no-trailing-newline.txt'))
-  assert.deepEqual(names(result), ['Snow Goose'])
-})
-
-test('CRLF line endings currently collapse the file into one line and lose every species', async (t) => {
-  // remove-blank-lines uses /^[ \t]*\n/gm. In multiline mode JS treats "\r" as
-  // a line terminator, so "^" matches between the "\r" and "\n" of every CRLF
-  // and every "\n" is deleted. The whole file becomes a single line.
-  const content = fixture('basic.txt').replace(/\n/g, '\r\n')
+test('a missing month header line keeps the first species', async (t) => {
+  const content = fixture('basic.txt').replace(/^\tJan.*\n/m, '')
   const { result } = await parse(t, content)
-  assert.deepEqual(result.species, [])
-  assert.equal(result.taxa, '10\r\r')
+  assert.deepEqual(names(result), BASIC_NAMES)
 })
 
-test.todo('keeps the last species row when the file has no trailing newline (readHistogram.js:16: slice(4, -1) unconditionally drops the final line, so a file ending in a species row instead of "\\n" silently loses that species)')
+test('keeps the last species row when the file has no trailing newline', async (t) => {
+  const { result } = await parse(t, fixture('no-trailing-newline.txt'))
+  assert.deepEqual(names(result), ['Snow Goose', 'Black-capped Chickadee'])
+  assert.equal(entry(result, 'Black-capped Chickadee').frequency.length, 8)
+})
 
-test.todo('frequency arrays drop the empty cell from the trailing tab, matching sampleSize (readHistogram.js:21: frequency is split without the filter(x => x !== "") applied to sampleSize on line 15, so every row gets an extra "" and frequency.length is sampleSize.length + 1)')
+test('a trailing whitespace-only line without a newline is ignored', async (t) => {
+  const { result } = await parse(t, fixture('basic.txt') + ' \t ')
+  assert.deepEqual(names(result), BASIC_NAMES)
+})
 
-test.todo('parses files with CRLF line endings (readHistogram.js:13: remove-blank-lines matches /^[ \\t]*\\n/gm and JS multiline "^" matches after "\\r", so every "\\n" in a CRLF file is removed; the file collapses to one line, taxa becomes "10\\r\\r" and species is silently empty)')
-
-test.todo('locates species rows by content rather than a fixed offset (readHistogram.js:16: slice(4) assumes exactly four header lines; one missing header line silently drops the first species, one extra header line throws)')
-
-test.todo('washingtonCounty2020 finds its bundled file regardless of the working directory (readHistogram.js:44: the relative path "data/ebird_US-VT-023__2020_2020_1_12_barchart.txt" is resolved against process.cwd(), not the module, so calling it from any other directory rejects with ENOENT)')
+test('parses files with CRLF line endings the same as LF', async (t) => {
+  const lf = await parse(t, fixture('basic.txt'))
+  const crlf = await parse(t, fixture('basic.txt').replace(/\n/g, '\r\n'))
+  assert.equal(crlf.result.taxa, '10')
+  assert.deepEqual(crlf.result, lf.result)
+})
