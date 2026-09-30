@@ -390,7 +390,7 @@ async function state (opts) {
 
 async function radialSearch (opts) {
   const dateFormat = helpers.parseDateFormat('day')
-  const radius = opts.distance || 10 // miles
+  const radius = opts.distance ?? 10 // miles
   const lat = opts.coordinates[0]
   const long = opts.coordinates[1]
   console.log(dateFormat, lat, long)
@@ -406,7 +406,11 @@ async function radialSearch (opts) {
   })
   speciesSeenInVermont = _.flatten(speciesSeenInVermont)
 
-  data = f.orderByDate(data, opts).filter((d) => {
+  data = f.orderByDate(f.dateFilter(data, opts), opts).filter((d) => {
+    // Blank coordinates would be measured from 0,0; skip them, as locationFilter does
+    if (String(d.Latitude ?? '').trim() === '' || String(d.Longitude ?? '').trim() === '') {
+      return false
+    }
     const distance = difference.distance(lat, long, d.Latitude, d.Longitude, 'M')
     return distance <= radius
   })

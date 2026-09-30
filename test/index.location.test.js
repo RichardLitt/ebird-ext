@@ -905,15 +905,16 @@ test('radialSearch with a large radius covers every located sighting but not the
   assert.equal(result.speciesTotal, 22) // 21 Vermont species + Tufted Titmouse
 })
 
-test('radialSearch currently places a row with blank coordinates at 0,0 ("Null Island")', async (t) => {
+test('radialSearch skips a row with blank coordinates instead of placing it at 0,0 ("Null Island")', async (t) => {
   quiet(t)
-  // compare-latlong coerces '' to 0, so the no-coordinates row is ~5,400 miles
-  // from Burlington rather than being skipped.
+  // compare-latlong would coerce '' to 0, so the no-coordinates row must be
+  // skipped before measuring.
   const nearNullIsland = await radialSearch({ input: SIGHTINGS, coordinates: [0, 0], distance: 1 })
-  assert.deepEqual(nearNullIsland.species, ['Red-winged Blackbird'])
+  assert.deepEqual(nearNullIsland.species, [])
+  const everywhere = await radialSearch({ input: SIGHTINGS, coordinates: [0, 0], distance: 100000 })
+  assert.ok(!everywhere.species.includes('Red-winged Blackbird'))
+  assert.equal(everywhere.speciesTotal, 22)
 })
-
-test.todo('radialSearch should skip rows with blank Latitude/Longitude (as locationFilter does) instead of measuring them from 0,0: the distance filter at index.js:417-420 passes the empty strings straight to compare-latlong, so a large enough radius (or a centre near 0,0) includes them')
 
 test('radialSearch with a centre far from every sighting returns nothing', async (t) => {
   quiet(t)
@@ -929,9 +930,29 @@ test('radialSearch on an empty CSV returns an empty result', async (t) => {
   assert.equal(result.speciesTotal, 0)
 })
 
-test.todo('radialSearch ignores opts.year / opts.after for its results: dateFilter is only applied to the unused speciesSeenInVermont list (index.js:411), while the radius results come from the unfiltered data (index.js:417)')
+test('radialSearch { year } keeps only that year\'s sightings', async (t) => {
+  quiet(t)
+  const result = await radialSearch({ input: SIGHTINGS, coordinates: BURLINGTON, year: 2024 })
+  assert.deepEqual(result.species, ['Snow Bunting', 'American Robin', 'Bohemian Waxwing'])
+  assert.deepEqual(Object.keys(result.speciesByDate), ['2024-01-15'])
+})
 
-test.todo('radialSearch { distance: 0 } silently becomes a 10-mile radius because of `opts.distance || 10` (index.js:401)')
+test('radialSearch { after } keeps only sightings after that date', async (t) => {
+  quiet(t)
+  const result = await radialSearch({ input: SIGHTINGS, coordinates: BURLINGTON, after: '2023-06-01' })
+  assert.deepEqual(Object.keys(result.speciesByDate), ['2023-09-09', '2024-01-15'])
+  assert.deepEqual(result.species, ['Common Loon', 'Snow Bunting', 'American Robin', 'Bohemian Waxwing'])
+})
+
+test('radialSearch { distance: 0 } is a zero-mile radius, not the 10-mile default', async (t) => {
+  quiet(t)
+  // Only the sightings exactly at the centre; the lake point ~6 miles away is out.
+  const atCentre = await radialSearch({ input: SIGHTINGS, coordinates: BURLINGTON, distance: 0 })
+  assert.equal(atCentre.speciesTotal, 6)
+  assert.ok(!atCentre.species.includes('Common Loon'))
+  const nearby = await radialSearch({ input: SIGHTINGS, coordinates: [44.48, -73.21], distance: 0 })
+  assert.equal(nearby.speciesTotal, 0)
+})
 
 // ===========================================================================
 // quadBirds
