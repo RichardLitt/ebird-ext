@@ -1,0 +1,29 @@
+Submission ID,Common Name,Scientific Name,Taxonomic Order,Count,State/Province,County,Location,Latitude,Longitude,Date,Time,Protocol,Duration (Min),All Obs Reported
+S900000002,Snow Bunting,Plectrophenax nivalis,33100,40,US-VT,Chittenden,Test Point Burlington,44.4759,-73.2121,2024-01-15,09:00 AM,Traveling,30,1
+S900000002,American Robin,Turdus migratorius,29000,1,US-VT,Chittenden,Test Point Burlington,44.4759,-73.2121,2024-01-15,09:00 AM,Traveling,30,1
+S900000002,Bohemian Waxwing,Bombycilla garrulus,30100,12,US-VT,Chittenden,Test Point Burlington,44.4759,-73.2121,2024-01-15,09:00 AM,Traveling,30,1
+S900000001,American Robin,Turdus migratorius,29000,3,US-VT,Chittenden,Test Point Burlington,44.4759,-73.2121,2023-05-10,07:00 AM,Traveling,60,1
+S900000001,Black-capped Chickadee,Poecile atricapillus,24000,2,US-VT,Chittenden,Test Point Burlington,44.4759,-73.2121,2023-05-10,07:00 AM,Traveling,60,1
+S900000001,Blue Jay,Cyanocitta cristata,23000,1,US-VT,Chittenden,Test Point Burlington,44.4759,-73.2121,2023-05-10,07:00 AM,Traveling,60,1
+S900000001,Dark-eyed Junco (Slate-colored),Junco hyemalis hyemalis/carolinensis,32000,4,US-VT,Chittenden,Test Point Burlington,44.4759,-73.2121,2023-05-10,07:00 AM,Traveling,60,1
+S900000003,Common Raven,Corvus corax,23500,2,US-VT,Washington,Test Point Montpelier,44.2601,-72.5754,2023-06-01,12:00 PM,Incidental,5,0
+S900000003,Barred Owl,Strix varia,15000,1,US-VT,Washington,Test Point Montpelier,44.2601,-72.5754,2023-06-01,12:00 PM,Incidental,5,0
+S900000004,Evening Grosbeak,Coccothraustes vespertinus,31000,6,US-VT,Washington,Test Point Montpelier,44.2601,-72.5754,2024-02-20,10:00 AM,Stationary,45,1
+S900000004,Black-capped Chickadee,Poecile atricapillus,24000,5,US-VT,Washington,Test Point Montpelier,44.2601,-72.5754,2024-02-20,10:00 AM,Stationary,45,1
+S900000005,Pine Grosbeak,Pinicola enucleator,31100,3,US-VT,Washington,Test Point Fayston,44.2167,-72.8333,2023-12-30,08:00 AM,Traveling,120,1
+S900000005,Red Crossbill (Type 10),Loxia curvirostra [Type 10],31200,2,US-VT,Washington,Test Point Fayston,44.2167,-72.8333,2023-12-30,08:00 AM,Traveling,120,1
+S900000005,Eastern Screech-Owl,Megascops asio,14900,1,US-VT,Washington,Test Point Fayston,44.2167,-72.8333,2023-12-30,08:00 AM,Traveling,120,1
+S900000006,Wood Duck,Aix sponsa,300,2,US-VT,Windham,Test Point Brattleboro,42.8509,-72.5579,2024-04-05,06:30 AM,Traveling,20,1
+S900000006,duck sp.,Anatinae sp.,900,5,US-VT,Windham,Test Point Brattleboro,42.8509,-72.5579,2024-04-05,06:30 AM,Traveling,20,1
+S900000006,Mallard x American Black Duck (hybrid),Anas platyrhynchos x rubripes,500,1,US-VT,Windham,Test Point Brattleboro,42.8509,-72.5579,2024-04-05,06:30 AM,Traveling,20,1
+S900000007,Boreal Chickadee,Poecile hudsonicus,24100,2,US-VT,Essex,Test Point Brighton,44.8134,-71.8801,2023-08-12,07:30 AM,Traveling,90,1
+S900000007,Canada Jay,Perisoreus canadensis,22900,3,US-VT,Essex,Test Point Brighton,44.8134,-71.8801,2023-08-12,07:30 AM,Traveling,90,1
+S900000008,Common Loon,Gavia immer,8000,1,US-VT,Chittenden,Test Point Lake Champlain,44.5,-73.33,2023-09-09,03:00 PM,Stationary,15,1
+S900000009,Tufted Titmouse,Baeolophus bicolor,24200,2,US-NH,Grafton,Test Point Hanover,43.7022,-72.2896,2023-07-04,11:00 AM,Traveling,30,1
+S900000009,American Robin,Turdus migratorius,29000,1,US-NH,Grafton,Test Point Hanover,43.7022,-72.2896,2023-07-04,11:00 AM,Traveling,30,1
+S900000010,Red-winged Blackbird,Agelaius phoeniceus,33500,8,US-VT,Addison,Test Point No Coordinates,,,2023-03-03,09:00 AM,Traveling,10,1
+S900000011,Cerulean Warbler,Setophaga cerulea,32500,1,US-VT,Rutland,Test Point Pawlet,43.3462,-73.1768,2024-05-20,06:00 AM,Traveling,60,1
+S900000012,Alder Flycatcher,Empidonax alnorum,20000,1,US-VT,Bennington,Test Point Manchester,43.1637,-73.0723,2024-06-10,06:00 AM,Traveling,25,1
+S900000013,Blackpoll Warbler,Setophaga striata,32600,1,US-VT,Bennington,Test Point Woodford,42.88,-73.07,2024-06-11,06:00 AM,Traveling,35,1
+S900000014,Wild Turkey,Meleagris gallopavo,1200,9,US-VT,Franklin,Test Point Fairfax,44.66,-72.99,2023-10-10,04:00 PM,Traveling,40,1
+S900000015,Eastern Bluebird,Sialia sialis,28500,2,US-VT,Windsor,Test Point Norwich,43.7153,-72.3079,2024-03-15,10:00 AM,Traveling,30,1
