@@ -182,7 +182,7 @@ test('towns { all } lists banding codes in first-seen order for Burlington', asy
   // 2023-05-10 checklist first, then the Lake Champlain loon (2023-09-09,
   // credited via the nearest-town fallback), then the new species from 2024-01-15.
   assert.deepEqual(result.BURLINGTON, [
-    'AMRO', 'BCCH', 'BLJA', 'Dark-eyed Junco (Slate-colored)', 'COLO', 'SNBU', 'BOWA'
+    'AMRO', 'BCCH', 'BLJA', 'DEJU', 'COLO', 'SNBU', 'BOWA'
   ])
 })
 
@@ -229,10 +229,52 @@ test('towns { all } discards rows that have no coordinates', async (t) => {
   assert.ok(Object.values(result).every(list => !list.includes('RWBL')))
 })
 
-test('towns { all } falls back to the raw common name when no banding code exists', async (t) => {
+// An already-parsed row at the Burlington test point, for towns({ input: [...] }).
+function burlingtonRow (common, sci, date = '2023-05-10') {
+  return {
+    'Submission ID': 'S999999999',
+    'Common Name': common,
+    'Scientific Name': sci,
+    'State/Province': 'US-VT',
+    County: 'Chittenden',
+    Latitude: '44.4759',
+    Longitude: '-73.2121',
+    Date: date
+  }
+}
+
+test('towns { all } reduces subspecies-level common names to the species banding code', async (t) => {
   quiet(t)
   const result = await towns({ input: SIGHTINGS, all: true })
-  assert.deepEqual(result.FAYSTON, ['PIGR', 'Red Crossbill (Type 10)', 'EASO'])
+  assert.deepEqual(result.FAYSTON, ['PIGR', 'RECR', 'EASO'])
+  assert.ok(result.BURLINGTON.includes('DEJU'))
+  assert.ok(Object.values(result).flat().every(code => !code.includes('(')))
+})
+
+test('towns { all } lists a species once when it was seen both as a subspecies and plain', async (t) => {
+  quiet(t)
+  const result = await towns({
+    input: [
+      burlingtonRow('Dark-eyed Junco (Slate-colored)', 'Junco hyemalis hyemalis/carolinensis'),
+      burlingtonRow('Dark-eyed Junco', 'Junco hyemalis', '2023-06-01')
+    ],
+    all: true
+  })
+  assert.deepEqual(result.BURLINGTON, ['DEJU'])
+})
+
+test('towns { all, baseData } does not double-count a subspecies against the 2022 base data', async (t) => {
+  quiet(t)
+  assert.ok(townDataFor2022.BURLINGTON.includes('DEJU'))
+  const result = await towns({ input: SIGHTINGS, all: true, baseData: true })
+  assert.equal(result.BURLINGTON.filter(c => c === 'DEJU').length, 1)
+  assert.ok(!result.BURLINGTON.includes('Dark-eyed Junco (Slate-colored)'))
+})
+
+test('towns { all } falls back to the raw common name when no banding code exists', async (t) => {
+  quiet(t)
+  const result = await towns({ input: [burlingtonRow('Zzyzx Test Bird', 'Testus zzyzx')], all: true })
+  assert.deepEqual(result.BURLINGTON, ['Zzyzx Test Bird'])
 })
 
 // ---------------------------------------------------------------------------
@@ -303,8 +345,6 @@ test('towns { all } credits a sighting outside every town polygon to the nearest
   const result = await towns({ input: SIGHTINGS, all: true })
   assert.ok(result.BURLINGTON.includes('COLO'))
 })
-
-test.todo('towns { all } stores subspecies-level common names like "Dark-eyed Junco (Slate-colored)" or "Red Crossbill (Type 10)" verbatim (index.js:200) instead of reducing them to the species banding code (DEJU, RECR), so town lists mix codes and names and can double-count against the 2022 base data')
 
 test('towns { all, output } rejects when the file write fails', async (t) => {
   quiet(t)

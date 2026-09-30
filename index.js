@@ -182,7 +182,13 @@ async function towns (opts) {
       towns[t] = []
       const speciesByDate = countUniqueSpecies(data.filter(x => x.Town === t), dateFormat)
       _.sortBy(f.createPeriodArray(speciesByDate), 'Date').forEach((e) => {
-        e.Species.forEach((species) => towns[t].push(banding.commonNameToCode(species['Common Name'])))
+        e.Species.forEach((species) => {
+          // "Dark-eyed Junco (Slate-colored)" and "Red Crossbill (Type 10)" count as DEJU and RECR
+          const code = banding.commonNameToCode(cleanCommonName([species['Common Name']])[0])
+          if (!towns[t].includes(code)) {
+            towns[t].push(code)
+          }
+        })
       })
     })
 
