@@ -1,0 +1,19 @@
+Submission ID,Common Name,Scientific Name,Count,State/Province,County,Location,Latitude,Longitude,Date,Time,Protocol,Duration (Min),All Obs Reported
+S900000001,Black-capped Chickadee,Poecile atricapillus,3,US-VT,Washington,Test Location A,44.2601,-72.5754,2023-12-30,08:00 AM,Stationary,30,1
+S900000001,Blue Jay,Cyanocitta cristata,1,US-VT,Washington,Test Location A,44.2601,-72.5754,2023-12-30,08:00 AM,Stationary,30,1
+S900000002,Black-capped Chickadee,Poecile atricapillus,2,US-VT,Washington,Test Location A,44.2601,-72.5754,2023-12-31,09:00 AM,Stationary,30,1
+S900000002,American Crow,Corvus brachyrhynchos,4,US-VT,Washington,Test Location A,44.2601,-72.5754,2023-12-31,09:00 AM,Stationary,30,1
+S900000002,Downy Woodpecker,Dryobates pubescens,1,US-VT,Washington,Test Location A,44.2601,-72.5754,2023-12-31,09:00 AM,Stationary,30,1
+S900000002,Tufted Titmouse,Baeolophus bicolor,1,US-VT,Washington,Test Location A,44.2601,-72.5754,2023-12-31,09:00 AM,Stationary,30,1
+S900000003,Black-capped Chickadee,Poecile atricapillus,5,US-VT,Washington,Test Location A,44.2601,-72.5754,2024-01-01,10:00 AM,Traveling,60,1
+S900000003,Blue Jay,Cyanocitta cristata,2,US-VT,Washington,Test Location A,44.2601,-72.5754,2024-01-01,10:00 AM,Traveling,60,1
+S900000003,American Crow,Corvus brachyrhynchos,1,US-VT,Washington,Test Location A,44.2601,-72.5754,2024-01-01,10:00 AM,Traveling,60,1
+S900000003,Downy Woodpecker,Dryobates pubescens,1,US-VT,Washington,Test Location A,44.2601,-72.5754,2024-01-01,10:00 AM,Traveling,60,1
+S900000003,White-breasted Nuthatch,Sitta carolinensis,1,US-VT,Washington,Test Location A,44.2601,-72.5754,2024-01-01,10:00 AM,Traveling,60,1
+S900000003,Hairy Woodpecker,Dryobates villosus,1,US-VT,Washington,Test Location A,44.2601,-72.5754,2024-01-01,10:00 AM,Traveling,60,1
+S900000004,Yellow Warbler,Setophaga petechia,2,US-VT,Washington,Test Location A,44.2601,-72.5754,2024-05-15,07:00 AM,Traveling,45,1
+S900000004,Song Sparrow,Melospiza melodia,3,US-VT,Washington,Test Location A,44.2601,-72.5754,2024-05-15,07:00 AM,Traveling,45,1
+S900000005,Common Yellowthroat,Geothlypis trichas,1,US-VT,Washington,Test Location A,44.2601,-72.5754,2024-05-20,06:30 AM,Traveling,45,1
+S900000005,Yellow Warbler,Setophaga petechia,1,US-VT,Washington,Test Location A,44.2601,-72.5754,2024-05-20,06:30 AM,Traveling,45,1
+S900000005,Red-winged Blackbird,Agelaius phoeniceus,6,US-VT,Washington,Test Location A,44.2601,-72.5754,2024-05-20,06:30 AM,Traveling,45,1
+S900000005,chickadee sp.,Poecile sp.,1,US-VT,Washington,Test Location A,44.2601,-72.5754,2024-05-20,06:30 AM,Traveling,45,1
