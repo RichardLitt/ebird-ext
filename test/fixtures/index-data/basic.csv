@@ -1,0 +1,16 @@
+Submission ID,Common Name,Scientific Name,Taxonomic Order,Count,State/Province,County,Location ID,Location,Latitude,Longitude,Date,Time,Protocol,Duration (Min),All Obs Reported
+S900000001,American Robin,Turdus migratorius,24060,3,US-VT,Chittenden,L900001,"Test Park, Burlington",44.4759,-73.2121,2022-05-01,07:00 AM,eBird - Traveling Count,30,1
+S900000001,Black-capped Chickadee,Poecile atricapillus,21000,X,US-VT,Chittenden,L900001,"Test Park, Burlington",44.4759,-73.2121,2022-05-01,07:00 AM,eBird - Traveling Count,30,1
+S900000001,gull sp.,Larinae sp.,5500,5,US-VT,Chittenden,L900001,"Test Park, Burlington",44.4759,-73.2121,2022-05-01,07:00 AM,eBird - Traveling Count,30,1
+S900000001,Mallard,Anas platyrhynchos,300,2,US-VT,Chittenden,L900001,"Test Park, Burlington",44.4759,-73.2121,2022-05-01,07:00 AM,eBird - Traveling Count,30,1
+S900000001,Rock Pigeon (Feral Pigeon),Columba livia (Feral Pigeon),2200,4,US-VT,Chittenden,L900001,"Test Park, Burlington",44.4759,-73.2121,2022-05-01,07:00 AM,eBird - Traveling Count,30,1
+S900000002,American Robin,Turdus migratorius,24060,1,US-VT,Washington,L900002,Test Green,44.2601,-72.5754,2022-05-02,08:15 AM,eBird - Stationary Count,60,1
+S900000002,Blue Jay,Cyanocitta cristata,20000,2,US-VT,Washington,L900002,Test Green,44.2601,-72.5754,2022-05-02,08:15 AM,eBird - Stationary Count,60,1
+S900000002,Brewster's Warbler (hybrid),Vermivora chrysoptera x cyanoptera,30000,1,US-VT,Washington,L900002,Test Green,44.2601,-72.5754,2022-05-02,08:15 AM,eBird - Stationary Count,60,1
+S900000003,American Robin,Turdus migratorius,24060,1,US-VT,Rutland,L900003,Test Lot,43.6106,-72.9726,2023-01-15,,Incidental,,0
+S900000003,Common Raven,Corvus corax,20500,1,US-VT,Rutland,L900003,Test Lot,43.6106,-72.9726,2023-01-15,,Incidental,,0
+S900000003,Alder/Willow Flycatcher (Traill's Flycatcher),Empidonax alnorum/traillii,17000,1,US-VT,Rutland,L900003,Test Lot,43.6106,-72.9726,2023-01-15,,Incidental,,0
+S900000004,American Robin,Turdus migratorius,24060,10,US-NY,New York,L900004,Test Meadow,40.7831,-73.9712,2023-06-10,09:30 AM,eBird - Traveling Count,45,1
+S900000004,House Sparrow,Passer domesticus,32000,20,US-NY,New York,L900004,Test Meadow,40.7831,-73.9712,2023-06-10,09:30 AM,eBird - Traveling Count,45,1
+S900000005,American Robin,Turdus migratorius,24060,1,US-VT,Washington,L900005,Audio-only record,,,2023-07-01,,Incidental,,0
+S900000006,gull sp.,Larinae sp.,5500,50,US-NY,New York,L900004,Test Meadow,40.7831,-73.9712,2023-08-01,10:00 AM,eBird - Stationary Count,20,1
