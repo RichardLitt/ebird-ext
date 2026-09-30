@@ -4,21 +4,24 @@
 // of the area of the Histogram file.
 
 import { promises as fs } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import removeEmptyLines from 'remove-blank-lines'
 
 async function getData (input) {
   let results = {}
   if (fs) {
-    // Yes, this is brittle. I don't expect this format to change soon.
-    input = removeEmptyLines(await fs.readFile(input, 'utf8')).split('\n')
+    // Normalise CRLF first: remove-blank-lines would otherwise strip every "\n".
+    const text = (await fs.readFile(input, 'utf8')).replace(/\r\n/g, '\n')
+    input = removeEmptyLines(text).split('\n').filter(s => s.trim() !== '')
     results.taxa = input.filter(s => s.includes('Number of taxa'))[0].split('\t')[1]
     results.sampleSize = input.filter(s => s.includes('Sample Size'))[0].split('\t').slice(1).filter(x => x !== '')
-    input = input.slice(4,-1).map(species => {
+    // Species rows are everything after the "Sample Size" line.
+    input = input.slice(input.findIndex(s => s.includes('Sample Size')) + 1).map(species => {
       let dict = {}
       let speciesMatch = species.split('\t')[0].match(/(?<species>.*) \(.*>(?<latin>.*)</)
       let speciesName = speciesMatch.groups.species
       let scientificName = speciesMatch.groups.latin
-      let frequency = species.split('\t').slice(1)
+      let frequency = species.split('\t').slice(1).filter(x => x !== '')
       // Basically, remove spuh
       let paraspecial = ['sp.', '/']
       if (!paraspecial.some(s => speciesName.includes(s))) {
@@ -41,7 +44,7 @@ async function getData (input) {
 
 // TODO Is there a way to automatically generate these? As in, download them each morning from eBird?
 async function washingtonCounty2020 () {
-  return await getData('data/ebird_US-VT-023__2020_2020_1_12_barchart.txt')
+  return await getData(fileURLToPath(new URL('./data/ebird_US-VT-023__2020_2020_1_12_barchart.txt', import.meta.url)))
 }
 
 export {
