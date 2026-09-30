@@ -1,0 +1,7 @@
+[
+  { "locId": "L9000001", "name": "Test Pond (Montpelier)", "countryCode": "US", "subnational1Code": "US-VT", "subnational2Code": "US-VT-023", "lat": 44.2601, "lng": -72.5754, "latestObsDt": "2023-07-01 11:42", "numSpeciesAllTime": 58 },
+  { "locId": "L9000002", "name": "Fake Marsh, North End", "countryCode": "US", "subnational1Code": "US-VT", "subnational2Code": "US-VT-023", "lat": 44.2650, "lng": -72.5800, "latestObsDt": "2019-05-16 08:00", "numSpeciesAllTime": 12 },
+  { "locId": "L9000003", "name": "Test Waterfront (Burlington)", "countryCode": "US", "subnational1Code": "US-VT", "subnational2Code": "US-VT-007", "lat": 44.4759, "lng": -73.2121 },
+  { "locId": "L9000004", "name": "Test Park (Rutland)", "countryCode": "US", "subnational1Code": "US-VT", "subnational2Code": "US-VT-021", "lat": 43.6106, "lng": -72.9726, "latestObsDt": "2010-03-13 16:20", "numSpeciesAllTime": 2 },
+  { "locId": "L9000006", "name": "Test Hotspot With No Coordinates", "countryCode": "US", "subnational1Code": "US-VT", "subnational2Code": "US-VT-023" }
+]

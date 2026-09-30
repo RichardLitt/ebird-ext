@@ -1,0 +1,6 @@
+[
+  { "ID": "L9000001", "Country": "US", "State/Province": "US-VT", "Region": "US-VT-023", "Latitude": "44.2601", "Longitude": "-72.5754", "Name": "Test Pond (Montpelier)", "Last visited": "2023-07-01 11:42", "Species": "58" },
+  { "ID": "L9000002", "Country": "US", "State/Province": "US-VT", "Region": "US-VT-023", "Latitude": "44.2650", "Longitude": "-72.5800", "Name": "Fake Marsh, North End", "Last visited": "2019-05-16 08:00", "Species": "12" },
+  { "ID": "L9000004", "Country": "US", "State/Province": "US-VT", "Region": "US-VT-021", "Latitude": "43.6106", "Longitude": "-72.9726", "Name": "Test Park (Rutland)", "Last visited": "2010-03-13 16:20", "Species": "2" },
+  { "ID": "L9000007", "Country": "US", "State/Province": "US-VT", "Region": "US-VT-007", "Latitude": "44.4800", "Longitude": "-73.2100", "Name": "Test Field (Burlington)", "Last visited": "2021-09-10 07:15", "Species": "33" }
+]
