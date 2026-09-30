@@ -10,15 +10,7 @@ import { commonInOrder, scientificInOrder, unknowns } from './fixtures/taxonomic
 // common names ('common', the default; anything other than 'scientific'
 // behaves the same) or scientific names ('scientific').
 //
-// KNOWN BUG: the source reads x['English name'] / x['scientific name'], but
-// the JSON's keys are PRIMARY_COM_NAME / SCI_NAME. Every lookup therefore
-// returns -1, the comparator always returns 0, and the "sort" leaves the list
-// in its input order. See the test.todo entries at the bottom of this file.
-//
-// The tests above the todos only assert behaviour that holds both today and
-// once the key names are fixed: return identity, mutation, handling of
-// empty/odd inputs, stability among unrecognised names, and that input
-// already in taxonomic order stays put.
+// Names not found in the taxonomy sort to the end, keeping their input order.
 
 const fn = taxonomicSort
 
@@ -297,11 +289,49 @@ test('a Set is not accepted (no .sort method)', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Known bugs
+// Taxonomic reordering
 // ---------------------------------------------------------------------------
 
-test.todo('reorders common names into taxonomic order (currently a no-op: source reads x["English name"] but the taxonomy JSON key is PRIMARY_COM_NAME, so every indexOf is -1 and the comparator always returns 0)')
+test('reorders shuffled common names into taxonomic order', () => {
+  const shuffled = [...commonInOrder].reverse()
+  assert.deepEqual(fn(shuffled), commonInOrder)
+})
 
-test.todo('reorders scientific names into taxonomic order with name="scientific" (currently a no-op: source reads x["scientific name"] but the taxonomy JSON key is SCI_NAME)')
+test('reorders an interleaved common-name list', () => {
+  const list = ['House Sparrow', 'Snow Goose', 'Red-tailed Hawk', 'Canada Goose', 'Blue Jay', 'Mallard', 'Cattle Egret']
+  assert.deepEqual(fn(list), commonInOrder)
+})
 
-test.todo('places species missing from the taxonomy at the end, as the source comment claims (indexOf returns -1, so once the key-name bug is fixed unknown species will sort to the FRONT instead)')
+test('reorders shuffled scientific names with name="scientific"', () => {
+  const shuffled = [...scientificInOrder].reverse()
+  assert.deepEqual(fn(shuffled, 'scientific'), scientificInOrder)
+})
+
+test('sorting the same list twice gives the same result', () => {
+  const once = fn([...commonInOrder].reverse())
+  assert.deepEqual(fn([...once]), once)
+})
+
+// ---------------------------------------------------------------------------
+// Unknown species
+// ---------------------------------------------------------------------------
+
+test('species missing from the taxonomy go at the end', () => {
+  const list = ['cheese', 'House Sparrow', 'Dodo', 'Snow Goose']
+  assert.deepEqual(fn(list), ['Snow Goose', 'House Sparrow', 'cheese', 'Dodo'])
+})
+
+test('unknowns keep their relative input order at the end', () => {
+  const list = [unknowns[3], 'Mallard', unknowns[0], unknowns[2], 'Snow Goose', unknowns[1]]
+  assert.deepEqual(fn(list), ['Snow Goose', 'Mallard', unknowns[3], unknowns[0], unknowns[2], unknowns[1]])
+})
+
+test('unknowns go at the end in scientific mode too', () => {
+  const list = ['cheese', 'Passer domesticus', 'Branta canadensis']
+  assert.deepEqual(fn(list, 'scientific'), ['Branta canadensis', 'Passer domesticus', 'cheese'])
+})
+
+test('wrongly-cased names are treated as unknown and go last', () => {
+  const list = ['house sparrow', 'Snow Goose']
+  assert.deepEqual(fn(list), ['Snow Goose', 'house sparrow'])
+})

@@ -24,9 +24,18 @@ import taxonomy from './taxonomies/eBird_Taxonomy_2020_VT.json' with { type: 'js
 
 function taxonomicSort (list, name = 'common') {
   const sortedTaxos = taxonomy.map(x => {
-    return (name === 'scientific') ? x['scientific name'] : x['English name']
+    return (name === 'scientific') ? x.SCI_NAME : x.PRIMARY_COM_NAME
   })
-  return list.sort((a, b) => sortedTaxos.indexOf(a) - sortedTaxos.indexOf(b))
+  // Species not in the taxonomy go at the end, in their original order
+  const rank = x => {
+    const i = sortedTaxos.indexOf(x)
+    return i === -1 ? Infinity : i
+  }
+  return list.sort((a, b) => {
+    const ra = rank(a)
+    const rb = rank(b)
+    return ra === rb ? 0 : ra - rb
+  })
 }
 
 export default taxonomicSort
