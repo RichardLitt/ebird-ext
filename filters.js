@@ -86,7 +86,7 @@ function getPoint (map, coordinates, countyCode) {
         const countyCenters = townCentroids.filter(f => f.properties.county === countyCode);
         const long = coordinates.LONGITUDE || coordinates.Longitude
         const lat = coordinates.LATITUDE || coordinates.Latitude
-        const newCoords = nearestPoint.default(turf.point([long, lat]), turf.featureCollection(countyCenters));
+        const newCoords = nearestPoint(turf.point([long, lat]), turf.featureCollection(countyCenters));
         coordinates = {
             Longitude: newCoords.geometry.coordinates[0],
             Latitude: newCoords.geometry.coordinates[1]
