@@ -1,0 +1,8 @@
+Submission ID,Common Name,Scientific Name,Taxonomic Order,Count,State/Province,County,Location ID,Location,Latitude,Longitude,Date,Time,Protocol,Duration (Min),All Obs Reported,Number of Observers
+S900000001,Black-capped Chickadee,Poecile atricapillus,31000,2,US-VT,Washington,L9000001,Test Pond (Montpelier),44.2601,-72.5754,2023-01-04,08:00 AM,eBird - Stationary Count,30,1,1
+S900000001,American Robin,Turdus migratorius,32000,1,US-VT,Washington,L9000001,Test Pond (Montpelier),44.2601,-72.5754,2023-01-04,08:00 AM,eBird - Stationary Count,30,1,1
+S900000002,Blue Jay,Cyanocitta cristata,30000,3,US-VT,Washington,L9000001,Test Pond (Montpelier),44.2601,-72.5754,2023-03-15,09:00 AM,eBird - Stationary Count,20,1,1
+S900000003,Blue Jay,Cyanocitta cristata,30000,1,US-VT,Washington,L9000001,Test Pond (Montpelier),44.2601,-72.5754,2024-03-13,09:00 AM,eBird - Stationary Count,20,1,1
+S900000004,duck sp.,Anatinae sp.,5000,4,US-VT,Rutland,L9000004,Test Park (Rutland),43.6106,-72.9726,2023-05-10,07:00 AM,eBird - Traveling Count,45,1,1
+S900000005,Common Raven,Corvus corax,29000,1,US-VT,Washington,L9000002,"Fake Marsh, North End",44.2650,-72.5800,2022-06-01,06:30 AM,eBird - Traveling Count,60,1,1
+S900000006,Mallard,Anas platyrhynchos,5100,6,US-VT,Washington,L1234567,Somebody's Backyard (personal location),44.2700,-72.5900,2023-03-16,10:00 AM,eBird - Stationary Count,15,1,1
