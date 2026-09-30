@@ -516,11 +516,17 @@ async function isSpeciesSightingRare (opts) {
     }
   }
 
+  // getTownCentroids returns every centroid when called without a town
+  const townCentroid = opts.town && f.getTownCentroids(opts.town)
+  if (!townCentroid) {
+    throw new Error(`Unknown town: "${opts.town}" is not a Vermont town.`)
+  }
+
   // TODO Add a way to get Breeding Codes
   opts.data = [{
     County: await getCountyForTown(opts.town),
     Date: opts.date,
-    Region: f.pointLookup(vermontRegions, vermontRegions, f.getTownCentroids(opts.town).geometry),
+    Region: f.pointLookup(vermontRegions, vermontRegions, townCentroid.geometry),
     'Scientific Name': species['Scientific Name'],
     Species: species.Species,
     Subspecies: opts.subspecies,
@@ -543,7 +549,7 @@ async function rareAZ (opts) {
   // Use only data from this year
   if (!opts.manual) {
     // console.log(opts)
-    data = f.orderByDate(f.dateFilter(await getData(opts.input), opts), opts).reverse()
+    data = f.orderByDate(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts).reverse()
   } else {
     // This will incorrectly flag as 'Unknown' TODO. OUt of area.
     if (opts.data) {
@@ -753,7 +759,7 @@ async function subspecies (opts) {
   let data = opts.input
   if (fs) {
     const input = await fs.readFile(opts.input, 'utf8')
-    data = Papa.parse(input, { header: true }).data
+    data = Papa.parse(input, { header: true, skipEmptyLines: true }).data
   }
 
   // const dateFormat = helpers.parseDateFormat('day')

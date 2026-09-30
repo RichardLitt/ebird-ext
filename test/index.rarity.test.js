@@ -686,17 +686,33 @@ test('isSpeciesSightingRare resolves a lower-case town, capitalizing only the Lo
   assert.equal(opts.data[0].Location, 'Rutland City')
 })
 
-test('isSpeciesSightingRare currently rejects with a TypeError for a town not in Vermont', async (t) => {
+test('isSpeciesSightingRare rejects with a clear Error naming a town not in Vermont', async (t) => {
   t.mock.method(console, 'log', () => {})
   await assert.rejects(
     isSpeciesSightingRare({ species: 'King Eider', town: 'Atlantis', date: '2024-01-15' }),
-    TypeError
+    (err) => {
+      assert.ok(!(err instanceof TypeError), 'not a TypeError')
+      assert.ok(err instanceof Error)
+      assert.match(err.message, /Atlantis/)
+      assert.match(err.message, /Vermont town/)
+      return true
+    }
   )
 })
 
-test.todo('isSpeciesSightingRare should handle an unknown town gracefully: index.js:523 reads f.getTownCentroids(opts.town).geometry, and getTownCentroids returns undefined for towns not in vt_towns.json, so the call throws "Cannot read properties of undefined (reading \'geometry\')"', async (t) => {
+test('isSpeciesSightingRare rejects with a clear Error when no town is given', async (t) => {
   t.mock.method(console, 'log', () => {})
-  await assert.doesNotReject(isSpeciesSightingRare({ species: 'King Eider', town: 'Atlantis', date: '2024-01-15' }))
+  await assert.rejects(
+    isSpeciesSightingRare({ species: 'King Eider', date: '2024-01-15' }),
+    (err) => !(err instanceof TypeError) && /Unknown town/.test(err.message)
+  )
+})
+
+test('isSpeciesSightingRare does not build opts.data for an unknown town', async (t) => {
+  t.mock.method(console, 'log', () => {})
+  const opts = { species: 'King Eider', town: 'Atlantis', date: '2024-01-15' }
+  await assert.rejects(isSpeciesSightingRare(opts))
+  assert.equal(opts.data, undefined)
 })
 
 // ===========================================================================
@@ -785,7 +801,7 @@ test('rareAZ: classifies every row of the Arizona fixture CSV, newest first', as
   assert.deepEqual(summarize(output), {
     Breeding: ['A900000006', 'A900000003'],
     Arizona: ['A900000002', 'A900000001', 'A900000009'],
-    Unknown: ['A900000008', 'A900000007']
+    Unknown: ['A900000007']
   })
 })
 
@@ -800,10 +816,11 @@ test('rareAZ: opts.year keeps only that year\'s sightings', async (t) => {
   assert.deepEqual(ids(output.Arizona), ['A900000002', 'A900000001'])
 })
 
-test.todo('rareAZ should only consider Arizona sightings: unlike rare(), the CSV path at index.js:546 never applies f.locationFilter, so a Vermont King Eider in the input is reported as an Arizona Unknown', async (t) => {
+test('rareAZ only considers Arizona sightings from the CSV (the Vermont King Eider is dropped)', async (t) => {
   const { output } = await runRareAZ(t, { input: AZ_CSV })
   const all = Object.values(output).flat().map(x => x['Submission ID'])
   assert.ok(!all.includes('A900000008'))
+  assert.ok(Object.values(output).flat().every(x => x.State === 'Arizona'))
 })
 
 test('rareAZ with opts.output writes <output>.json and logs where it wrote', async (t) => {
@@ -980,9 +997,21 @@ test('subspecies: a trailing blank line is ignored when no date filter is given'
   assert.deepEqual(out.allIdentifications, ['Anser caerulescens'])
 })
 
-test.todo('subspecies should accept opts.year on a normal CSV that ends in a newline: index.js:755 parses without skipEmptyLines, so the blank last row reaches f.dateFilter (index.js:759, before locationFilter drops it) and helpers.momentFormat(undefined) throws "Cannot read properties of undefined (reading \'includes\')"', async (t) => {
+test('subspecies accepts opts.year on a normal CSV that ends in a newline', async (t) => {
   const out = await runSubspecies(t, { input: LIFE_CSV, year: 2024 })
   assert.ok(!out.species.includes('Branta bernicla'))
+  assert.ok(out.species.includes('Anser caerulescens'))
+})
+
+test('subspecies: opts.year and opts.after work on a temp CSV with a trailing newline', async (t) => {
+  const { file } = await tmpCsv(t, [
+    { sci: 'Branta bernicla', date: '2023-05-01' },
+    { sci: 'Anser caerulescens', date: '2024-01-01' }
+  ], { trailingNewline: true })
+  const byYear = await runSubspecies(t, { input: file, year: 2024 })
+  assert.deepEqual(byYear.species, ['Anser caerulescens'])
+  const after = await subspecies({ input: file, after: '2023-06-01' })
+  assert.deepEqual(after.species, ['Anser caerulescens'])
 })
 
 test('subspecies: "Anatinae sp." with no dabbling duck seen logs an "Unsure" warning', async (t) => {
