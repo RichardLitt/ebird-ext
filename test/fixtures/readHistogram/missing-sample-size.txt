@@ -1,0 +1,7 @@
+Frequency of observations in the selected location(s).:
+Number of taxa: 	1
+
+	Jan				Feb				Mar				
+
+Snow Goose (<em class="sci">Anser caerulescens</em>)	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	
+

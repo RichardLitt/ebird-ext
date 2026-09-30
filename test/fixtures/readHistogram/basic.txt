@@ -1,0 +1,27 @@
+
+
+
+
+
+
+
+
+
+
+Frequency of observations in the selected location(s).:
+Number of taxa: 	10
+
+	Jan				Feb				Mar				
+Sample Size:	49.0	42.0	71.0	105.0	81.0	86.0	0.0	0.0	
+
+Snow Goose (<em class="sci">Anser caerulescens</em>)	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	
+Canada Goose (<em class="sci">Branta canadensis</em>)	0.0	0.0015	0.2615385	0.3584906	0.3006135	0.3402778	0.0	0.0	
+Cackling/Canada Goose (<em class="sci">Branta hutchinsii/canadensis</em>)	0.0	0.0	0.009434	0.0	0.0	0.0	0.0	0.0	
+Mallard (Domestic type) (<em class="sci">Anas platyrhynchos (Domestic type)</em>)	0.0	0.0	0.0140845	0.0	0.0	0.0	0.0	0.0	
+Mallard x American Black Duck (hybrid) (<em class="sci">Anas platyrhynchos x rubripes</em>)	0.0204082	0.0	0.0	0.0	0.0	0.0	0.0	0.0	
+duck sp. (<em class="sci">Anatinae sp.</em>)	0.0	0.0238095	0.0	0.0	0.0	0.0	0.0	0.0	
+Black-capped Chickadee (<em class="sci">Poecile atricapillus</em>)	0.6326531	0.6190476	0.5774648	0.4761905	0.4691358	0.5	0.0	0.0	
+Downy/Hairy Woodpecker (<em class="sci">Dryobates pubescens/villosus</em>)	0.0	0.0	0.0140845	0.0	0.0	0.0	0.0	0.0	
+American Robin (<em class="sci">Turdus migratorius</em>)	0.0	0.0	0.1126761	0.4380952	0.5061728	0.5465116	0.0	0.0	
+bird sp. (<em class="sci">Aves sp.</em>)	0.0	0.0	0.0	0.0095238	0.0	0.0	0.0	0.0	
+
