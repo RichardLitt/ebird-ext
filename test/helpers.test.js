@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { capitalizeFirstLetters, parseDateFormat, momentFormat, monthAndDay, leapYearDaysInMonth } from '../helpers.js'
+import { capitalizeFirstLetters, parseDateFormat, momentFormat, monthAndDay, leapYearDaysInMonth, skipInvalidDates } from '../helpers.js'
 
 test('capitalizeFirstLetters title-cases lowercase words', () => {
   assert.equal(capitalizeFirstLetters('hello world'), 'Hello World')
@@ -110,4 +110,38 @@ test('leapYearDaysInMonth covers 366 days in total', () => {
   assert.equal(leapYearDaysInMonth(1), 31)
   assert.equal(leapYearDaysInMonth(4), 30)
   assert.equal(leapYearDaysInMonth('12'), 31)
+})
+
+test('skipInvalidDates keeps real dates in either format, in order', (t) => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  const rows = [
+    { 'Submission ID': 'S1', Date: '2024-02-29' },
+    { 'Submission ID': 'S2', Date: '12/31/2022' }
+  ]
+  assert.deepEqual(skipInvalidDates(rows), rows)
+  assert.equal(warn.mock.calls.length, 0)
+})
+
+test('skipInvalidDates drops impossible dates and warns once with count and unique IDs', (t) => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  const rows = [
+    { 'Submission ID': 'S1', Date: '2023-02-29' },
+    { 'Submission ID': 'S1', Date: '2023-02-29' },
+    { 'Submission ID': 'S2', Date: '2023-03-01' },
+    { 'Submission ID': 'S3', Date: '02/30/2023' }
+  ]
+  assert.deepEqual(skipInvalidDates(rows), [rows[2]])
+  assert.equal(warn.mock.calls.length, 1)
+  assert.equal(warn.mock.calls[0].arguments[0], 'Skipping 3 row(s) with an impossible date: S1, S3')
+})
+
+test('skipInvalidDates returns [] for [] without warning', (t) => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  assert.deepEqual(skipInvalidDates([]), [])
+  assert.equal(warn.mock.calls.length, 0)
+})
+
+test('skipInvalidDates still throws on an undelimited date (via momentFormat)', (t) => {
+  t.mock.method(console, 'warn', () => {})
+  assert.throws(() => skipInvalidDates([{ Date: '20240601' }]), /Invalid Date String/)
 })

@@ -44,10 +44,30 @@ function leapYearDaysInMonth (month) {
   return moment([2000, Number(month) - 1]).daysInMonth()
 }
 
+// Drop rows whose Date is not a real calendar date (e.g. 2023-02-29), with
+// one warning giving the number skipped and the first few Submission IDs.
+function skipInvalidDates (data) {
+  const skipped = []
+  const valid = data.filter(e => {
+    if (moment(e.Date, momentFormat(e.Date)).isValid()) {
+      return true
+    }
+    skipped.push(e)
+    return false
+  })
+  if (skipped.length) {
+    const ids = [...new Set(skipped.map(e => e['Submission ID']))]
+    const shown = ids.slice(0, 5).join(', ') + (ids.length > 5 ? ', ...' : '')
+    console.warn(`Skipping ${skipped.length} row(s) with an impossible date: ${shown}`)
+  }
+  return valid
+}
+
 export {
   capitalizeFirstLetters,
   parseDateFormat,
   momentFormat,
   monthAndDay,
-  leapYearDaysInMonth
+  leapYearDaysInMonth,
+  skipInvalidDates
 }

@@ -315,19 +315,92 @@ test('biggestTime("month") includes a leap day in February', async () => {
   assert.equal(result.SpeciesTotal, 2)
 })
 
-test('biggestTime groups an impossible date (Feb 29 in a non-leap year) under "Invalid date"', async () => {
-  // Documents current behavior: moment produces an invalid date and
-  // format() returns the literal string "Invalid date".
+test('biggestTime skips impossible dates (Feb 29 in a non-leap year) instead of forming an "Invalid date" period', async (t) => {
+  t.mock.method(console, 'warn', () => {})
   const file = await csv([
-    row('Wild Turkey', 'Meleagris gallopavo', '2023-02-29'),
-    row('Blue Jay', 'Cyanocitta cristata', '2023-02-30')
+    row('Wild Turkey', 'Meleagris gallopavo', '2023-02-29', { 'Submission ID': 'S1' }),
+    row('Blue Jay', 'Cyanocitta cristata', '2023-02-30', { 'Submission ID': 'S2' }),
+    row('American Crow', 'Corvus brachyrhynchos', '2023-02-30', { 'Submission ID': 'S2' }),
+    row('Snow Bunting', 'Plectrophenax nivalis', '2023-03-01', { 'Submission ID': 'S3' })
   ])
   const result = await biggestTime('day', { input: file })
-  assert.equal(result.Date, 'Invalid date')
-  assert.equal(result.SpeciesTotal, 2)
+  assert.equal(result.Date, '2023-03-01')
+  assert.equal(result.SpeciesTotal, 1)
 })
 
-test.todo('biggestTime/firstTimes should reject or skip impossible calendar dates (e.g. 2023-02-29) instead of silently pooling them into an "Invalid date" period (index.js:98, index.js:117)')
+test('biggestTime warns once with the skipped count and Submission IDs', async (t) => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  const file = await csv([
+    row('Wild Turkey', 'Meleagris gallopavo', '2023-02-29', { 'Submission ID': 'S1' }),
+    row('Blue Jay', 'Cyanocitta cristata', '2023-02-30', { 'Submission ID': 'S2' }),
+    row('American Crow', 'Corvus brachyrhynchos', '2023-02-30', { 'Submission ID': 'S2' }),
+    row('Snow Bunting', 'Plectrophenax nivalis', '2023-03-01', { 'Submission ID': 'S3' })
+  ])
+  await biggestTime('day', { input: file })
+  assert.equal(warn.mock.calls.length, 1)
+  const msg = warn.mock.calls[0].arguments[0]
+  assert.match(msg, /\b3 row/)
+  assert.match(msg, /S1, S2/)
+  assert.ok(!msg.includes('S3'))
+})
+
+test('biggestTime lists at most five Submission IDs in the warning', async (t) => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  const rows = Array.from({ length: 7 }, (_, i) =>
+    row('Wild Turkey', 'Meleagris gallopavo', '2023-02-29', { 'Submission ID': `S${i + 1}` }))
+  rows.push(row('Snow Bunting', 'Plectrophenax nivalis', '2023-03-01', { 'Submission ID': 'S99' }))
+  await biggestTime('day', { input: await csv(rows) })
+  const msg = warn.mock.calls[0].arguments[0]
+  assert.match(msg, /\b7 row/)
+  assert.match(msg, /S1, S2, S3, S4, S5, \.\.\./)
+  assert.ok(!msg.includes('S6'))
+})
+
+test('biggestTime does not warn when every date is valid', async (t) => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  await biggestTime('day', { input: BASIC })
+  assert.equal(warn.mock.calls.length, 0)
+})
+
+test('biggestTime skips impossible dates for month and year periods too', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const file = await csv([
+    row('Wild Turkey', 'Meleagris gallopavo', '2023-02-29'),
+    row('Blue Jay', 'Cyanocitta cristata', '2023-04-31'),
+    row('Snow Bunting', 'Plectrophenax nivalis', '2023-03-01')
+  ])
+  for (const timespan of ['month', 'year']) {
+    const result = await biggestTime(timespan, { input: file })
+    assert.notEqual(result.Date, 'Invalid date')
+    assert.equal(result.SpeciesTotal, 1)
+  }
+})
+
+test('firstTimes skips impossible dates and warns once', async (t) => {
+  const warn = t.mock.method(console, 'warn', () => {})
+  const file = await csv([
+    row('Wild Turkey', 'Meleagris gallopavo', '2023-02-29', { 'Submission ID': 'S1' }),
+    row('Blue Jay', 'Cyanocitta cristata', '2023-02-29', { 'Submission ID': 'S1' }),
+    row('Snow Bunting', 'Plectrophenax nivalis', '2023-03-01', { 'Submission ID': 'S2' })
+  ])
+  const result = await firstTimes('day', { input: file })
+  assert.equal(result.Date, '2023-03-01')
+  assert.deepEqual(result.Species.map(x => x['Common Name']), ['Snow Bunting'])
+  assert.equal(warn.mock.calls.length, 1)
+  assert.match(warn.mock.calls[0].arguments[0], /\b2 row.*S1/)
+})
+
+test('firstTimes does not let an impossible date claim a species first seen later', async (t) => {
+  t.mock.method(console, 'warn', () => {})
+  const file = await csv([
+    row('Wild Turkey', 'Meleagris gallopavo', '2023-02-29'),
+    row('Wild Turkey', 'Meleagris gallopavo', '2023-05-01'),
+    row('Blue Jay', 'Cyanocitta cristata', '2023-05-01')
+  ])
+  const result = await firstTimes('day', { input: file })
+  assert.equal(result.Date, '2023-05-01')
+  assert.equal(result.SpeciesTotal, 2)
+})
 
 // ===========================================================================
 // biggestTime -- ties

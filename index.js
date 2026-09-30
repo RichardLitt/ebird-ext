@@ -75,7 +75,7 @@ async function getData (input, opts = {}) {
 
 async function biggestTime (timespan, opts) {
   const dateFormat = helpers.parseDateFormat(timespan)
-  const data = await getData(opts.input)
+  const data = helpers.skipInvalidDates(await getData(opts.input))
   const dataByDate = {}
 
   // Sort by the amount of unique entries per day
@@ -93,7 +93,7 @@ async function biggestTime (timespan, opts) {
 
 async function firstTimes (timespan, opts) {
   const dateFormat = helpers.parseDateFormat(timespan)
-  const data = f.orderByDate(await getData(opts.input)) // Sort by the date, instead
+  const data = f.orderByDate(helpers.skipInvalidDates(await getData(opts.input))) // Sort by the date, instead
   const dataByDate = {}
   const speciesIndex = {}
 
