@@ -114,25 +114,6 @@ async function firstTimes (timespan, opts) {
   return f.createPeriodArray(dataByDate)[0]
 }
 
-async function firstTimeList (opts) {
-  // TODO Fix
-  // const dateFormat = helpers.parseDateFormat('day')
-  // const data = f.orderByDate(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts))
-  // const dataByDate = {}
-  // const speciesIndex = {}
-  //
-  // data = countUniqueSpecies(data)
-  //
-  // let i = 1
-  // // TODO Doesn't work for MyEBirdData for some reason
-  // _.sortBy(f.createPeriodArray(dataByDate), 'Date').forEach((e) => {
-  //   e.Species.forEach((specie) => {
-  //     console.log(`${i} | ${specie['Common Name']} - ${specie['Scientific Name']} | ${(specie.County) ? specie.County + ', ' : ''}${specie['State/Province']} | ${e.Date}`)
-  //     i++
-  //   })
-  // })
-}
-
 // Sort by the amount of unique entries per day
 function countUniqueSpecies (data, dateFormat) {
   const speciesIndex = {}
@@ -1011,7 +992,6 @@ async function daylistTargets (opts) {
 
 export {
   biggestTime,
-  firstTimeList,
   firstTimes,
   quadBirds,
   radialSearch,
@@ -1039,7 +1019,6 @@ export {
 
 export default {
   biggestTime,
-  firstTimeList,
   firstTimes,
   quadBirds,
   radialSearch,

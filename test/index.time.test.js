@@ -5,10 +5,10 @@ import path from 'node:path'
 import { promises as fs } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import Papa from 'papaparse'
+import * as index from '../index.js'
 import {
   biggestTime,
   firstTimes,
-  firstTimeList,
   daylistTargets
 } from '../index.js'
 
@@ -18,7 +18,6 @@ import {
 //                                   most unique species
 //   firstTimes(timespan, opts)   -> the period in which the most species were
 //                                   seen for the first time ("lifers")
-//   firstTimeList(opts)          -> currently a stub (body commented out)
 //   daylistTargets(opts)         -> with opts.today, logs every Vermont
 //                                   species previously recorded on today's
 //                                   calendar date (month + day, any year)
@@ -713,24 +712,13 @@ test('firstTimes rejects with ENOENT for a missing input file', async () => {
 })
 
 // ===========================================================================
-// firstTimeList -- currently a stub
+// firstTimeList -- removed
 // ===========================================================================
 
-test('firstTimeList resolves to undefined', async () => {
-  assert.equal(await firstTimeList({ input: BASIC }), undefined)
+test('firstTimeList is no longer exported (it was an empty stub)', () => {
+  assert.ok(!('firstTimeList' in index))
+  assert.ok(!('firstTimeList' in index.default))
 })
-
-test('firstTimeList does not read the input (a missing file does not reject)', async () => {
-  assert.equal(await firstTimeList({ input: path.join(tmpDir, 'nope.csv') }), undefined)
-})
-
-test('firstTimeList prints nothing', async (t) => {
-  t.mock.method(console, 'log', () => {})
-  await firstTimeList({ input: BASIC })
-  assert.equal(console.log.mock.calls.length, 0)
-})
-
-test.todo('firstTimeList is a stub: its whole body is commented out ("TODO Fix"), so it never lists first sightings (index.js:132-149)')
 
 // ===========================================================================
 // daylistTargets
