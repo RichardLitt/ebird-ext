@@ -5,6 +5,8 @@ export default [
     ignores: [
       'node_modules/**',
       'coverage/**',
+      // Claude Code agent worktrees
+      '.claude/**',
       // One-off data scripts: untested, not maintained to this standard
       'montpelier.js',
       'shimeBirdData/**',

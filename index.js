@@ -644,7 +644,6 @@ async function rare (opts) {
   const output = {
     Breeding: [],
     Vermont: [],
-    Burlington: [],
     Champlain: [],
     NEK: [],
     Unknown: [],
@@ -693,13 +692,6 @@ async function rare (opts) {
       } else if (recordEntry.Reporting === 'V') {
         // Anyhwere in Vermont
         output.Vermont.push(e)
-      } else if (recordEntry.Reporting === 'B') {
-        // Outside of Burlington
-        // Upper case, to match the geojson town names that locationFilter sets
-        const towns = ['BURLINGTON', 'SOUTH BURLINGTON', 'ESSEX', 'COLCHESTER', 'WINOOSKI', 'SHELBURNE']
-        if (!towns.includes((e.Town || '').toUpperCase())) {
-          output.Burlington.push(e)
-        }
       } else if (recordEntry.Reporting === 'C') {
         // Outside of Lake Champlain Basin
         if (e.Region !== 'Champlain Valley') {
@@ -741,7 +733,6 @@ const RARITY_CATEGORIES = {
   Unknown: 'Vermont Firsts (not on the VBRC checklist)',
   Vermont: 'Vermont Records (report anywhere in Vermont)',
   Breeding: 'Nesting Records (breeding code used)',
-  Burlington: 'Outside of Burlington',
   Champlain: 'Outside of the Champlain Valley',
   NEK: 'Outside of the NEK',
   OutsideExpectedDates: 'Outside of expected dates',
