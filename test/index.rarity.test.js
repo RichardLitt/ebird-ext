@@ -42,7 +42,7 @@ const VT_CSV = path.join(fixtureDir, 'vermont.csv')
 const AZ_CSV = path.join(fixtureDir, 'arizona.csv')
 const LIFE_CSV = path.join(fixtureDir, 'lifelist.csv')
 
-const BUCKETS = ['Breeding', 'Vermont', 'Burlington', 'Champlain', 'NEK', 'Unknown', 'Subspecies', 'OutsideExpectedDates']
+const BUCKETS = ['Breeding', 'Vermont', 'Champlain', 'NEK', 'Unknown', 'Subspecies', 'OutsideExpectedDates']
 const AZ_BUCKETS = ['Breeding', 'Arizona', 'Unknown', 'Subspecies']
 
 // Build a sighting in the shape isSpeciesSightingRare hands to rare().
@@ -383,47 +383,36 @@ test('rare: Scientific Name matching is exact (a trinomial is not the species)',
 })
 
 // ---------------------------------------------------------------------------
-// Reporting 'B': outside the Burlington area
-// ---------------------------------------------------------------------------
-
-test('rare: no bundled record uses Reporting "B", so the Burlington bucket is always empty today', async () => {
-  assert.equal(VermontRecords.filter(r => r.Reporting === 'B').length, 0)
-  const entries = VermontRecords.slice(0, 50).map(r => sighting({ 'Scientific Name': r['Scientific Name'], Town: 'Montpelier' }))
-  const out = await rareManual(...entries)
-  assert.equal(out.Burlington.length, 0)
-})
-
-// No bundled record uses 'B', so temporarily give King Eider (normally 'V',
-// no occurrence limit) Reporting 'B' for these tests.
-function withReportingB (t) {
-  const record = VermontRecords.find(r => r['Scientific Name'] === 'Somateria spectabilis')
-  const original = record.Reporting
-  record.Reporting = 'B'
-  t.after(() => { record.Reporting = original })
-}
-
-test('rare: a "B" species from a CSV is not flagged inside the Burlington area (upper-case Town)', async (t) => {
-  withReportingB(t)
-  const { file } = await tmpCsv(t, [
-    { id: 'T1', sci: 'Somateria spectabilis' },
-    { id: 'T2', sci: 'Somateria spectabilis', county: 'Washington', lat: '44.2601', lon: '-72.5754' }
-  ])
-  const out = await rare({ input: file })
-  assert.deepEqual(summarize(out), { Burlington: ['T2'] })
-  assert.equal(out.Burlington[0].Town, 'MONTPELIER')
-})
-
-test('rare: the "B" town check ignores case for manual entries too', async (t) => {
-  withReportingB(t)
-  const inside = ['Burlington', 'south burlington', 'WINOOSKI'].map(Town => sighting({ 'Scientific Name': 'Somateria spectabilis', Town }))
-  const outside = sighting({ 'Scientific Name': 'Somateria spectabilis', Town: 'Montpelier' })
-  const out = await rareManual(...inside, outside)
-  assert.deepEqual(out.Burlington, [outside])
-})
-
-// ---------------------------------------------------------------------------
 // Subspecies
 // ---------------------------------------------------------------------------
+
+test('vermont_records_subspecies.json: every entry is a species on the VBRC list, with list-valued subspecies', () => {
+  const onList = new Set(VermontRecords.map(r => r['Scientific Name']))
+  for (const entry of VermontSubspecies) {
+    assert.ok(onList.has(entry['Scientific Name']), `${entry['Scientific Name']} is not on the VBRC list`)
+    assert.ok(Array.isArray(entry['Target Subspecies']), `${entry.Species} Target Subspecies`)
+    assert.ok(Array.isArray(entry['Vermont Subspecies']), `${entry.Species} Vermont Subspecies`)
+    assert.equal(typeof entry.Species, 'string')
+  }
+})
+
+test('rare: redpoll forms after the Common/Hoary lump', async () => {
+  const form = Subspecies => sighting({ 'Scientific Name': 'Acanthis flammea', Subspecies })
+  const hornemanni = form('Acanthis flammea hornemanni')
+  const greenland = form('Acanthis flammea rostrata/islandica')
+  const lesser = form('Acanthis flammea cabaret')
+  const hoary = form('Acanthis flammea hornemanni/exilipes')
+  const exilipes = form('Acanthis flammea exilipes')
+  const common = form('Acanthis flammea flammea')
+  const out = await rareManual(hornemanni, greenland, lesser, hoary, exilipes, common)
+  assert.deepEqual(out.Subspecies, [hornemanni, greenland, lesser])
+})
+
+test('rare: Eurasian Whimbrel (now its own species) is a Vermont first, not a subspecies', async () => {
+  const e = sighting({ 'Scientific Name': 'Numenius phaeopus', Subspecies: 'Numenius phaeopus phaeopus' })
+  const out = await rareManual(e)
+  assert.deepEqual(bucketsOf(out, e), ['Unknown'])
+})
 
 test('rare: a target subspecies (Red-tailed Hawk abieticola) goes to Subspecies', async () => {
   const e = sighting({ 'Scientific Name': 'Buteo jamaicensis', Subspecies: 'Buteo jamaicensis abieticola' })
