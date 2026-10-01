@@ -176,7 +176,7 @@ test('csvToJsonHotspots prepends the eBird API header so records have named keys
   await csvToJsonHotspots({ input: fixture('hotspots-api.csv') })
   const [first] = await readSandboxJson('data/hotspots.json')
   assert.deepEqual(Object.keys(first), [
-    'ID', 'Country', 'State/Province', 'Region', 'Latitude', 'Longitude', 'Name', 'Last visited', 'Species'
+    'ID', 'Country', 'State/Province', 'Region', 'Latitude', 'Longitude', 'Name', 'Last visited', 'Species', 'Checklists'
   ])
 })
 
@@ -193,8 +193,31 @@ test('csvToJsonHotspots keeps every value as a string (no dynamic typing)', asyn
     Longitude: '-72.5754',
     Name: 'Test Pond (Montpelier)',
     'Last visited': '2023-07-01 11:42',
-    Species: '58'
+    Species: '58',
+    Checklists: ''
   })
+})
+
+test('csvToJsonHotspots reads the current API format (Checklists column, bare never-visited rows)', async () => {
+  await sandbox()
+  await csvToJsonHotspots({ input: fixture('hotspots-api-current.csv') })
+  const data = await readSandboxJson('data/hotspots.json')
+  assert.equal(data.length, 3)
+  assert.equal(data[0].Checklists, '15')
+  assert.equal(data[1].Name, 'Fake Marsh, North End')
+  assert.deepEqual(data[2], {
+    ID: 'L9000003',
+    Country: 'US',
+    'State/Province': 'US-VT',
+    Region: 'US-VT-007',
+    Latitude: '44.4759',
+    Longitude: '-73.2121',
+    Name: 'Test Waterfront (Burlington)',
+    'Last visited': '',
+    Species: '',
+    Checklists: ''
+  })
+  assert.deepEqual((await readSandboxJson('data/novisits-hotspots.json')).map(x => x.ID), ['L9000003'])
 })
 
 test('csvToJsonHotspots parses quoted names containing commas', async () => {

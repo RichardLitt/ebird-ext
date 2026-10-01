@@ -14,18 +14,25 @@ import * as f from './filters.js'
 // git diff -U0 data/hotspotsList.md
 // git add data
 
+// Columns of https://api.ebird.org/v2/ref/hotspot/US-VT (CSV, no header row).
+// Checklists was added to the API around 2024; older downloads stop at Species.
+const HOTSPOT_COLUMNS = ['ID', 'Country', 'State/Province', 'Region', 'Latitude', 'Longitude', 'Name', 'Last visited', 'Species', 'Checklists']
+
 async function csvToJsonHotspots (opts) {
-  let input
-  if (fs) {
-    input = await fs.readFile(opts.input, 'utf8')
-    input = input.split(/\r?\n/)
-    input.unshift('ID,Country,State/Province,Region,Latitude,Longitude,Name,Last visited,Species')
-    input = input.join('\n').trim()
-    input = Papa.parse(input, { header: true })
-  }
-  await fs.writeFile('data/hotspots.json', JSON.stringify(input.data))
-  await fs.writeFile('data/novisits-hotspots.json', JSON.stringify(input.data.filter(x => !x['Last visited'])))
-  const list = input.data.map(x => x.Name).join('\n')
+  let input = await fs.readFile(opts.input, 'utf8')
+  input = input.split(/\r?\n/)
+  input.unshift(HOTSPOT_COLUMNS.join(','))
+  input = input.join('\n').trim()
+  // Never-visited hotspots come with no trailing fields at all; give every
+  // record every column (empty when missing) so they all look alike
+  const data = Papa.parse(input, { header: true }).data.map(row => {
+    const record = {}
+    HOTSPOT_COLUMNS.forEach(column => { record[column] = row[column] ?? '' })
+    return record
+  })
+  await fs.writeFile('data/hotspots.json', JSON.stringify(data))
+  await fs.writeFile('data/novisits-hotspots.json', JSON.stringify(data.filter(x => !x['Last visited'])))
+  const list = data.map(x => x.Name).join('\n')
   await fs.writeFile('data/hotspotsList.md', list)
 }
 
