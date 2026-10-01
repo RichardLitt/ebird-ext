@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import Papa from 'papaparse'
 import { isEBDHeader, isEBDRows, fromEBDRow, fromEBD, collapseSharedChecklists, parseEBD, EBD_PARSE_OPTIONS } from '../ebd.js'
-import { getData, rare, rareReport } from '../index.js'
+import { getData, rare, rareReport, rareByCounty, rareSlackReport } from '../index.js'
 
 // eBird Basic Dataset files are named ebd_*.txt, which .gitignore keeps out of
 // the repo (they hold other people's records). So the fake file is built here
@@ -213,7 +213,7 @@ test('rare on an EBD file honours the county and year filters', async () => {
 test('rareReport prints a heading per non-empty bucket and one line per record', async () => {
   const lines = rareReport(await rare({ input: ebdFile, county: 'Addison', year: '2026' }))
   const goose = lines.find(l => l.includes('Barnacle Goose'))
-  assert.match(goose, /^ {2}2026-03-10 \| Barnacle Goose \| Test Marsh, Middlebury, Addison \| obsr1 \| https:\/\/ebird\.org\/checklist\/S1$/)
+  assert.match(goose, /^ {2}2026-03-10 \| Barnacle Goose \| Test Marsh, Middlebury, Addison \| https:\/\/ebird\.org\/checklist\/S1$/)
   assert.ok(lines.includes('Subspecies (1)'))
   assert.ok(lines.some(l => l.includes('[Buteo jamaicensis abieticola]')))
   assert.ok(!lines.some(l => /\(0\)$/.test(l)))
@@ -229,4 +229,91 @@ test('rareReport shows the breeding code in the nesting bucket', () => {
 
 test('rareReport says so when there is nothing to report', () => {
   assert.deepEqual(rareReport({ Vermont: [], Unknown: [] }), ['No records to report to the VBRC.'])
+})
+
+// ===========================================================================
+// rareSlackReport
+// ===========================================================================
+
+test('rareSlackReport groups records by county, alphabetically, with checklist links', async () => {
+  const lines = rareSlackReport(await rare({ input: ebdFile, year: '2026' }), { year: '2026' })
+  assert.deepEqual(lines, [
+    '*VBRC reportable records, Vermont, 2026: 3 records*',
+    '',
+    '*Addison County* (2)',
+    '• Barnacle Goose · Test Marsh, Middlebury · 2026-03-10 · VBRC review species · https://ebird.org/checklist/S1',
+    '• Red-tailed Hawk (abieticola) · Test Marsh, Middlebury · 2026-03-10 · subspecies · https://ebird.org/checklist/S3',
+    '',
+    '*Chittenden County* (1)',
+    '• Barnacle Goose · Test Waterfront, Burlington · 2026-03-10 · VBRC review species · https://ebird.org/checklist/S5'
+  ])
+})
+
+test('rareSlackReport names the county in the heading when filtered to one', async () => {
+  const lines = rareSlackReport(await rare({ input: ebdFile, county: 'Addison', year: '2026' }), { county: 'Addison', year: '2026' })
+  assert.equal(lines[0], '*VBRC reportable records, Addison County, 2026: 2 records*')
+  assert.ok(!lines.some(l => l.includes('Chittenden')))
+})
+
+test('rareSlackReport lists a record in several buckets once, with every reason', () => {
+  const e = { Date: '2026-06-01', 'Common Name': 'Test Bird', 'Scientific Name': 'Testus testus', County: 'Addison', 'Breeding Code': 'NY', 'Submission ID': 'S9' }
+  const lines = rareSlackReport({ Breeding: [e], OutsideExpectedDates: [e] })
+  assert.equal(lines[3], '• Test Bird · 2026-06-01 · nesting: NY, outside expected dates · https://ebird.org/checklist/S9')
+})
+
+test('rareByCounty files records without a county under Unknown, last', () => {
+  const groups = rareByCounty({ Vermont: [{ 'Submission ID': 'S1', 'Scientific Name': 'a' }, { 'Submission ID': 'S3', 'Scientific Name': 'a', County: 'Addison' }, { 'Submission ID': 'S2', 'Scientific Name': 'a', County: 'Windsor' }] })
+  assert.deepEqual(groups.map(g => g.county), ['Addison', 'Windsor', 'Unknown'])
+})
+
+test('rareSlackReport says so when there is nothing to report', () => {
+  assert.deepEqual(rareSlackReport({ Vermont: [] }, { year: '2026' }), ['No records to report to the VBRC (Vermont, 2026).'])
+})
+
+// ===========================================================================
+// Several files, unreviewed records, and records edited late
+// ===========================================================================
+
+// Like the _unvetted.txt file in an EBD download: records no reviewer has approved
+const UNVETTED_ROWS = [
+  ebdRow({ 'COMMON NAME': 'Barnacle Goose', 'SCIENTIFIC NAME': 'Branta leucopsis', 'SAMPLING EVENT IDENTIFIER': 'S20', 'OBSERVATION DATE': '2026-04-01', 'LAST EDITED DATE': '2026-04-01 10:00:00', APPROVED: '0' }),
+  // Seen in 2019 but last edited in 2026: an old checklist uploaded late
+  ebdRow({ 'COMMON NAME': 'Barnacle Goose', 'SCIENTIFIC NAME': 'Branta leucopsis', 'SAMPLING EVENT IDENTIFIER': 'S21', 'OBSERVATION DATE': '2019-05-04', 'LAST EDITED DATE': '2026-02-11 09:30:00', APPROVED: '0' }),
+  // Seen in 2019, last edited in 2020: not this year's business
+  ebdRow({ 'COMMON NAME': 'Barnacle Goose', 'SCIENTIFIC NAME': 'Branta leucopsis', 'SAMPLING EVENT IDENTIFIER': 'S22', 'OBSERVATION DATE': '2019-05-04', 'LAST EDITED DATE': '2020-01-01 09:30:00' }),
+  // A common species in its expected dates, which rare() never reports
+  ebdRow({ 'COMMON NAME': 'Canada Goose', 'SCIENTIFIC NAME': 'Branta canadensis', 'SAMPLING EVENT IDENTIFIER': 'S23', 'OBSERVATION DATE': '2026-04-01', APPROVED: '0' })
+]
+
+const twoFiles = async () => {
+  const unvetted = path.join(dir, 'ebd_US-VT_202601_202612_unv_relSep-2026_unvetted.txt')
+  await fs.writeFile(unvetted, toEBDText(UNVETTED_ROWS), 'utf8')
+  return `${ebdFile},${unvetted}`
+}
+
+test('getData reads several comma-separated files', async () => {
+  const ids = (await getData(await twoFiles())).map(r => r['Submission ID'])
+  assert.ok(ids.includes('S1'))
+  assert.ok(ids.includes('S20'))
+})
+
+test('getData keep drops rows as an EBD file is read', async () => {
+  const rows = await getData(ebdFile, { keep: r => r['Submission ID'] === 'S3' })
+  assert.deepEqual(rows.map(r => r['Submission ID']), ['S3'])
+})
+
+test('rare with a year keeps earlier sightings last edited that year, and marks them', async () => {
+  const out = await rare({ input: await twoFiles(), county: 'Addison', year: '2026' })
+  const ids = out.Vermont.map(r => r['Submission ID'])
+  assert.ok(ids.includes('S21'))
+  assert.ok(!ids.includes('S22'))
+  assert.equal(out.Vermont.find(r => r['Submission ID'] === 'S21')['Edited Late'], true)
+  assert.equal(out.Vermont.find(r => r['Submission ID'] === 'S20')['Edited Late'], undefined)
+})
+
+test('rareSlackReport marks unreviewed and late-edited records', async () => {
+  const lines = rareSlackReport(await rare({ input: await twoFiles(), county: 'Addison', year: '2026' }), { county: 'Addison', year: '2026' })
+  assert.equal(lines[0], '*VBRC reportable records, Addison County, 2026: 4 records, 2 unreviewed, 1 from earlier years, edited in 2026*')
+  assert.ok(lines.includes('• Barnacle Goose · Test Marsh, Middlebury · 2019-05-04 · VBRC review species · unreviewed · last edited 2026-02-11 · https://ebird.org/checklist/S21'))
+  assert.ok(lines.includes('• Barnacle Goose · Test Marsh, Middlebury · 2026-04-01 · VBRC review species · unreviewed · https://ebird.org/checklist/S20'))
 })

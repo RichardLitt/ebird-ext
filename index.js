@@ -6,7 +6,7 @@ import CountyBarcharts from './data/countyBarcharts.json' with { type: 'json' }
 import VermontSubspecies from './data/vermont_records_subspecies.json' with { type: 'json' }
 import GeoJsonGeometriesLookup from 'geojson-geometries-lookup'
 const vermontRegions = new GeoJsonGeometriesLookup(vermontRegionsRaw)
-import { promises as fs } from 'node:fs'
+import { promises as fs, createReadStream } from 'node:fs'
 import _ from 'lodash'
 import Papa from 'papaparse'
 import moment from 'moment'
@@ -60,7 +60,47 @@ function cleanCommonName (arr) {
 // input is a path to a "My eBird Data" CSV, or already-parsed rows.
 // Spuhs, slashes and hybrids are removed unless opts.keepSpuh is set: callers
 // counting checklists, visits or individuals need them, species counts don't.
+// Read the first bytes of a file: enough to see its header line
+async function readHead (file) {
+  const handle = await fs.open(file)
+  try {
+    const { buffer, bytesRead } = await handle.read(Buffer.alloc(4096), 0, 4096, 0)
+    return buffer.toString('utf8', 0, bytesRead)
+  } finally {
+    await handle.close()
+  }
+}
+
+// Stream an EBD file a row at a time: a statewide download is hundreds of MB,
+// too big to hold whole. opts.keep can drop rows as they are read.
+function readEBDFile (file, opts) {
+  return new Promise((resolve, reject) => {
+    const rows = []
+    Papa.parse(createReadStream(file, 'utf8'), {
+      ...ebd.EBD_PARSE_OPTIONS,
+      step: ({ data }) => {
+        if (!ebd.isEBDRows([data])) return
+        const row = ebd.fromEBDRow(data)
+        if (!opts.keepSpuh && f.removeSpuh([row]).length === 0) return
+        if (opts.keep && !opts.keep(row)) return
+        rows.push(row)
+      },
+      complete: () => resolve(ebd.collapseSharedChecklists(rows)),
+      error: reject
+    })
+  })
+}
+
+// input is a file path (MyEBirdData.csv or an EBD ebd_*.txt), several paths
+// separated by commas (say, an EBD download and its _unvetted.txt file), or
+// rows already parsed. opts.keep, if given, filters the rows.
 async function getData (input, opts = {}) {
+  if (typeof input === 'string' && input.includes(',')) {
+    return (await Promise.all(input.split(',').map(file => getData(file, opts)))).flat()
+  }
+  if (typeof input === 'string' && ebd.isEBDHeader(await readHead(input))) {
+    return readEBDFile(input, opts)
+  }
   let data = input
   if (typeof input === 'string') {
     // Strip a UTF-8 BOM (spreadsheet-resaved exports have one), or Papa keeps
@@ -74,7 +114,8 @@ async function getData (input, opts = {}) {
   if (ebd.isEBDRows(data)) {
     data = ebd.fromEBD(data)
   }
-  return opts.keepSpuh ? data : f.removeSpuh(data)
+  data = opts.keepSpuh ? data : f.removeSpuh(data)
+  return opts.keep ? data.filter(opts.keep) : data
 }
 
 async function biggestTime (timespan, opts) {
@@ -557,40 +598,13 @@ async function rareAZ (opts) {
     Unknown: [],
     Subspecies: []
   }
-  // We need both the single letter and the full-text;
-  // the eBird downloaded database only has single, but MyEbirdData has the full string.
-  // Alternatively, we should convert them when importing, but there're space issues.
-  const ignoredBreedingCodes = [
-    'S Singing Bird',
-    'S',
-    'H In Appropriate Habitat',
-    'H',
-    'F Flyover',
-    'F',
-    'S7 Singing Bird Present 7+ Days (Probable)',
-    'S7',
-    'M Multiple (7+) Singing Birds (Probable)',
-    'M',
-    'P Pair in Suitable Habitat (Probable)',
-    'P',
-    'T Territorial Defense (Probable)',
-    'T',
-    'C Courtship, Display or Copulation (Probable)',
-    'C',
-    'N Visiting Probable Nest Site (Probable)',
-    'N',
-    'A Agitated Behavior (Probable)',
-    'A',
-    'B Wren/Woodpecker Nest Building (Probable)',
-    'B'
-  ]
 
   data.forEach(e => {
     const species = e['Scientific Name']
     if (speciesToReport.includes(species)) {
       const recordEntry = ArizonaRecords.find(x => x['Scientific Name'] === species)
       // This checks if there is a breeding code but this species hasn't been confirmed breeding before.
-      if (recordEntry.Breeding !== 'n' && e['Breeding Code'] && !ignoredBreedingCodes.includes(e['Breeding Code'])) {
+      if (recordEntry.Breeding !== 'n' && e['Breeding Code'] && !IGNORED_BREEDING_CODES.includes(e['Breeding Code'])) {
         output.Breeding.push(e)
       } else if (recordEntry.Reporting === 'V') {
         // Anyhwere in Vermont
@@ -616,12 +630,70 @@ async function rareAZ (opts) {
   return output
 }
 
+// We need both the single letter and the full-text;
+// the eBird downloaded database only has single, but MyEbirdData has the full string.
+// Alternatively, we should convert them when importing, but there're space issues.
+const IGNORED_BREEDING_CODES = [
+  'S Singing Bird',
+  'S',
+  'H In Appropriate Habitat',
+  'H',
+  'F Flyover',
+  'F',
+  'S7 Singing Bird Present 7+ Days (Probable)',
+  'S7',
+  'M Multiple (7+) Singing Birds (Probable)',
+  'M',
+  'P Pair in Suitable Habitat (Probable)',
+  'P',
+  'T Territorial Defense (Probable)',
+  'T',
+  'C Courtship, Display or Copulation (Probable)',
+  'C',
+  'N Visiting Probable Nest Site (Probable)',
+  'N',
+  'A Agitated Behavior (Probable)',
+  'A',
+  'B Wren/Woodpecker Nest Building (Probable)',
+  'B'
+]
+
+// Whether rare() could flag this record, judged before the slow town and region
+// lookups. Only rules out a species the VBRC never asks about, seen inside its
+// expected dates, with no nesting code and no reportable subspecies.
+const expectedDatesCache = new Map()
+const VermontRecordsByName = new Map(VermontRecords.map(x => [x['Scientific Name'], x]))
+function couldBeRare (e) {
+  const recordEntry = VermontRecordsByName.get(e['Scientific Name'])
+  if (!recordEntry || ['V', 'C', 'K'].includes(recordEntry.Reporting)) return true
+  if (e['Breeding Code'] && !IGNORED_BREEDING_CODES.includes(e['Breeding Code'])) return true
+  if (e.Subspecies && VermontSubspecies.some(x => x['Scientific Name'] === e['Scientific Name'])) return true
+  // Cached: parsing dates is most of the time spent on a large EBD file
+  const key = `${e.Date}|${recordEntry.Occurrence}`
+  if (!expectedDatesCache.has(key)) expectedDatesCache.set(key, appearsDuringExpectedDates(e.Date, recordEntry.Occurrence))
+  return !expectedDatesCache.get(key)
+}
+
+const yearOf = date => /^\d{4}-/.test(date) ? date.slice(0, 4) : moment(date, helpers.momentFormat(date)).format('YYYY')
+
+// Records for the report year: seen that year, or seen earlier but last edited
+// that year (EBD only), as a checklist uploaded late would be. Those need a
+// report too, and are marked 'Edited Late'.
+function inReportYear (e, year) {
+  if (yearOf(e.Date) === year) return true
+  return !!e['Last Edited Date'] && yearOf(e.Date) < year && yearOf(e['Last Edited Date']) === year
+}
+
 async function rare (opts) {
   let data
   opts.state = 'Vermont'
   // Use only data from this year, from Vermont
   if (!opts.manual) {
-    data = f.orderByDate(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts).reverse()
+    const year = opts.year && opts.year.toString()
+    const keep = year ? e => inReportYear(e, year) && couldBeRare(e) : couldBeRare
+    // The year is handled by keep, which dateFilter would undo; it still applies --after
+    data = f.orderByDate(f.dateFilter(f.locationFilter(await getData(opts.input, { keep }), opts), _.omit(opts, 'year')), opts).reverse()
+    if (year) data.forEach(e => { if (yearOf(e.Date) !== year) e['Edited Late'] = true })
   } else {
     // This will correctly flag as 'Unknown'
     if (opts.data) {
@@ -653,7 +725,7 @@ async function rare (opts) {
   // We need both the single letter and the full-text;
   // the eBird downloaded database only has single, but MyEbirdData has the full string.
   // Alternatively, we should convert them when importing, but there're space issues.
-  const ignoredBreedingCodes = [
+  const IGNORED_BREEDING_CODES = [
     'S Singing Bird',
     'S',
     'H In Appropriate Habitat',
@@ -685,9 +757,9 @@ async function rare (opts) {
       // TODO Document this. Could also check Observation Details or Checklist Comments
       if (!appearsDuringExpectedDates(e.Date, recordEntry.Occurrence)) {
         output.OutsideExpectedDates.push(e)
-      } else if (recordEntry.Breeding !== '*' && e['Breeding Code'] && !ignoredBreedingCodes.includes(e['Breeding Code'])) {
+      } else if (recordEntry.Breeding !== '*' && e['Breeding Code'] && !IGNORED_BREEDING_CODES.includes(e['Breeding Code'])) {
         output.Breeding.push(e)
-      } else if (recordEntry.Reporting === 'N' && (e['Breeding Code']) && !ignoredBreedingCodes.includes(e['Breeding Code'])) {
+      } else if (recordEntry.Reporting === 'N' && (e['Breeding Code']) && !IGNORED_BREEDING_CODES.includes(e['Breeding Code'])) {
         output.Breeding.push(e)
       } else if (recordEntry.Reporting === 'V') {
         // Anyhwere in Vermont
@@ -751,11 +823,69 @@ function rareReport (output) {
     records.forEach(e => {
       const name = e.Subspecies ? `${e['Common Name']} [${e.Subspecies}]` : e['Common Name']
       const place = [e.Location, e.Town && helpers.capitalizeFirstLetters(e.Town), e.County].filter(Boolean).join(', ')
-      const extras = [e['Breeding Code'] && key === 'Breeding' ? `breeding: ${e['Breeding Code']}` : '', e['Observer ID']].filter(Boolean)
+      const extras = [e['Breeding Code'] && key === 'Breeding' ? `breeding: ${e['Breeding Code']}` : '', e.Approved === '0' ? 'unreviewed' : '', e['Edited Late'] ? `last edited ${e['Last Edited Date'].slice(0, 10)}` : ''].filter(Boolean)
       lines.push(`  ${e.Date} | ${name} | ${place}${extras.length ? ' | ' + extras.join(' | ') : ''} | https://ebird.org/checklist/${e['Submission ID']}`)
     })
   })
   if (lines.length === 0) lines.push('No records to report to the VBRC.')
+  return lines
+}
+
+// Short reason for each rare() bucket, shown next to each record in the Slack report
+const RARITY_REASONS = {
+  Unknown: 'Vermont first',
+  Vermont: 'VBRC review species',
+  Breeding: 'nesting',
+  Champlain: 'outside Champlain Valley',
+  NEK: 'outside NEK',
+  OutsideExpectedDates: 'outside expected dates',
+  Subspecies: 'subspecies'
+}
+
+// Group rare() output by county, for handing to the county's eBird reviewers.
+// A record flagged by several buckets (say, a subspecies outside its dates) is
+// listed once, with every reason. Counties are alphabetical, any without one last; records by date.
+function rareByCounty (output) {
+  const records = new Map()
+  Object.entries(RARITY_REASONS).forEach(([key, reason]) => {
+    (output[key] || []).forEach(e => {
+      const id = `${e['Submission ID']}|${e['Scientific Name']}|${e.Subspecies || ''}`
+      if (!records.has(id)) records.set(id, { record: e, reasons: [] })
+      const entry = records.get(id)
+      if (!entry.reasons.includes(reason)) entry.reasons.push(reason)
+    })
+  })
+  const counties = _.groupBy([...records.values()], x => x.record.County || 'Unknown')
+  return _.sortBy(Object.keys(counties), [c => c === 'Unknown', c => c]).map(county => ({
+    county,
+    records: _.sortBy(counties[county], [x => x.record.Date, x => x.record['Common Name']])
+  }))
+}
+
+// rare() output as lines for a Slack message, grouped by county for the
+// county eBird reviewers. Uses Slack's *bold* markup, and bare checklist URLs,
+// which Slack turns into links.
+function rareSlackReport (output, opts = {}) {
+  const groups = rareByCounty(output)
+  const total = _.sumBy(groups, g => g.records.length)
+  const scope = [opts.county ? `${opts.county} County` : 'Vermont', opts.year].filter(Boolean).join(', ')
+  if (total === 0) return [`No records to report to the VBRC (${scope}).`]
+  // Records from an EBD _unvetted.txt file, which no reviewer has approved yet
+  const count = test => _.sumBy(groups, g => g.records.filter(x => test(x.record)).length)
+  const unreviewed = count(e => e.Approved === '0')
+  const late = count(e => e['Edited Late'])
+  const notes = [unreviewed && `${unreviewed} unreviewed`, late && `${late} from earlier years, edited in ${opts.year}`].filter(Boolean)
+  const lines = [`*VBRC reportable records, ${scope}: ${total} record${total === 1 ? '' : 's'}${notes.map(n => `, ${n}`).join('')}*`]
+  groups.forEach(({ county, records }) => {
+    lines.push('', `*${county === 'Unknown' ? 'County unknown' : `${county} County`}* (${records.length})`)
+    records.forEach(({ record: e, reasons }) => {
+      // eBird already puts the subspecies group on the name: "Red-tailed Hawk (abieticola)"
+      const name = (e.Subspecies && !e['Common Name'].includes('(')) ? `${e['Common Name']} (${e.Subspecies})` : e['Common Name']
+      const place = [e.Location, e.Town && helpers.capitalizeFirstLetters(e.Town)].filter(Boolean).join(', ')
+      const why = reasons.map(r => (r === 'nesting' && e['Breeding Code']) ? `nesting: ${e['Breeding Code']}` : r).join(', ')
+      lines.push(`• ${[name, place, e.Date, why, e.Approved === '0' && 'unreviewed', e['Edited Late'] && `last edited ${e['Last Edited Date'].slice(0, 10)}`].filter(Boolean).join(' · ')} · https://ebird.org/checklist/${e['Submission ID']}`)
+    })
+  })
   return lines
 }
 
@@ -1046,6 +1176,8 @@ export {
   radialSearch,
   rare,
   rareReport,
+  rareByCounty,
+  rareSlackReport,
   RARITY_CATEGORIES,
   rareAZ,
   regions,
@@ -1075,6 +1207,8 @@ export default {
   radialSearch,
   rare,
   rareReport,
+  rareByCounty,
+  rareSlackReport,
   RARITY_CATEGORIES,
   rareAZ,
   regions,

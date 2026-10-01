@@ -25,7 +25,8 @@ const cli = meow(`
     counties      Show your counties counts
     state         Show your state counts
     rare          Show which rarities to report to records committee. Takes
-                  MyEBirdData.csv or an eBird Basic Dataset ebd_*.txt file
+                  MyEBirdData.csv or eBird Basic Dataset ebd_*.txt files. With
+                  --year, includes earlier sightings last edited that year
     251           Show 251
     winterFinch   Show winterFinch needs
     subspecies    Show subspecies, spuhs, and other leaf nodes
@@ -37,7 +38,7 @@ const cli = meow(`
     unbirdedHotspots  Show which hotspots haven't been birded
 
   Options
-    --input, -i The input file
+    --input, -i The input file, or several separated by commas
     --country   Search by country
     --state     Search by state
     --county    Search by county
@@ -47,11 +48,13 @@ const cli = meow(`
     --region    Search by biophysical regions in Vermont
     --list, -l  List all of the species
     --complete  Filter by complete checklists only
+    --slack     With rare: group by county, formatted for a Slack message
     --verbose   Adds extra logging
 
   Examples
     $ node cli.js
     $ node cli.js rare --input=ebd_US-VT-001_202601_202612.txt --county=Addison --year=2026
+    $ node cli.js rare --input=ebd_US-VT_relAug-2026.txt,ebd_US-VT_relAug-2026_unvetted.txt --year=2026 --slack
 `, {
   importMeta: import.meta,
   flags: {
@@ -88,6 +91,9 @@ const cli = meow(`
       shortFlag: 'v',
       type: 'boolean'
     },
+    slack: {
+      type: 'boolean'
+    },
     withinDistance: {
       type: 'string'
     }
@@ -114,7 +120,11 @@ async function run () {
     await main.winterFinch(cli.flags)
   } else if (cli.input[0] === 'rare') {
     const output = await main.rare(cli.flags)
-    console.log(main.rareReport(output).join('\n'))
+    if (cli.flags.slack) {
+      console.log(main.rareSlackReport(output, cli.flags).join('\n'))
+    } else {
+      console.log(main.rareReport(output).join('\n'))
+    }
   } else if (cli.input[0] === 'rareAZ') {
     await main.rareAZ(cli.flags)
   } else if (cli.input[0] === 'big') {

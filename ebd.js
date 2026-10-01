@@ -25,6 +25,8 @@ function fromEBDRow (row) {
   const subspeciesName = trim(row['SUBSPECIES SCIENTIFIC NAME'])
   return {
     'Submission ID': trim(row['SAMPLING EVENT IDENTIFIER']),
+    // The EBD has no upload date; this is the nearest thing to one
+    'Last Edited Date': trim(row['LAST EDITED DATE']),
     // MyEBirdData puts the subspecies or group on the main name fields, e.g.
     // "Red-tailed Hawk (abieticola)" / "Buteo jamaicensis abieticola", and
     // removeSpuh() splits that back out into Subspecies. Match it.
