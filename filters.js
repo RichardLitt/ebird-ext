@@ -78,14 +78,16 @@ function getPoint (map, coordinates, countyCode) {
 
   let point = getContainer(map, coordinates)
 
-  // If it is on a river or across a border or something, get the nearest town
-  if (point === undefined) {
+  const long = Number(coordinates.LONGITUDE || coordinates.Longitude)
+  const lat = Number(coordinates.LATITUDE || coordinates.Latitude)
+
+  // If it is on a river or across a border or something, get the nearest town.
+  // Without coordinates there is nothing to measure from, so leave it unplaced.
+  if (point === undefined && Number.isFinite(long) && Number.isFinite(lat) && (long || lat)) {
     try {
-      // Only check towns in the relevant county
-      // TODO What if I don't have the relevant county?
-      const countyCenters = townCentroids.filter(f => f.properties.county === countyCode)
-      const long = coordinates.LONGITUDE || coordinates.Longitude
-      const lat = coordinates.LATITUDE || coordinates.Latitude
+      // Only check towns in the relevant county, or every town if the county is unknown
+      const inCounty = townCentroids.filter(f => f.properties.county === countyCode)
+      const countyCenters = inCounty.length ? inCounty : townCentroids
       const newCoords = nearestPoint(turfPoint([long, lat]), featureCollection(countyCenters))
       coordinates = {
         Longitude: newCoords.geometry.coordinates[0],
@@ -157,7 +159,7 @@ function locationFilter (list, opts) {
           // This is ugly but it should work.
         }, Number(Object.keys(eBirdCountyIds).filter(key => eBirdCountyIds[key] === checklist.County)[0]))
         // Upper case, to match the geojson town keys that every caller compares against
-        checklist.Town = point.toUpperCase()
+        checklist.Town = point?.toUpperCase()
       }
       if (!checklist.Region) {
         point = getPoint('regions', {
@@ -165,7 +167,7 @@ function locationFilter (list, opts) {
           Latitude: checklist.Latitude
           // This is ugly but it should work.
         }, Number(Object.keys(eBirdCountyIds).filter(key => eBirdCountyIds[key] === checklist.County)[0]))
-        checklist.Region = helpers.capitalizeFirstLetters(point)
+        checklist.Region = point && helpers.capitalizeFirstLetters(point)
       }
     }
 

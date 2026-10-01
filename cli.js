@@ -104,7 +104,8 @@ async function run () {
   } else if (cli.input[0] === 'regions') {
     await main.regions(cli.flags)
   } else if (cli.input[0] === 'counties') {
-    await main.counties(cli.flags)
+    const result = await main.counties(cli.flags)
+    if (cli.flags.county) console.log(result)
   } else if (cli.input[0] === 'state') {
     await main.state(cli.flags)
   } else if (cli.input[0] === 'winterFinch') {
