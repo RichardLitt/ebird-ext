@@ -242,7 +242,6 @@ async function counties (opts) {
   if (opts.county) {
     // locationFilter matched the county case-insensitively, so look it up the same way
     const county = Object.keys(newObj).find(c => c.toLowerCase() === opts.county.toLowerCase())
-    console.log(newObj[county])
     return newObj[county]
   }
 
@@ -916,7 +915,8 @@ async function datesSpeciesObserved (opts) {
   // Every month-day of a leap year (366), matching the chart built below
   const daysInChart = _.sumBy(_.range(1, 13), helpers.leapYearDaysInMonth)
 
-  const speciesList = data.filter(x => x['State/Province'] === 'US-VT').map(x => x['Common Name']).filter((v, i, a) => a.indexOf(v) === i)
+  const vermontData = data.filter(x => x['State/Province'] === 'US-VT')
+  const speciesList = vermontData.map(x => x['Common Name']).filter((v, i, a) => a.indexOf(v) === i)
   const speciesArray = []
 
   speciesList.forEach(species => {
@@ -928,7 +928,7 @@ async function datesSpeciesObserved (opts) {
     // Create keys in observedDates for months
     Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0')).forEach(key => { observedDates[key] = [] })
     // Filter and add all days observed to the chart
-    data.filter(x => x['Common Name'] === species)
+    vermontData.filter(x => x['Common Name'] === species)
       .forEach(x => {
         const [month, day] = helpers.monthAndDay(x.Date) || []
         if (month && observedDates[month].indexOf(Number(day)) === -1) {
@@ -960,7 +960,8 @@ async function daylistTargets (opts) {
   const data = f.locationFilter(await getData(opts.input), opts)
 
   // Should probably have a bigger wanring on it.
-  const speciesList = data.filter(x => x['State/Province'] === 'US-VT').map(x => x['Common Name']).filter((v, i, a) => a.indexOf(v) === i)
+  const vermontData = data.filter(x => x['State/Province'] === 'US-VT')
+  const speciesList = vermontData.map(x => x['Common Name']).filter((v, i, a) => a.indexOf(v) === i)
   const speciesArray = {}
 
   speciesList.forEach(species => {

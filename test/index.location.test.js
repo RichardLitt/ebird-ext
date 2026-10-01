@@ -558,13 +558,12 @@ test('counties { year } counts only that year', async (t) => {
 // counties -- options
 // ---------------------------------------------------------------------------
 
-test('counties { county } returns and logs just that county', async (t) => {
+test('counties { county } returns just that county without logging it', async (t) => {
   quiet(t)
   const result = await counties({ input: SIGHTINGS, county: 'Essex' })
   assert.deepEqual(result.species, ['Boreal Chickadee', 'Canada Jay'])
   assert.equal(result.county, 'Essex')
-  assert.equal(console.log.mock.calls.length, 1)
-  assert.deepEqual(logged()[0][0], result)
+  assert.equal(console.log.mock.calls.length, 0)
 })
 
 test('counties { ticks } logs the sum of species totals across counties', async (t) => {
@@ -1158,9 +1157,7 @@ test('winterFinch matches Eastern Screech-Owl (eBird capitalisation) in the owl 
 test('winterFinch { county } prints just that county\'s finch and owl lines', async (t) => {
   quiet(t)
   await winterFinch({ input: SIGHTINGS, county: 'washington' })
-  // counties { county } also logs the county entry object; keep the text lines.
-  const lines = logged().filter(args => typeof args[0] === 'string').map(args => args.join(' '))
-  assert.deepEqual(lines, [
+  assert.deepEqual(loggedLines(), [
     'Washington (3): Evening Grosbeak, Pine Grosbeak, Red Crossbill.',
     '',
     'Washington (2): Eastern Screech-Owl, Barred Owl.'
@@ -1170,6 +1167,5 @@ test('winterFinch { county } prints just that county\'s finch and owl lines', as
 test('winterFinch { county } for an unknown county prints only the blank separator', async (t) => {
   quiet(t)
   await winterFinch({ input: SIGHTINGS, county: 'Grafton' })
-  const lines = logged().filter(args => typeof args[0] === 'string').map(args => args.join(' '))
-  assert.deepEqual(lines, [''])
+  assert.deepEqual(loggedLines(), [''])
 })

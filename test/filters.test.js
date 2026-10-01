@@ -115,6 +115,14 @@ test('locationFilter populates Region (biophysical) for Vermont checklists', () 
   assert.ok(result.every(x => typeof x.Region === 'string' && x.Region.length > 0))
 })
 
+test('locationFilter does not throw on a Vermont checklist with blank coordinates', (t) => {
+  t.mock.method(console, 'error', () => {})
+  const list = [
+    { 'Submission ID': 'S_BLANK', Date: '2024-01-01', 'State/Province': 'US-VT', County: 'Addison', Latitude: '', Longitude: '' }
+  ]
+  assert.doesNotThrow(() => locationFilter(list, { state: 'Vermont' }))
+})
+
 test('locationFilter discards checklists with no Latitude', () => {
   const list = [
     ...clone(),
@@ -431,6 +439,18 @@ test('getPoint("regions", coords) returns the region for a clearly-inside point'
 test('getPoint accepts UPPERCASE LATITUDE/LONGITUDE keys (eBird DB format)', () => {
   const result = getPoint('towns', { LATITUDE: 44.4759, LONGITUDE: -73.2121 }, 7)
   assert.equal(result, 'BURLINGTON')
+})
+
+test('getPoint returns undefined, without logging an error, when there are no coordinates', (t) => {
+  const error = t.mock.method(console, 'error', () => {})
+  assert.equal(getPoint('towns', { Latitude: '', Longitude: '' }, 1), undefined)
+  assert.equal(getPoint('regions', {}, 1), undefined)
+  assert.equal(error.mock.calls.length, 0)
+})
+
+test('getPoint falls back to the nearest town anywhere when the county is unknown', () => {
+  const result = getPoint('towns', { Latitude: 44.4759, Longitude: -73.50 }, NaN)
+  assert.ok(typeof result === 'string' && result.length > 0)
 })
 
 test('getPoint falls back to nearest in-county town for a point on a river', () => {

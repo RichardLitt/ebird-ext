@@ -45,6 +45,7 @@ const DATES = fixture('dates.csv')
 const VT251 = fixture('vt251.csv')
 const SLASH_DATES = fixture('slash-dates.csv')
 const HEADER_ONLY = fixture('header-only.csv')
+const DATES_OUT_OF_STATE = fixture('dates-out-of-state.csv')
 const NO_SCI_NAME = fixture('no-scientific-name.csv')
 
 const HEADER = 'Submission ID,Common Name,Scientific Name,Count,State/Province,County,Location,Latitude,Longitude,Date,Time,Protocol,Duration (Min),All Obs Reported'
@@ -571,6 +572,14 @@ test('datesSpeciesObserved only considers US-VT rows', async (t) => {
   const log = muteLog(t)
   await datesSpeciesObserved({ input: DATES })
   assert.ok(!log.mock.calls[0].arguments[0].some(s => s.startsWith('Delta Test Bird')))
+})
+
+test('datesSpeciesObserved ignores out-of-state dates for a Vermont species', async (t) => {
+  freezeNow(t, 2025, 6, 15)
+  const log = muteLog(t)
+  await datesSpeciesObserved({ input: DATES_OUT_OF_STATE })
+  // Beta also has a New York sighting on 08-08; only its two Vermont days count.
+  assert.deepEqual(log.mock.calls[0].arguments[0], ['Beta Test Bird: 2'])
 })
 
 test('datesSpeciesObserved excludes spuhs and keeps rows without coordinates', async (t) => {
