@@ -759,6 +759,59 @@ function rareReport (output) {
   return lines
 }
 
+// Short reason for each rare() bucket, shown next to each record in the Slack report
+const RARITY_REASONS = {
+  Unknown: 'Vermont first',
+  Vermont: 'VBRC review species',
+  Breeding: 'nesting',
+  Champlain: 'outside Champlain Valley',
+  NEK: 'outside NEK',
+  OutsideExpectedDates: 'outside expected dates',
+  Subspecies: 'subspecies'
+}
+
+// Group rare() output by county, for handing to the county's eBird reviewers.
+// A record flagged by several buckets (say, a subspecies outside its dates) is
+// listed once, with every reason. Counties are alphabetical, any without one last; records by date.
+function rareByCounty (output) {
+  const records = new Map()
+  Object.entries(RARITY_REASONS).forEach(([key, reason]) => {
+    (output[key] || []).forEach(e => {
+      const id = `${e['Submission ID']}|${e['Scientific Name']}|${e.Subspecies || ''}`
+      if (!records.has(id)) records.set(id, { record: e, reasons: [] })
+      const entry = records.get(id)
+      if (!entry.reasons.includes(reason)) entry.reasons.push(reason)
+    })
+  })
+  const counties = _.groupBy([...records.values()], x => x.record.County || 'Unknown')
+  return _.sortBy(Object.keys(counties), [c => c === 'Unknown', c => c]).map(county => ({
+    county,
+    records: _.sortBy(counties[county], [x => x.record.Date, x => x.record['Common Name']])
+  }))
+}
+
+// rare() output as lines for a Slack message, grouped by county for the
+// county eBird reviewers. Uses Slack's *bold* markup, and bare checklist URLs,
+// which Slack turns into links.
+function rareSlackReport (output, opts = {}) {
+  const groups = rareByCounty(output)
+  const total = _.sumBy(groups, g => g.records.length)
+  const scope = [opts.county ? `${opts.county} County` : 'Vermont', opts.year].filter(Boolean).join(', ')
+  if (total === 0) return [`No records to report to the VBRC (${scope}).`]
+  const lines = [`*VBRC reportable records, ${scope}: ${total} record${total === 1 ? '' : 's'}*`]
+  groups.forEach(({ county, records }) => {
+    lines.push('', `*${county === 'Unknown' ? 'County unknown' : `${county} County`}* (${records.length})`)
+    records.forEach(({ record: e, reasons }) => {
+      // eBird already puts the subspecies group on the name: "Red-tailed Hawk (abieticola)"
+      const name = (e.Subspecies && !e['Common Name'].includes('(')) ? `${e['Common Name']} (${e.Subspecies})` : e['Common Name']
+      const place = [e.Location, e.Town && helpers.capitalizeFirstLetters(e.Town)].filter(Boolean).join(', ')
+      const why = reasons.map(r => (r === 'nesting' && e['Breeding Code']) ? `nesting: ${e['Breeding Code']}` : r).join(', ')
+      lines.push(`• ${[name, place, e.Date, why].filter(Boolean).join(' · ')} · https://ebird.org/checklist/${e['Submission ID']}`)
+    })
+  })
+  return lines
+}
+
 // What have you logged, outside of the species level?
 async function subspecies (opts) {
   let data = opts.input
@@ -1046,6 +1099,8 @@ export {
   radialSearch,
   rare,
   rareReport,
+  rareByCounty,
+  rareSlackReport,
   RARITY_CATEGORIES,
   rareAZ,
   regions,
@@ -1075,6 +1130,8 @@ export default {
   radialSearch,
   rare,
   rareReport,
+  rareByCounty,
+  rareSlackReport,
   RARITY_CATEGORIES,
   rareAZ,
   regions,

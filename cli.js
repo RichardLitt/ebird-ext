@@ -47,11 +47,13 @@ const cli = meow(`
     --region    Search by biophysical regions in Vermont
     --list, -l  List all of the species
     --complete  Filter by complete checklists only
+    --slack     With rare: group by county, formatted for a Slack message
     --verbose   Adds extra logging
 
   Examples
     $ node cli.js
     $ node cli.js rare --input=ebd_US-VT-001_202601_202612.txt --county=Addison --year=2026
+    $ node cli.js rare --input=ebd_US-VT_202601_202612.txt --year=2026 --slack
 `, {
   importMeta: import.meta,
   flags: {
@@ -88,6 +90,9 @@ const cli = meow(`
       shortFlag: 'v',
       type: 'boolean'
     },
+    slack: {
+      type: 'boolean'
+    },
     withinDistance: {
       type: 'string'
     }
@@ -114,7 +119,11 @@ async function run () {
     await main.winterFinch(cli.flags)
   } else if (cli.input[0] === 'rare') {
     const output = await main.rare(cli.flags)
-    console.log(main.rareReport(output).join('\n'))
+    if (cli.flags.slack) {
+      console.log(main.rareSlackReport(output, cli.flags).join('\n'))
+    } else {
+      console.log(main.rareReport(output).join('\n'))
+    }
   } else if (cli.input[0] === 'rareAZ') {
     await main.rareAZ(cli.flags)
   } else if (cli.input[0] === 'big') {
