@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import Papa from 'papaparse'
 import { isEBDHeader, isEBDRows, fromEBDRow, fromEBD, collapseSharedChecklists, parseEBD, EBD_PARSE_OPTIONS } from '../ebd.js'
-import { getData, rare, rareReport, rareByCounty, rareSlackReport } from '../index.js'
+import { getData, rare, rareReport, rareByCounty, rareSlackReport, splitSlackMessages } from '../index.js'
 
 // eBird Basic Dataset files are named ebd_*.txt, which .gitignore keeps out of
 // the repo (they hold other people's records). So the fake file is built here
@@ -356,4 +356,31 @@ test('rareSlackReport keeps different species and counties apart', () => {
     Vermont: [ibis('S1', '2026-06-01'), ibis('S2', '2026-06-02', { County: 'Addison' }), ibis('S3', '2026-06-02', { 'Common Name': 'Glossy Ibis' })]
   })
   assert.equal(lines.filter(l => l.startsWith('•')).length, 3)
+})
+
+// ===========================================================================
+// splitSlackMessages
+// ===========================================================================
+
+const county = (name, n) => ['', `*${name} County* (${n})`, ...Array.from({ length: n }, (_, i) => `• Bird ${i} · ${'x'.repeat(80)}`)]
+
+test('splitSlackMessages keeps a short report as one message', () => {
+  const lines = ['*Heading*', ...county('Addison', 2)]
+  assert.deepEqual(splitSlackMessages(lines), [lines.join('\n')])
+})
+
+test('splitSlackMessages breaks between counties, keeping every message under the limit', () => {
+  const lines = ['*Heading*', ...county('Addison', 5), ...county('Bennington', 5), ...county('Chittenden', 5)]
+  const messages = splitSlackMessages(lines, 1200)
+  assert.ok(messages.length > 1)
+  assert.ok(messages.every(m => m.length <= 1200))
+  assert.ok(messages.slice(1).every(m => m.startsWith('*')))
+  assert.equal(messages.join('\n\n'), lines.join('\n'))
+})
+
+test('splitSlackMessages splits a county too long for one message, repeating its heading', () => {
+  const messages = splitSlackMessages(['*Heading*', ...county('Addison', 20)], 1000)
+  assert.ok(messages.every(m => m.length <= 1000))
+  assert.ok(messages.slice(1).every(m => m.startsWith('*Addison County* (20) (continued)')))
+  assert.equal(messages.join('\n').split('\n').filter(l => l.startsWith('•')).length, 20)
 })

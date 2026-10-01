@@ -939,6 +939,38 @@ function rareSlackReport (output, opts = {}) {
   return lines
 }
 
+// Slack recommends messages under 4,000 characters, and won't send a long
+// paste. Split rareSlackReport() lines into messages under max characters,
+// breaking between counties, or between records in a county too long for one.
+function splitSlackMessages (lines, max = 3500) {
+  const messages = []
+  let current = ''
+  const add = text => {
+    if (current && current.length + 2 + text.length > max) {
+      messages.push(current)
+      current = ''
+    }
+    current = current ? `${current}\n\n${text}` : text
+  }
+  // Blocks are the report heading and each county, separated by blank lines
+  const blocks = lines.join('\n').split('\n\n')
+  blocks.forEach(block => {
+    if (block.length <= max) return add(block)
+    const [heading, ...records] = block.split('\n')
+    let part = heading
+    records.forEach(record => {
+      if (part.length + 1 + record.length > max) {
+        add(part)
+        part = `${heading} (continued)`
+      }
+      part += `\n${record}`
+    })
+    add(part)
+  })
+  if (current) messages.push(current)
+  return messages
+}
+
 // What have you logged, outside of the species level?
 async function subspecies (opts) {
   let data = opts.input
@@ -1228,6 +1260,7 @@ export {
   rareReport,
   rareByCounty,
   rareSlackReport,
+  splitSlackMessages,
   RARITY_CATEGORIES,
   rareAZ,
   regions,
@@ -1259,6 +1292,7 @@ export default {
   rareReport,
   rareByCounty,
   rareSlackReport,
+  splitSlackMessages,
   RARITY_CATEGORIES,
   rareAZ,
   regions,

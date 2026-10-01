@@ -48,7 +48,7 @@ const cli = meow(`
     --region    Search by biophysical regions in Vermont
     --list, -l  List all of the species
     --complete  Filter by complete checklists only
-    --slack     With rare: group by county, formatted for a Slack message
+    --slack     With rare: group by county, formatted as Slack messages
     --verbose   Adds extra logging
 
   Examples
@@ -121,7 +121,11 @@ async function run () {
   } else if (cli.input[0] === 'rare') {
     const output = await main.rare(cli.flags)
     if (cli.flags.slack) {
-      console.log(main.rareSlackReport(output, cli.flags).join('\n'))
+      const messages = main.splitSlackMessages(main.rareSlackReport(output, cli.flags))
+      messages.forEach((message, i) => {
+        if (messages.length > 1) console.log(`${i ? '\n' : ''}----- Slack message ${i + 1} of ${messages.length} -----\n`)
+        console.log(message)
+      })
     } else {
       console.log(main.rareReport(output).join('\n'))
     }
