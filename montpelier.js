@@ -1,4 +1,3 @@
-import fetch from 'node-fetch'
 import VermontHotspots from './data/hotspots.json' with { type: 'json' }
 // import eBirdDataAsJSON from './data/washCoHotspotObservations.json' with { type: 'json' }
 // TODO Implement this, instead

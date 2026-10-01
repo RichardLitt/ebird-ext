@@ -2,7 +2,7 @@
 import fs from 'node:fs'
 import stream from 'node:stream'
 import JSONStream from 'JSONStream' // Make sure to install this package: 'npm install JSONStream'
-import csv from 'csv-parse'
+import { parse as csv } from 'csv-parse'
 import * as f from '../filters.js'
 import * as helpers from '../helpers.js'
 import * as banding from '../bandingCodes.js'

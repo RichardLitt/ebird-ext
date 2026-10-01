@@ -1,0 +1,13 @@
+# Dependabot security updates arrive as one grouped PR instead of one per
+# package. open-pull-requests-limit: 0 turns off routine version-update PRs.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    groups:
+      security:
+        applies-to: security-updates
+        patterns: ['*']

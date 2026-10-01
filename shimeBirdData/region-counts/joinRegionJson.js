@@ -4,7 +4,6 @@ import * as banding from '../../bandingCodes.js'
 import * as f from '../../filters.js'
 import * as helpers from '../../helpers.js'
 import _ from 'lodash'
-import fetch from 'node-fetch'
 
 const require = createRequire(import.meta.url)
 
