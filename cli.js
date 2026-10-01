@@ -24,7 +24,8 @@ const cli = meow(`
     regions       Show your region counts
     counties      Show your counties counts
     state         Show your state counts
-    rare          Show which rarities to report to records committee
+    rare          Show which rarities to report to records committee. Takes
+                  MyEBirdData.csv or an eBird Basic Dataset ebd_*.txt file
     251           Show 251
     winterFinch   Show winterFinch needs
     subspecies    Show subspecies, spuhs, and other leaf nodes
@@ -50,6 +51,7 @@ const cli = meow(`
 
   Examples
     $ node cli.js
+    $ node cli.js rare --input=ebd_US-VT-001_202601_202612.txt --county=Addison --year=2026
 `, {
   importMeta: import.meta,
   flags: {
@@ -111,7 +113,8 @@ async function run () {
   } else if (cli.input[0] === 'winterFinch') {
     await main.winterFinch(cli.flags)
   } else if (cli.input[0] === 'rare') {
-    await main.rare(cli.flags)
+    const output = await main.rare(cli.flags)
+    console.log(main.rareReport(output).join('\n'))
   } else if (cli.input[0] === 'rareAZ') {
     await main.rareAZ(cli.flags)
   } else if (cli.input[0] === 'big') {

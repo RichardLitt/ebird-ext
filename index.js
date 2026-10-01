@@ -15,6 +15,7 @@ import appearsDuringExpectedDates from './appearsDuringExpectedDates.js'
 import * as helpers from './helpers.js'
 import * as f from './filters.js'
 import * as banding from './bandingCodes.js'
+import * as ebd from './ebd.js'
 import townDataFor2022 from './data/townDataFor2022-May-Export.json' with { type: 'json' }
 
 // Why eBird uses this format I have no idea.
@@ -65,10 +66,13 @@ async function getData (input, opts = {}) {
     // Strip a UTF-8 BOM (spreadsheet-resaved exports have one), or Papa keeps
     // it on the first header and row['Submission ID'] is undefined.
     const fileContent = (await fs.readFile(input, 'utf8')).replace(/^\uFEFF/, '')
-    data = Papa.parse(fileContent, {
-      header: true,
-      skipEmptyLines: true
-    }).data
+    data = Papa.parse(fileContent, ebd.isEBDHeader(fileContent)
+      ? ebd.EBD_PARSE_OPTIONS
+      : { header: true, skipEmptyLines: true }).data
+  }
+  // eBird Basic Dataset rows (a file path, or rows already parsed by the site)
+  if (ebd.isEBDRows(data)) {
+    data = ebd.fromEBD(data)
   }
   return opts.keepSpuh ? data : f.removeSpuh(data)
 }
@@ -732,6 +736,38 @@ async function rare (opts) {
   return output
 }
 
+// Headings for each rare() bucket, matching the VBRC checker on birdinginvermont.com
+const RARITY_CATEGORIES = {
+  Unknown: 'Vermont Firsts (not on the VBRC checklist)',
+  Vermont: 'Vermont Records (report anywhere in Vermont)',
+  Breeding: 'Nesting Records (breeding code used)',
+  Burlington: 'Outside of Burlington',
+  Champlain: 'Outside of the Champlain Valley',
+  NEK: 'Outside of the NEK',
+  OutsideExpectedDates: 'Outside of expected dates',
+  Subspecies: 'Subspecies'
+}
+
+// Turn rare() output into printable lines: a heading per non-empty bucket, then
+// one line per record with a link to its checklist.
+function rareReport (output) {
+  const lines = []
+  Object.entries(RARITY_CATEGORIES).forEach(([key, title]) => {
+    const records = output[key] || []
+    if (records.length === 0) return
+    if (lines.length) lines.push('')
+    lines.push(`${title} (${records.length})`)
+    records.forEach(e => {
+      const name = e.Subspecies ? `${e['Common Name']} [${e.Subspecies}]` : e['Common Name']
+      const place = [e.Location, e.Town && helpers.capitalizeFirstLetters(e.Town), e.County].filter(Boolean).join(', ')
+      const extras = [e['Breeding Code'] && key === 'Breeding' ? `breeding: ${e['Breeding Code']}` : '', e['Observer ID']].filter(Boolean)
+      lines.push(`  ${e.Date} | ${name} | ${place}${extras.length ? ' | ' + extras.join(' | ') : ''} | https://ebird.org/checklist/${e['Submission ID']}`)
+    })
+  })
+  if (lines.length === 0) lines.push('No records to report to the VBRC.')
+  return lines
+}
+
 // What have you logged, outside of the species level?
 async function subspecies (opts) {
   let data = opts.input
@@ -1018,6 +1054,8 @@ export {
   quadBirds,
   radialSearch,
   rare,
+  rareReport,
+  RARITY_CATEGORIES,
   rareAZ,
   regions,
   towns,
@@ -1045,6 +1083,8 @@ export default {
   quadBirds,
   radialSearch,
   rare,
+  rareReport,
+  RARITY_CATEGORIES,
   rareAZ,
   regions,
   towns,
