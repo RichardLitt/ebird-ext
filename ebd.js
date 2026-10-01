@@ -4,6 +4,8 @@
 // These helpers turn EBD rows into MyEBirdData-shaped rows, so every other
 // function in this toolkit can use them unchanged.
 
+import Papa from 'papaparse'
+
 // A column only the EBD has; MyEBirdData uses mixed-case names throughout
 const EBD_MARKER = 'SAMPLING EVENT IDENTIFIER'
 
@@ -86,8 +88,14 @@ const EBD_PARSE_OPTIONS = {
   skipEmptyLines: true
 }
 
+// Parse raw EBD text (e.g. a file read in the browser) into MyEBirdData-shaped rows
+function parseEBD (text) {
+  return fromEBD(Papa.parse(text.replace(/^\uFEFF/, ''), EBD_PARSE_OPTIONS).data)
+}
+
 export {
   EBD_PARSE_OPTIONS,
+  parseEBD,
   isEBDHeader,
   isEBDRows,
   fromEBDRow,

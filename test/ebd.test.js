@@ -4,7 +4,7 @@ import { promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import Papa from 'papaparse'
-import { isEBDHeader, isEBDRows, fromEBDRow, fromEBD, collapseSharedChecklists, EBD_PARSE_OPTIONS } from '../ebd.js'
+import { isEBDHeader, isEBDRows, fromEBDRow, fromEBD, collapseSharedChecklists, parseEBD, EBD_PARSE_OPTIONS } from '../ebd.js'
 import { getData, rare, rareReport } from '../index.js'
 
 // eBird Basic Dataset files are named ebd_*.txt, which .gitignore keeps out of
@@ -172,6 +172,16 @@ test('getData converts EBD rows that were already parsed', async () => {
     (await getData(parsed)).map(r => r['Submission ID']),
     (await getData(ebdFile)).map(r => r['Submission ID'])
   )
+})
+
+test('parseEBD turns raw EBD text into the same rows as reading the file', async () => {
+  const text = '\uFEFF' + toEBDText(ROWS)
+  assert.deepEqual(await getData(parseEBD(text)), await getData(ebdFile))
+})
+
+test('rare accepts parseEBD rows, as the site passes them', async () => {
+  const out = await rare({ input: parseEBD(toEBDText(ROWS)), county: 'Addison', year: '2026' })
+  assert.deepEqual(out.Subspecies.map(r => r['Submission ID']), ['S3'])
 })
 
 // ===========================================================================
