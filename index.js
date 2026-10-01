@@ -844,7 +844,8 @@ const RARITY_REASONS = {
 
 // Group rare() output by county, for handing to the county's eBird reviewers.
 // A record flagged by several buckets (say, a subspecies outside its dates) is
-// listed once, with every reason. Counties are alphabetical, any without one last; records by date.
+// listed once, with every reason. Counties are alphabetical, any without one last;
+// records by date and start time.
 function rareByCounty (output) {
   const records = new Map()
   Object.entries(RARITY_REASONS).forEach(([key, reason]) => {
@@ -858,35 +859,116 @@ function rareByCounty (output) {
   const counties = _.groupBy([...records.values()], x => x.record.County || 'Unknown')
   return _.sortBy(Object.keys(counties), [c => c === 'Unknown', c => c]).map(county => ({
     county,
-    records: _.sortBy(counties[county], [x => x.record.Date, x => x.record['Common Name']])
+    records: _.sortBy(counties[county], [x => x.record.Date, x => x.record.Time || '', x => x.record['Common Name']])
   }))
 }
 
+// Sightings of one species in one county, each within this many days of the
+// one before, are listed together as likely the same bird(s)
+const SAME_BIRD_DAYS = 7
+// How many of a group's checklists the Slack report links, earliest first
+const CHECKLISTS_SHOWN = 3
+
+// Group a county's records (sorted by date) into likely sightings of the same
+// bird(s). Groups come out ordered by their earliest record.
+function groupSightings (records) {
+  const groups = []
+  const open = {}
+  records.forEach(x => {
+    const name = x.record['Common Name']
+    const group = open[name]
+    if (group && moment(x.record.Date).diff(moment(_.last(group).record.Date), 'days') <= SAME_BIRD_DAYS) {
+      group.push(x)
+    } else {
+      open[name] = [x]
+      groups.push(open[name])
+    }
+  })
+  return groups
+}
+
 // rare() output as lines for a Slack message, grouped by county for the
-// county eBird reviewers. Uses Slack's *bold* markup, and bare checklist URLs,
-// which Slack turns into links.
+// county eBird reviewers, with likely sightings of the same bird(s) on one
+// line. Uses Slack's *bold* markup, and bare checklist URLs, which Slack links.
 function rareSlackReport (output, opts = {}) {
-  const groups = rareByCounty(output)
-  const total = _.sumBy(groups, g => g.records.length)
+  const counties = rareByCounty(output)
+  const total = _.sumBy(counties, g => g.records.length)
   const scope = [opts.county ? `${opts.county} County` : 'Vermont', opts.year].filter(Boolean).join(', ')
   if (total === 0) return [`No records to report to the VBRC (${scope}).`]
+  const count = test => _.sumBy(counties, g => g.records.filter(x => test(x.record)).length)
   // Records from an EBD _unvetted.txt file, which no reviewer has approved yet
-  const count = test => _.sumBy(groups, g => g.records.filter(x => test(x.record)).length)
   const unreviewed = count(e => e.Approved === '0')
   const late = count(e => e['Edited Late'])
-  const notes = [unreviewed && `${unreviewed} unreviewed`, late && `${late} from earlier years, edited in ${opts.year}`].filter(Boolean)
-  const lines = [`*VBRC reportable records, ${scope}: ${total} record${total === 1 ? '' : 's'}${notes.map(n => `, ${n}`).join('')}*`]
-  groups.forEach(({ county, records }) => {
-    lines.push('', `*${county === 'Unknown' ? 'County unknown' : `${county} County`}* (${records.length})`)
-    records.forEach(({ record: e, reasons }) => {
+  const sightings = counties.map(({ county, records }) => ({ county, groups: groupSightings(records) }))
+  const notes = [
+    `${_.sumBy(sightings, c => c.groups.length)} sightings`,
+    unreviewed && `${unreviewed} unreviewed`,
+    late && `${late} from earlier years, edited in ${opts.year}`
+  ].filter(Boolean)
+  const lines = [`*VBRC reportable records, ${scope}: ${total} checklist${total === 1 ? '' : 's'}, ${notes.join(', ')}*`]
+
+  const link = e => [
+    `https://ebird.org/checklist/${e['Submission ID']}`,
+    e.Approved === '0' && '(unreviewed)',
+    e['Edited Late'] && `(last edited ${e['Last Edited Date'].slice(0, 10)})`
+  ].filter(Boolean).join(' ')
+
+  sightings.forEach(({ county, groups }) => {
+    lines.push('', `*${county === 'Unknown' ? 'County unknown' : `${county} County`}* (${groups.length})`)
+    groups.forEach(group => {
+      const records = group.map(x => x.record)
+      const [first, last] = [records[0], _.last(records)]
       // eBird already puts the subspecies group on the name: "Red-tailed Hawk (abieticola)"
-      const name = (e.Subspecies && !e['Common Name'].includes('(')) ? `${e['Common Name']} (${e.Subspecies})` : e['Common Name']
-      const place = [e.Location, e.Town && helpers.capitalizeFirstLetters(e.Town)].filter(Boolean).join(', ')
-      const why = reasons.map(r => (r === 'nesting' && e['Breeding Code']) ? `nesting: ${e['Breeding Code']}` : r).join(', ')
-      lines.push(`• ${[name, place, e.Date, why, e.Approved === '0' && 'unreviewed', e['Edited Late'] && `last edited ${e['Last Edited Date'].slice(0, 10)}`].filter(Boolean).join(' · ')} · https://ebird.org/checklist/${e['Submission ID']}`)
+      const name = (first.Subspecies && !first['Common Name'].includes('(')) ? `${first['Common Name']} (${first.Subspecies})` : first['Common Name']
+      const places = _.uniq(records.map(e => [e.Location, e.Town && helpers.capitalizeFirstLetters(e.Town)].filter(Boolean).join(', ')))
+      const place = places.length > 1 ? `${places[0]} (+${places.length - 1} other location${places.length > 2 ? 's' : ''})` : places[0]
+      const dates = first.Date === last.Date ? first.Date : `${first.Date} to ${last.Date.slice(0, 4) === first.Date.slice(0, 4) ? last.Date.slice(5) : last.Date}`
+      const codes = _.uniq(records.map(e => e['Breeding Code']).filter(Boolean)).join(', ')
+      const why = _.uniq(group.flatMap(x => x.reasons)).map(r => (r === 'nesting' && codes) ? `nesting: ${codes}` : r).join(', ')
+      if (records.length === 1) {
+        lines.push(`• ${[name, place, dates, why].filter(Boolean).join(' · ')} · ${link(first)}`)
+        return
+      }
+      // The earliest few, plus any a reviewer still has to act on
+      const shown = records.filter((e, i) => i < CHECKLISTS_SHOWN || e.Approved === '0' || e['Edited Late'])
+      const more = records.length - shown.length
+      const links = shown.map(link).join(', ') + (more ? `, +${more} more` : '')
+      lines.push(`• ${[name, place, dates, why].filter(Boolean).join(' · ')} · ${records.length} checklists, likely the same bird(s): ${links}`)
     })
   })
   return lines
+}
+
+// Slack recommends messages under 4,000 characters, and won't send a long
+// paste. Split rareSlackReport() lines into messages under max characters,
+// breaking between counties, or between records in a county too long for one.
+function splitSlackMessages (lines, max = 3500) {
+  const messages = []
+  let current = ''
+  const add = text => {
+    if (current && current.length + 2 + text.length > max) {
+      messages.push(current)
+      current = ''
+    }
+    current = current ? `${current}\n\n${text}` : text
+  }
+  // Blocks are the report heading and each county, separated by blank lines
+  const blocks = lines.join('\n').split('\n\n')
+  blocks.forEach(block => {
+    if (block.length <= max) return add(block)
+    const [heading, ...records] = block.split('\n')
+    let part = heading
+    records.forEach(record => {
+      if (part.length + 1 + record.length > max) {
+        add(part)
+        part = `${heading} (continued)`
+      }
+      part += `\n${record}`
+    })
+    add(part)
+  })
+  if (current) messages.push(current)
+  return messages
 }
 
 // What have you logged, outside of the species level?
@@ -1178,6 +1260,7 @@ export {
   rareReport,
   rareByCounty,
   rareSlackReport,
+  splitSlackMessages,
   RARITY_CATEGORIES,
   rareAZ,
   regions,
@@ -1209,6 +1292,7 @@ export default {
   rareReport,
   rareByCounty,
   rareSlackReport,
+  splitSlackMessages,
   RARITY_CATEGORIES,
   rareAZ,
   regions,

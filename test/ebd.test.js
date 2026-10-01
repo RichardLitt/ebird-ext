@@ -5,7 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import Papa from 'papaparse'
 import { isEBDHeader, isEBDRows, fromEBDRow, fromEBD, collapseSharedChecklists, parseEBD, EBD_PARSE_OPTIONS } from '../ebd.js'
-import { getData, rare, rareReport, rareByCounty, rareSlackReport } from '../index.js'
+import { getData, rare, rareReport, rareByCounty, rareSlackReport, splitSlackMessages } from '../index.js'
 
 // eBird Basic Dataset files are named ebd_*.txt, which .gitignore keeps out of
 // the repo (they hold other people's records). So the fake file is built here
@@ -238,7 +238,7 @@ test('rareReport says so when there is nothing to report', () => {
 test('rareSlackReport groups records by county, alphabetically, with checklist links', async () => {
   const lines = rareSlackReport(await rare({ input: ebdFile, year: '2026' }), { year: '2026' })
   assert.deepEqual(lines, [
-    '*VBRC reportable records, Vermont, 2026: 3 records*',
+    '*VBRC reportable records, Vermont, 2026: 3 checklists, 3 sightings*',
     '',
     '*Addison County* (2)',
     '• Barnacle Goose · Test Marsh, Middlebury · 2026-03-10 · VBRC review species · https://ebird.org/checklist/S1',
@@ -251,7 +251,7 @@ test('rareSlackReport groups records by county, alphabetically, with checklist l
 
 test('rareSlackReport names the county in the heading when filtered to one', async () => {
   const lines = rareSlackReport(await rare({ input: ebdFile, county: 'Addison', year: '2026' }), { county: 'Addison', year: '2026' })
-  assert.equal(lines[0], '*VBRC reportable records, Addison County, 2026: 2 records*')
+  assert.equal(lines[0], '*VBRC reportable records, Addison County, 2026: 2 checklists, 2 sightings*')
   assert.ok(!lines.some(l => l.includes('Chittenden')))
 })
 
@@ -313,7 +313,74 @@ test('rare with a year keeps earlier sightings last edited that year, and marks 
 
 test('rareSlackReport marks unreviewed and late-edited records', async () => {
   const lines = rareSlackReport(await rare({ input: await twoFiles(), county: 'Addison', year: '2026' }), { county: 'Addison', year: '2026' })
-  assert.equal(lines[0], '*VBRC reportable records, Addison County, 2026: 4 records, 2 unreviewed, 1 from earlier years, edited in 2026*')
-  assert.ok(lines.includes('• Barnacle Goose · Test Marsh, Middlebury · 2019-05-04 · VBRC review species · unreviewed · last edited 2026-02-11 · https://ebird.org/checklist/S21'))
-  assert.ok(lines.includes('• Barnacle Goose · Test Marsh, Middlebury · 2026-04-01 · VBRC review species · unreviewed · https://ebird.org/checklist/S20'))
+  assert.equal(lines[0], '*VBRC reportable records, Addison County, 2026: 4 checklists, 4 sightings, 2 unreviewed, 1 from earlier years, edited in 2026*')
+  assert.ok(lines.includes('• Barnacle Goose · Test Marsh, Middlebury · 2019-05-04 · VBRC review species · https://ebird.org/checklist/S21 (unreviewed) (last edited 2026-02-11)'))
+  assert.ok(lines.includes('• Barnacle Goose · Test Marsh, Middlebury · 2026-04-01 · VBRC review species · https://ebird.org/checklist/S20 (unreviewed)'))
+})
+
+// ===========================================================================
+// rareSlackReport: likely sightings of the same bird(s)
+// ===========================================================================
+
+const ibis = (id, date, fields = {}) => ({ 'Submission ID': id, 'Common Name': 'White Ibis', 'Scientific Name': 'Eudocimus albus', County: 'Chittenden', Location: 'Shelburne Farms', Date: date, ...fields })
+
+test('rareSlackReport puts a species seen on and off in one county on one line, earliest first', () => {
+  const lines = rareSlackReport({
+    Vermont: [
+      ibis('S3', '2026-06-02'),
+      ibis('S1', '2026-05-30', { Time: '09:00' }),
+      ibis('S2', '2026-05-30', { Time: '07:00', Location: 'Shelburne Bay' }),
+      ibis('S4', '2026-06-09'),
+      // More than a week after the last: a different sighting
+      ibis('S5', '2026-06-20')
+    ]
+  }, { year: '2026' })
+  assert.deepEqual(lines, [
+    '*VBRC reportable records, Vermont, 2026: 5 checklists, 2 sightings*',
+    '',
+    '*Chittenden County* (2)',
+    '• White Ibis · Shelburne Bay (+1 other location) · 2026-05-30 to 06-09 · VBRC review species · 4 checklists, likely the same bird(s): https://ebird.org/checklist/S2, https://ebird.org/checklist/S1, https://ebird.org/checklist/S3, +1 more',
+    '• White Ibis · Shelburne Farms · 2026-06-20 · VBRC review species · https://ebird.org/checklist/S5'
+  ])
+})
+
+test('rareSlackReport always links the checklists in a group still to be reviewed', () => {
+  const lines = rareSlackReport({
+    Vermont: ['S1', 'S2', 'S3', 'S4'].map((id, i) => ibis(id, `2026-06-0${i + 1}`)).concat(ibis('S5', '2026-06-05', { Approved: '0' }), ibis('S6', '2026-06-06'))
+  })
+  assert.match(lines[3], /S3, https:\/\/ebird\.org\/checklist\/S5 \(unreviewed\), \+2 more$/)
+})
+
+test('rareSlackReport keeps different species and counties apart', () => {
+  const lines = rareSlackReport({
+    Vermont: [ibis('S1', '2026-06-01'), ibis('S2', '2026-06-02', { County: 'Addison' }), ibis('S3', '2026-06-02', { 'Common Name': 'Glossy Ibis' })]
+  })
+  assert.equal(lines.filter(l => l.startsWith('•')).length, 3)
+})
+
+// ===========================================================================
+// splitSlackMessages
+// ===========================================================================
+
+const county = (name, n) => ['', `*${name} County* (${n})`, ...Array.from({ length: n }, (_, i) => `• Bird ${i} · ${'x'.repeat(80)}`)]
+
+test('splitSlackMessages keeps a short report as one message', () => {
+  const lines = ['*Heading*', ...county('Addison', 2)]
+  assert.deepEqual(splitSlackMessages(lines), [lines.join('\n')])
+})
+
+test('splitSlackMessages breaks between counties, keeping every message under the limit', () => {
+  const lines = ['*Heading*', ...county('Addison', 5), ...county('Bennington', 5), ...county('Chittenden', 5)]
+  const messages = splitSlackMessages(lines, 1200)
+  assert.ok(messages.length > 1)
+  assert.ok(messages.every(m => m.length <= 1200))
+  assert.ok(messages.slice(1).every(m => m.startsWith('*')))
+  assert.equal(messages.join('\n\n'), lines.join('\n'))
+})
+
+test('splitSlackMessages splits a county too long for one message, repeating its heading', () => {
+  const messages = splitSlackMessages(['*Heading*', ...county('Addison', 20)], 1000)
+  assert.ok(messages.every(m => m.length <= 1000))
+  assert.ok(messages.slice(1).every(m => m.startsWith('*Addison County* (20) (continued)')))
+  assert.equal(messages.join('\n').split('\n').filter(l => l.startsWith('•')).length, 20)
 })
