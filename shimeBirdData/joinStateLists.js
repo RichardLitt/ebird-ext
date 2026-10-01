@@ -6,7 +6,7 @@
 import fs from 'node:fs'
 import t from '../taxonomicSort.js'
 import * as f from '../filters.js'
-import csv from 'csv-parse'
+import { parse as csv } from 'csv-parse'
 import _ from 'lodash'
 const parser = csv({
   delimiter: ',',
