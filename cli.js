@@ -8,50 +8,68 @@ import moment from 'moment'
 
 const cli = meow(`
   Usage
-    $ node cli.js <input> [opts]
+    $ node cli.js <command> --input=<file> [options]
 
-  Arguments
-    quad          Show quad birds
-    first         Show your entire first time lists
-    big           Show all your biggest time periods
-    big-year      Show your biggest year
-    big-month     Show your biggest month
-    big-day       Show your biggest day
-    first-year    Show your first lists
-    first-month   Show your first lists
-    first-day     Show your first lists
-    towns         Show your town counts
-    regions       Show your region counts
-    counties      Show your counties counts
-    state         Show your state counts
-    rare          Show which rarities to report to records committee. Takes
-                  MyEBirdData.csv or eBird Basic Dataset ebd_*.txt files. With
-                  --year, includes earlier sightings last edited that year
-    251           Project 251 town lists for --year (default: this year), from --input
-    subspecies    Show subspecies, spuhs, and other leaf nodes
-    checklists    Show checklists for a given region and time
-    getLastDate   Show most recent date from checklist
-    countTheBirds Show the sum of all individual birds counted
-    townHotspots  Show which hotspots are in which towns
-    csvToJsonHotspots Create hotspots file
-    unbirdedHotspots  Show which hotspots haven't been birded
+  --input is a MyEBirdData.csv export (https://ebird.org/downloadMyData) or an
+  eBird Basic Dataset file (ebd_*.txt). Several files can be given, separated
+  by commas. See the README for each command's output.
+
+  Your lists
+    big           Your biggest year, month and day
+    big-year      Your biggest year (--list for the species)
+    big-month     Your biggest month (--list for the species)
+    big-day       Your biggest day (--list for the species)
+    first         The year, month and day with the most new species
+    first-year    The year with the most new species (--list for the species)
+    first-month   The month with the most new species (--list for the species)
+    first-day     The day with the most new species (--list for the species)
+    quad          Species you've seen, photographed and recorded. Give both
+                  MyEBirdData.csv and Macaulay Library export CSVs
+    subspecies    Subspecies, spuhs, slashes, hybrids and other leaf nodes
+    countTheBirds The total of all individual birds counted
+    checklists    Your checklists (with --year, --county, --complete, ...)
+
+  Vermont
+    towns         Species per town. --town=<name> lists one town's species
+    regions       Species per biophysical region
+    counties      Species per county. --county=<name> for one county
+    state         Species in Vermont, by the date you first saw each
+    withinDistance Species within --distance miles (default 10) of
+                  --coordinates=<lat,lng> (default: Montpelier)
+    rare          Records to report to the Vermont Bird Records Committee.
+                  With --year, includes earlier sightings last edited that year
+    issr          Is one sighting reportable? --species, --town and --date
+    datesSpeciesObserved  The 20 species you've seen on the most days of the year
+    daylistTargets        Species you've never seen in Vermont on today's date
+    251           Project 251 town lists for --year (default: this year)
+    getLastDate   Today's date, formatted for the Project 251 page
+
+  Hotspots
+    townHotspots          Hotspots in a --town
+    unbirdedHotspots      Hotspots you've never birded (--input), or not this
+                          year (--currentYear) or since a year (--sinceYear)
+    weeksYouveBirdedAtHotspot  Weeks of the year you haven't birded --id
+    csvToJsonHotspots     Rebuild data/hotspots.json from --input (used by
+                          scripts/updateHotspots.sh)
 
   Options
-    --input, -i The input file, or several separated by commas
-    --country   Search by country
-    --state     Search by state
-    --county    Search by county
-    --year      Limit results to a given year
-    --after     Limit results to after a given date
-    --town      Search by towns in Vemront
-    --region    Search by biophysical regions in Vermont
-    --list, -l  List all of the species
-    --complete  Filter by complete checklists only
-    --slack     With rare: group by county, formatted as Slack messages
-    --verbose   Adds extra logging
+    --input, -i   The input file, or several separated by commas
+    --country     Only records in this country
+    --state       Only records in this state
+    --county      Only records in this county
+    --town        Only records in this Vermont town
+    --region      Only records in this Vermont biophysical region
+    --year        Only records from this year
+    --after       Only records after this date
+    --complete    Only complete checklists
+    --list, -l    List the species
+    --output      Also write the result to this JSON file
+    --slack       With rare: group by county, formatted as Slack messages
+    --verbose     Adds extra logging
 
   Examples
-    $ node cli.js
+    $ node cli.js big-day --input=MyEBirdData.csv --list
+    $ node cli.js towns --input=MyEBirdData.csv --town=Montpelier
     $ node cli.js rare --input=ebd_US-VT-001_202601_202612.txt --county=Addison --year=2026
     $ node cli.js rare --input=ebd_US-VT_relAug-2026.txt,ebd_US-VT_relAug-2026_unvetted.txt --year=2026 --slack
 `, {
@@ -93,7 +111,10 @@ const cli = meow(`
     slack: {
       type: 'boolean'
     },
-    withinDistance: {
+    coordinates: {
+      type: 'string'
+    },
+    distance: {
       type: 'string'
     }
   }
@@ -103,16 +124,33 @@ const cli = meow(`
 // TODO Make input automatic based on file location
 // TODO This is ugly. Make it better.
 
+// One line per area with any species, most species first
+function printAreaTotals (areas) {
+  Object.entries(areas)
+    .map(([name, area]) => [name, Array.isArray(area) ? area.length : area.speciesTotal])
+    .filter(([, total]) => total)
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .forEach(([name, total]) => console.log(`${name}: ${total}`))
+}
+
 async function run () {
   if (cli.input[0] === 'quad') {
     await main.quadBirds(cli.flags)
   } else if (cli.input[0] === 'towns') {
-    await main.towns(cli.flags)
+    if (cli.flags.town) {
+      await main.towns(cli.flags)
+    } else {
+      printAreaTotals(await main.towns({ ...cli.flags, all: true }))
+    }
   } else if (cli.input[0] === 'regions') {
-    await main.regions(cli.flags)
+    printAreaTotals(await main.regions(cli.flags))
   } else if (cli.input[0] === 'counties') {
     const result = await main.counties(cli.flags)
-    if (cli.flags.county) console.log(result)
+    if (cli.flags.county) {
+      console.log(result)
+    } else {
+      printAreaTotals(result)
+    }
   } else if (cli.input[0] === 'state') {
     await main.state(cli.flags)
   } else if (cli.input[0] === 'rare') {
@@ -191,13 +229,19 @@ async function run () {
       console.log(`With these species: ${_.map(biggest.Species, 'Scientific Name').join(', ')}.`)
     }
   } else if (cli.input[0] === 'withinDistance') {
-    await main.withinDistance({ coordinates: [-72.5766799, 44.2581012], input: 'MyEBirdData.csv' })
+    // Default: Montpelier
+    const coordinates = (cli.flags.coordinates || '44.2581012,-72.5766799').split(',').map(Number)
+    const distance = cli.flags.distance ? Number(cli.flags.distance) : 10
+    const result = await main.radialSearch({ ...cli.flags, coordinates, distance })
+    console.log(`${result.speciesTotal} species within ${distance} miles of ${coordinates.join(', ')}${result.speciesTotal ? ': ' + result.species.join(', ') + '.' : '.'}`)
   } else if (cli.input[0] === '251') {
     await main.vt251(cli.flags.input, { year: cli.flags.year && Number(cli.flags.year), output: cli.flags.output, release: cli.flags.release })
   } else if (cli.input[0] === 'subspecies') {
     await main.subspecies(cli.flags)
   } else if (cli.input[0] === 'checklists') {
-    await main.checklists(cli.flags)
+    const checklists = await main.checklists(cli.flags)
+    checklists.forEach(c => console.log(`${c.Date} ${c.Time || ''} | ${c.Location} | https://ebird.org/checklist/${c['Submission ID']}`))
+    console.log(`${checklists.length} checklists.`)
   } else if (cli.input[0] === 'getLastDate') {
     await main.getLastDate(cli.flags)
   } else if (cli.input[0] === 'countTheBirds') {
@@ -213,9 +257,10 @@ async function run () {
   } else if (cli.input[0] === 'datesSpeciesObserved') {
     await main.datesSpeciesObserved(cli.flags)
   } else if (cli.input[0] === 'daylistTargets') {
-    await main.daylistTargets(cli.flags)
+    await main.daylistTargets({ ...cli.flags, today: true })
   } else if (cli.input[0] === 'issr') {
-    await main.isSpeciesSightingRare(cli.flags)
+    const output = await main.isSpeciesSightingRare(cli.flags)
+    console.log(main.rareReport(output).join('\n'))
   } else {
     console.log(cli.showHelp())
   }

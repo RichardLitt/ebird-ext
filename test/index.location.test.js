@@ -797,10 +797,10 @@ test('state returns speciesByDate keyed by date with the first-seen rows', async
 // radialSearch -- return shape and logging
 // ---------------------------------------------------------------------------
 
-test('radialSearch logs the date format and centre coordinates', async (t) => {
+test('radialSearch does not log: it returns its result', async (t) => {
   quiet(t)
   await radialSearch({ input: SIGHTINGS, coordinates: BURLINGTON })
-  assert.deepEqual(logged()[0], ['YYYY-MM-DD', 44.4759, -73.2121])
+  assert.deepEqual(logged(), [])
 })
 
 test('radialSearch returns { species, speciesByDate, speciesTotal }', async (t) => {

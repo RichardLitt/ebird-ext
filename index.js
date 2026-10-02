@@ -372,7 +372,6 @@ async function radialSearch (opts) {
   const radius = opts.distance ?? 10 // miles
   const lat = opts.coordinates[0]
   const long = opts.coordinates[1]
-  console.log(dateFormat, lat, long)
   let data = await getData(opts.input)
 
   // Get a total list of species that you have seen in Vermont
