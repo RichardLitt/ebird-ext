@@ -1,12 +1,14 @@
 import VermontHotspots from './data/hotspots.json' with { type: 'json' }
 import townBoundaries from './geojson/vt_towns.json' with { type: 'json' }
 import _ from 'lodash'
-import { promises as fs } from 'node:fs'
 import moment from 'moment'
 import Papa from 'papaparse'
 import * as main from './index.js'
 import * as helpers from './helpers.js'
 import * as f from './filters.js'
+
+// Node-only file access, loaded on first use (see io.js)
+const io = () => import('./io.js')
 
 // Get new hotspots lists
 // curl --location -g --request GET 'https://api.ebird.org/v2/ref/hotspot/US-VT' > data/hotspots.csv
@@ -19,7 +21,7 @@ import * as f from './filters.js'
 const HOTSPOT_COLUMNS = ['ID', 'Country', 'State/Province', 'Region', 'Latitude', 'Longitude', 'Name', 'Last visited', 'Species', 'Checklists']
 
 async function csvToJsonHotspots (opts) {
-  let input = await fs.readFile(opts.input, 'utf8')
+  let input = await (await io()).readText(opts.input)
   input = input.split(/\r?\n/)
   input.unshift(HOTSPOT_COLUMNS.join(','))
   input = input.join('\n').trim()
@@ -30,14 +32,14 @@ async function csvToJsonHotspots (opts) {
     HOTSPOT_COLUMNS.forEach(column => { record[column] = row[column] ?? '' })
     return record
   })
-  await fs.writeFile('data/hotspots.json', JSON.stringify(data))
-  await fs.writeFile('data/novisits-hotspots.json', JSON.stringify(data.filter(x => !x['Last visited'])))
+  await (await io()).writeFile('data/hotspots.json', JSON.stringify(data))
+  await (await io()).writeFile('data/novisits-hotspots.json', JSON.stringify(data.filter(x => !x['Last visited'])))
   const list = data.map(x => x.Name).join('\n')
-  await fs.writeFile('data/hotspotsList.md', list)
+  await (await io()).writeFile('data/hotspotsList.md', list)
 }
 
 async function hotspotsForTown (opts) {
-  const hotspots = JSON.parse(await fs.readFile('data/hotspots.json', 'utf8'))
+  const hotspots = await (await io()).readJSON('data/hotspots.json')
   return f.locationFilter(hotspots.map(x => {
     // eBird API records use lat / lng; csvToJsonHotspots writes Latitude / Longitude
     if (x.Latitude === undefined) { x.Latitude = x.lat }
@@ -56,7 +58,7 @@ async function unbirdedHotspots (opts) {
     data = await main.getData(opts.input, { keepSpuh: true })
   }
 
-  let hotspots = JSON.parse(await fs.readFile('data/hotspots.json', 'utf8'))
+  let hotspots = await (await io()).readJSON('data/hotspots.json')
 
   // If the opts are not this year
   if (opts.currentYear) {

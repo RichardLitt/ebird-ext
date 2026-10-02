@@ -5,7 +5,6 @@ import CountyBarcharts from './data/countyBarcharts.json' with { type: 'json' }
 import VermontSubspecies from './data/vermont_records_subspecies.json' with { type: 'json' }
 import GeoJsonGeometriesLookup from 'geojson-geometries-lookup'
 const vermontRegions = new GeoJsonGeometriesLookup(vermontRegionsRaw)
-import { promises as fs, createReadStream } from 'node:fs'
 import _ from 'lodash'
 import Papa from 'papaparse'
 import moment from 'moment'
@@ -44,7 +43,7 @@ async function vt251 (input, { year = new Date().getFullYear(), output = 'data/v
     // Local date, as YYYY-MM-DD
     updated: new Date().toLocaleDateString('en-CA')
   }
-  await fs.writeFile(`${output.replace(/\.json$/, '')}_meta.json`, JSON.stringify(meta, null, 2) + '\n', 'utf8')
+  await (await io()).writeFile(`${output.replace(/\.json$/, '')}_meta.json`, JSON.stringify(meta, null, 2) + '\n')
 }
 
 // Useful for when Rock Pigeon is being compared against other lists, or for times when a single sighting contains only subspecies
@@ -55,36 +54,9 @@ function cleanCommonName (arr) {
 // input is a path to a "My eBird Data" CSV, or already-parsed rows.
 // Spuhs, slashes and hybrids are removed unless opts.keepSpuh is set: callers
 // counting checklists, visits or individuals need them, species counts don't.
-// Read the first bytes of a file: enough to see its header line
-async function readHead (file) {
-  const handle = await fs.open(file)
-  try {
-    const { buffer, bytesRead } = await handle.read(Buffer.alloc(4096), 0, 4096, 0)
-    return buffer.toString('utf8', 0, bytesRead)
-  } finally {
-    await handle.close()
-  }
-}
-
-// Stream an EBD file a row at a time: a statewide download is hundreds of MB,
-// too big to hold whole. opts.keep can drop rows as they are read.
-function readEBDFile (file, opts) {
-  return new Promise((resolve, reject) => {
-    const rows = []
-    Papa.parse(createReadStream(file, 'utf8'), {
-      ...ebd.EBD_PARSE_OPTIONS,
-      step: ({ data }) => {
-        if (!ebd.isEBDRows([data])) return
-        const row = ebd.fromEBDRow(data)
-        if (!opts.keepSpuh && f.removeSpuh([row]).length === 0) return
-        if (opts.keep && !opts.keep(row)) return
-        rows.push(row)
-      },
-      complete: () => resolve(ebd.collapseSharedChecklists(rows)),
-      error: reject
-    })
-  })
-}
+// Node-only file access, loaded on first use so the site's bundle never runs
+// it (see io.js)
+const io = () => import('./io.js')
 
 // input is a file path (MyEBirdData.csv or an EBD ebd_*.txt), several paths
 // separated by commas (say, an EBD download and its _unvetted.txt file), or
@@ -93,14 +65,13 @@ async function getData (input, opts = {}) {
   if (typeof input === 'string' && input.includes(',')) {
     return (await Promise.all(input.split(',').map(file => getData(file, opts)))).flat()
   }
-  if (typeof input === 'string' && ebd.isEBDHeader(await readHead(input))) {
-    return readEBDFile(input, opts)
+  if (typeof input === 'string' && await (await io()).isEBDFile(input)) {
+    return (await io()).readEBDFile(input, row =>
+      (opts.keepSpuh || f.removeSpuh([row]).length !== 0) && (!opts.keep || opts.keep(row)))
   }
   let data = input
   if (typeof input === 'string') {
-    // Strip a UTF-8 BOM (spreadsheet-resaved exports have one), or Papa keeps
-    // it on the first header and row['Submission ID'] is undefined.
-    const fileContent = (await fs.readFile(input, 'utf8')).replace(/^\uFEFF/, '')
+    const fileContent = await (await io()).readText(input)
     data = Papa.parse(fileContent, ebd.isEBDHeader(fileContent)
       ? ebd.EBD_PARSE_OPTIONS
       : { header: true, skipEmptyLines: true }).data
@@ -214,7 +185,7 @@ async function towns (opts) {
     })
 
     if (opts.output) {
-      await fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(towns), 'utf8')
+      await (await io()).writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(towns))
     }
     return towns
   } else if (opts.town) {
@@ -222,7 +193,7 @@ async function towns (opts) {
     data = countUniqueSpecies(data.filter(x => x.Town === opts.town.toUpperCase()), dateFormat)
 
     if (opts.output) {
-      await fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(data), 'utf8')
+      await (await io()).writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(data))
     }
 
     let i = 1
@@ -280,7 +251,7 @@ async function counties (opts) {
   }
 
   if (opts.output) {
-    await fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(counties), 'utf8')
+    await (await io()).writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(counties))
   }
 
   return newObj
@@ -847,9 +818,8 @@ function splitSlackMessages (lines, max = 3500) {
 // What have you logged, outside of the species level?
 async function subspecies (opts) {
   let data = opts.input
-  if (fs) {
-    const input = await fs.readFile(opts.input, 'utf8')
-    data = Papa.parse(input, { header: true, skipEmptyLines: true }).data
+  if (typeof data === 'string') {
+    data = Papa.parse(await (await io()).readText(data), { header: true, skipEmptyLines: true }).data
   }
 
   // const dateFormat = helpers.parseDateFormat('day')
