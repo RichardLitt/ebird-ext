@@ -372,7 +372,6 @@ async function radialSearch (opts) {
   const radius = opts.distance ?? 10 // miles
   const lat = opts.coordinates[0]
   const long = opts.coordinates[1]
-  console.log(dateFormat, lat, long)
   let data = await getData(opts.input)
 
   // Get a total list of species that you have seen in Vermont
@@ -709,9 +708,11 @@ function rareReport (output) {
     lines.push(`${title} (${records.length})`)
     records.forEach(e => {
       const name = e.Subspecies ? `${e['Common Name']} [${e.Subspecies}]` : e['Common Name']
-      const place = [e.Location, e.Town && helpers.capitalizeFirstLetters(e.Town), e.County].filter(Boolean).join(', ')
+      // A hand-entered sighting (issr) has the town as its location: say it once
+      const place = _.uniqBy([e.Location, e.Town && helpers.capitalizeFirstLetters(e.Town), e.County].filter(Boolean), x => x.toLowerCase()).join(', ')
       const extras = [e['Breeding Code'] && key === 'Breeding' ? `breeding: ${e['Breeding Code']}` : '', e.Approved === '0' ? 'unreviewed' : '', e['Edited Late'] ? `last edited ${e['Last Edited Date'].slice(0, 10)}` : ''].filter(Boolean)
-      lines.push(`  ${e.Date} | ${name} | ${place}${extras.length ? ' | ' + extras.join(' | ') : ''} | https://ebird.org/checklist/${e['Submission ID']}`)
+      const link = e['Submission ID'] ? ` | https://ebird.org/checklist/${e['Submission ID']}` : ''
+      lines.push(`  ${e.Date} | ${name} | ${place}${extras.length ? ' | ' + extras.join(' | ') : ''}${link}`)
     })
   })
   if (lines.length === 0) lines.push('No records to report to the VBRC.')
