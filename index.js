@@ -5,7 +5,6 @@ import CountyBarcharts from './data/countyBarcharts.json' with { type: 'json' }
 import VermontSubspecies from './data/vermont_records_subspecies.json' with { type: 'json' }
 import GeoJsonGeometriesLookup from 'geojson-geometries-lookup'
 const vermontRegions = new GeoJsonGeometriesLookup(vermontRegionsRaw)
-import { promises as fs, createReadStream } from 'node:fs'
 import _ from 'lodash'
 import Papa from 'papaparse'
 import moment from 'moment'
@@ -16,23 +15,8 @@ import * as f from './filters.js'
 import * as banding from './bandingCodes.js'
 import * as ebd from './ebd.js'
 
-// Why eBird uses this format I have no idea.
-const eBirdCountyIds = {
-  1: 'Addison',
-  3: 'Bennington',
-  5: 'Caledonia',
-  7: 'Chittenden',
-  9: 'Essex',
-  11: 'Franklin',
-  13: 'Grand Isle',
-  15: 'Lamoille',
-  17: 'Orange',
-  19: 'Orleans',
-  21: 'Rutland',
-  23: 'Washington',
-  25: 'Windham',
-  27: 'Windsor'
-}
+// Exported for the site and hotspots.js; the table lives in helpers.js
+const { eBirdCountyIds } = helpers
 
 // Project 251: the species on complete checklists of 5 minutes or more in each
 // Vermont town in one year. input is a MyEBirdData.csv or an EBD file; an EBD
@@ -59,7 +43,7 @@ async function vt251 (input, { year = new Date().getFullYear(), output = 'data/v
     // Local date, as YYYY-MM-DD
     updated: new Date().toLocaleDateString('en-CA')
   }
-  await fs.writeFile(`${output.replace(/\.json$/, '')}_meta.json`, JSON.stringify(meta, null, 2) + '\n', 'utf8')
+  await (await io()).writeFile(`${output.replace(/\.json$/, '')}_meta.json`, JSON.stringify(meta, null, 2) + '\n')
 }
 
 // Useful for when Rock Pigeon is being compared against other lists, or for times when a single sighting contains only subspecies
@@ -70,36 +54,9 @@ function cleanCommonName (arr) {
 // input is a path to a "My eBird Data" CSV, or already-parsed rows.
 // Spuhs, slashes and hybrids are removed unless opts.keepSpuh is set: callers
 // counting checklists, visits or individuals need them, species counts don't.
-// Read the first bytes of a file: enough to see its header line
-async function readHead (file) {
-  const handle = await fs.open(file)
-  try {
-    const { buffer, bytesRead } = await handle.read(Buffer.alloc(4096), 0, 4096, 0)
-    return buffer.toString('utf8', 0, bytesRead)
-  } finally {
-    await handle.close()
-  }
-}
-
-// Stream an EBD file a row at a time: a statewide download is hundreds of MB,
-// too big to hold whole. opts.keep can drop rows as they are read.
-function readEBDFile (file, opts) {
-  return new Promise((resolve, reject) => {
-    const rows = []
-    Papa.parse(createReadStream(file, 'utf8'), {
-      ...ebd.EBD_PARSE_OPTIONS,
-      step: ({ data }) => {
-        if (!ebd.isEBDRows([data])) return
-        const row = ebd.fromEBDRow(data)
-        if (!opts.keepSpuh && f.removeSpuh([row]).length === 0) return
-        if (opts.keep && !opts.keep(row)) return
-        rows.push(row)
-      },
-      complete: () => resolve(ebd.collapseSharedChecklists(rows)),
-      error: reject
-    })
-  })
-}
+// Node-only file access, loaded on first use so the site's bundle never runs
+// it (see io.js)
+const io = () => import('./io.js')
 
 // input is a file path (MyEBirdData.csv or an EBD ebd_*.txt), several paths
 // separated by commas (say, an EBD download and its _unvetted.txt file), or
@@ -108,14 +65,13 @@ async function getData (input, opts = {}) {
   if (typeof input === 'string' && input.includes(',')) {
     return (await Promise.all(input.split(',').map(file => getData(file, opts)))).flat()
   }
-  if (typeof input === 'string' && ebd.isEBDHeader(await readHead(input))) {
-    return readEBDFile(input, opts)
+  if (typeof input === 'string' && await (await io()).isEBDFile(input)) {
+    return (await io()).readEBDFile(input, row =>
+      (opts.keepSpuh || f.removeSpuh([row]).length !== 0) && (!opts.keep || opts.keep(row)))
   }
   let data = input
   if (typeof input === 'string') {
-    // Strip a UTF-8 BOM (spreadsheet-resaved exports have one), or Papa keeps
-    // it on the first header and row['Submission ID'] is undefined.
-    const fileContent = (await fs.readFile(input, 'utf8')).replace(/^\uFEFF/, '')
+    const fileContent = await (await io()).readText(input)
     data = Papa.parse(fileContent, ebd.isEBDHeader(fileContent)
       ? ebd.EBD_PARSE_OPTIONS
       : { header: true, skipEmptyLines: true }).data
@@ -229,7 +185,7 @@ async function towns (opts) {
     })
 
     if (opts.output) {
-      await fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(towns), 'utf8')
+      await (await io()).writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(towns))
     }
     return towns
   } else if (opts.town) {
@@ -237,17 +193,11 @@ async function towns (opts) {
     data = countUniqueSpecies(data.filter(x => x.Town === opts.town.toUpperCase()), dateFormat)
 
     if (opts.output) {
-      await fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(data), 'utf8')
+      await (await io()).writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(data))
     }
 
-    let i = 1
-    // TODO Doesn't work for MyEBirdData for some reason
-    _.sortBy(f.createPeriodArray(data), 'Date').forEach((e) => {
-      e.Species.forEach((specie) => {
-        console.log(`${i} | ${specie['Common Name']} - ${specie['Scientific Name']} | ${opts.town}, ${(specie.County) ? specie.County + ', ' : ''}${specie.State} | ${e.Date}`)
-        i++
-      })
-    })
+    // Species by the date first seen in the town; reports.townReport prints it
+    return data
   }
 }
 
@@ -277,17 +227,6 @@ async function counties (opts) {
   const newObj = {}
   counties.forEach(c => { newObj[c.county] = c })
 
-  function countyTicks () {
-    const total = Object.keys(newObj).reduce((prev, cur) => {
-      return prev + newObj[cur].speciesTotal
-    }, 0)
-    console.log(`Total ticks: ${total}.`)
-  }
-
-  if (opts.ticks) {
-    countyTicks()
-  }
-
   if (opts.county) {
     // locationFilter matched the county case-insensitively, so look it up the same way
     const county = Object.keys(newObj).find(c => c.toLowerCase() === opts.county.toLowerCase())
@@ -295,7 +234,7 @@ async function counties (opts) {
   }
 
   if (opts.output) {
-    await fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(counties), 'utf8')
+    await (await io()).writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(counties))
   }
 
   return newObj
@@ -359,11 +298,7 @@ async function state (opts) {
     })
   })
 
-  console.log(newObj.species.length)
-  Object.keys(newObj.speciesByDate).forEach(d => {
-    console.log(`${d}: ${newObj.speciesByDate[d].map(submission => submission['Common Name']).join(', ')}.`)
-  })
-  // fs.writeFile('vt_region_counts.json', JSON.stringify(regions), 'utf8')
+  // reports.stateReport prints it
   return newObj
 }
 
@@ -454,12 +389,8 @@ async function quadBirds (opts) {
 
   completionDates = f.orderByDate(completionDates)
 
-  if (opts.list) {
-    for (const species in completionDates) {
-      console.log(`${completionDates[species].Date}: ${completionDates[species].species['Common Name']}.`)
-    }
-  }
-  console.log(`You ${(!opts.year || opts.year.toString() === moment().format('YYYY')) ? 'have seen' : 'saw'}, photographed, and recorded a total of ${completionDates.length} species${(opts.year) ? ` in ${opts.year}` : ''}.`)
+  // { Date, species } for each species seen, photographed and recorded; reports.quadReport prints it
+  return completionDates
 }
 
 // - Get scientific name for a given bird
@@ -509,8 +440,6 @@ async function isSpeciesSightingRare (opts) {
     'Common Name': species.Species,
     Location: helpers.capitalizeFirstLetters(opts.town)
   }]
-
-  console.log(opts.data)
 
   opts.manual = true
   return rare(opts)
@@ -862,9 +791,8 @@ function splitSlackMessages (lines, max = 3500) {
 // What have you logged, outside of the species level?
 async function subspecies (opts) {
   let data = opts.input
-  if (fs) {
-    const input = await fs.readFile(opts.input, 'utf8')
-    data = Papa.parse(input, { header: true, skipEmptyLines: true }).data
+  if (typeof data === 'string') {
+    data = Papa.parse(await (await io()).readText(data), { header: true, skipEmptyLines: true }).data
   }
 
   // const dateFormat = helpers.parseDateFormat('day')
@@ -906,7 +834,7 @@ async function subspecies (opts) {
             // These seem to be the only weird adjectival spuhs, though.
             if (['Anatinae', 'Anatidae'].includes(genus)) {
               const anatinae = ['Amazonetta', 'Sibirionetta', 'Spatula', 'Mareca', 'Lophonetta', 'Speculanas', 'Anas']
-              if (!anatinae.some(ducks => species.join(' ').includes(ducks))) {
+              if (opts.verbose && !anatinae.some(ducks => species.join(' ').includes(ducks))) {
                 console.log(`Unsure what to do with ${x} spuh identifation.`)
               }
             }
@@ -995,7 +923,6 @@ async function subspecies (opts) {
     // non-leaf nodes, including species identifications if subspecies identified
     leaves: createLeavesList(species, allIdentifications).sort()
   }
-  console.log(output)
   // console.log(output.leaves.length)
   return output
 }
@@ -1020,7 +947,7 @@ async function checklists (opts) {
 /* Used when updating the 251 page */
 async function getLastDate (opts) {
   // Just use the date it is actually updated
-  console.log(moment().format('MMMM Do, YYYY'))
+  return moment().format('MMMM Do, YYYY')
 }
 
 async function countTheBirds (opts) {
@@ -1030,7 +957,7 @@ async function countTheBirds (opts) {
       return parseInt(o.Count)
     }
   })
-  console.log(sum)
+  return sum
 }
 
 async function datesSpeciesObserved (opts) {
@@ -1078,9 +1005,9 @@ async function datesSpeciesObserved (opts) {
     // })
   })
 
-  console.log(speciesArray.sort(function (a, b) {
+  return speciesArray.sort(function (a, b) {
     return a[1] - b[1]
-  }).map(x => `${x[0]}: ${daysInChart - x[1]}`).slice(0, 20))
+  }).map(x => `${x[0]}: ${daysInChart - x[1]}`).slice(0, 20)
 }
 
 async function daylistTargets (opts) {
@@ -1120,12 +1047,9 @@ async function daylistTargets (opts) {
     const month = moment().format('MM')
     const date = Number(moment().format('DD'))
     // Species never seen on today's month-day: today is still unbirded for them
-    Object.keys(speciesArray).forEach(species => {
-      if (speciesArray[species][month].indexOf(date) !== -1) {
-        console.log(species)
-      }
-    })
+    return Object.keys(speciesArray).filter(species => speciesArray[species][month].indexOf(date) !== -1)
   }
+  return speciesArray
 }
 
 // async function today (opts) {

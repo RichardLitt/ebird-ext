@@ -561,12 +561,10 @@ test('isSpeciesSightingRare builds a full sighting record from the town', async 
   }])
 })
 
-test('isSpeciesSightingRare console.logs the built sighting data once', async (t) => {
+test('isSpeciesSightingRare logs nothing', async (t) => {
   t.mock.method(console, 'log', () => {})
-  const opts = { species: 'King Eider', town: 'Burlington', date: '2024-01-15' }
-  await isSpeciesSightingRare(opts)
-  assert.equal(console.log.mock.calls.length, 1)
-  assert.equal(console.log.mock.calls[0].arguments[0], opts.data)
+  await isSpeciesSightingRare({ species: 'King Eider', town: 'Burlington', date: '2024-01-15' })
+  assert.equal(console.log.mock.calls.length, 0)
 })
 
 test('isSpeciesSightingRare sets manual, data and state on the caller\'s opts', async (t) => {
@@ -706,10 +704,10 @@ test('subspecies returns every identification category', async (t) => {
   for (const v of Object.values(out)) assert.ok(Array.isArray(v))
 })
 
-test('subspecies console.logs the output object once (non-verbose)', async (t) => {
+test('subspecies returns its output object and logs nothing (non-verbose)', async (t) => {
   const out = await runSubspecies(t, { input: LIFE_CSV })
-  assert.equal(console.log.mock.calls.length, 1)
-  assert.equal(console.log.mock.calls[0].arguments[0], out)
+  assert.equal(console.log.mock.calls.length, 0)
+  assert.ok(Array.isArray(out.species) && Array.isArray(out.leaves))
 })
 
 test('subspecies: species is the unique species-level list, trinomials collapsed', async (t) => {
@@ -848,9 +846,9 @@ test('subspecies: opts.year and opts.after work on a temp CSV with a trailing ne
   assert.deepEqual(after.species, ['Anser caerulescens'])
 })
 
-test('subspecies: "Anatinae sp." with no dabbling duck seen logs an "Unsure" warning', async (t) => {
+test('subspecies { verbose }: "Anatinae sp." with no dabbling duck seen logs an "Unsure" warning', async (t) => {
   const { file } = await tmpCsv(t, [{ sci: 'Anatinae sp.' }, { sci: 'Aythya collaris' }])
-  await runSubspecies(t, { input: file })
+  await runSubspecies(t, { input: file, verbose: true })
   const messages = console.log.mock.calls.map(c => c.arguments[0])
   assert.ok(messages.includes('Unsure what to do with Anatinae sp. spuh identifation.'))
 })

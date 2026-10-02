@@ -1,5 +1,23 @@
 import moment from 'moment'
 
+// eBird's county codes: US-VT-001 is Addison, and so on.
+const eBirdCountyIds = {
+  1: 'Addison',
+  3: 'Bennington',
+  5: 'Caledonia',
+  7: 'Chittenden',
+  9: 'Essex',
+  11: 'Franklin',
+  13: 'Grand Isle',
+  15: 'Lamoille',
+  17: 'Orange',
+  19: 'Orleans',
+  21: 'Rutland',
+  23: 'Washington',
+  25: 'Windham',
+  27: 'Windsor'
+}
+
 function capitalizeFirstLetters (string) {
   return string.toLowerCase().split(' ').map(x => x.charAt(0).toUpperCase() + x.slice(1)).join(' ')
 }
@@ -64,6 +82,7 @@ function skipInvalidDates (data) {
 }
 
 export {
+  eBirdCountyIds,
   capitalizeFirstLetters,
   parseDateFormat,
   momentFormat,

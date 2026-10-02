@@ -18,7 +18,9 @@ const ROWS = [
   'S1,King Eider,Somateria spectabilis,1,US-VT,Chittenden,L1,Burlington Waterfront,44.4759,-73.2121,2025-01-15,09:00 AM,eBird - Traveling Count,30,1,',
   'S2,Blue Jay,Cyanocitta cristata,2,US-VT,Chittenden,L1,Burlington Waterfront,44.4759,-73.2121,2025-03-01,10:00 AM,eBird - Stationary Count,15,1,',
   'S3,Blue Jay,Cyanocitta cristata,1,US-VT,Washington,L2,Hubbard Park,44.2650,-72.5730,2025-03-02,08:00 AM,eBird - Traveling Count,45,1,',
-  'S3,Barred Owl,Strix varia,1,US-VT,Washington,L2,Hubbard Park,44.2650,-72.5730,2025-03-02,08:00 AM,eBird - Traveling Count,45,1,'
+  'S3,Barred Owl,Strix varia,1,US-VT,Washington,L2,Hubbard Park,44.2650,-72.5730,2025-03-02,08:00 AM,eBird - Traveling Count,45,1,',
+  // Out of state: Vermont-only commands leave it out, silently
+  'S4,Blue Jay,Cyanocitta cristata,3,US-NH,Grafton,L3,Pine Park,43.7110,-72.2860,2025-04-01,07:00 AM,eBird - Traveling Count,20,1,'
 ]
 
 let dir, input
@@ -36,6 +38,16 @@ async function cli (...args) {
   return stdout
 }
 
+// For commands expected to fail: { code, stdout, stderr }
+async function cliFails (...args) {
+  try {
+    await run(process.execPath, ['cli.js', ...args], { cwd: root })
+  } catch (error) {
+    return error
+  }
+  assert.fail('expected the command to fail')
+}
+
 test('every command the CLI handles is in its --help', async () => {
   const source = await fs.readFile(path.join(root, 'cli.js'), 'utf8')
   const commands = [...source.matchAll(/cli\.input\[0\] === '([^']+)'/g)].map(m => m[1])
@@ -47,6 +59,35 @@ test('every command the CLI handles is in its --help', async () => {
 
 test('towns prints each town with species, most first', async () => {
   assert.equal(await cli('towns', `--input=${input}`), 'BURLINGTON: 3\nMONTPELIER: 2\n')
+})
+
+test('towns --town lists that town\'s species, with no output for out-of-state rows', async () => {
+  assert.equal(await cli('towns', `--input=${input}`, '--town=Burlington'), [
+    '1 | Snow Bunting - Plectrophenax nivalis | Burlington, Chittenden, Vermont | 2025-01-15',
+    '2 | King Eider - Somateria spectabilis | Burlington, Chittenden, Vermont | 2025-01-15',
+    '3 | Blue Jay - Cyanocitta cristata | Burlington, Chittenden, Vermont | 2025-03-01',
+    ''
+  ].join('\n'))
+})
+
+test('state prints the species total, then the species first seen each day', async () => {
+  assert.equal(await cli('state', `--input=${input}`), [
+    '4',
+    '2025-01-15: Snow Bunting, King Eider.',
+    '2025-03-01: Blue Jay.',
+    '2025-03-02: Barred Owl.',
+    ''
+  ].join('\n'))
+})
+
+test('countTheBirds prints the total of every count', async () => {
+  assert.equal(await cli('countTheBirds', `--input=${input}`), '48\n')
+})
+
+test('an error is printed as a message, with exit code 1', async () => {
+  const { code, stderr } = await cliFails('weeksYouveBirdedAtHotspot', `--input=${input}`)
+  assert.equal(code, 1)
+  assert.equal(stderr, 'Error: Get the ID for this location first, manually. Send it as --id.\n')
 })
 
 test('regions prints each region with species', async () => {
@@ -72,7 +113,7 @@ test('withinDistance takes --coordinates and --distance', async () => {
 test('checklists prints one line per checklist, with its link', async () => {
   const out = await cli('checklists', `--input=${input}`)
   assert.match(out, /2025-01-15 09:00 AM \| Burlington Waterfront \| https:\/\/ebird\.org\/checklist\/S1\n/)
-  assert.match(out, /3 checklists\.\n$/)
+  assert.match(out, /4 checklists\.\n$/)
 })
 
 test('issr prints the report for a reportable sighting', async () => {

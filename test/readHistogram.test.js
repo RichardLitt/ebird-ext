@@ -142,11 +142,9 @@ test('bundled file: no kept species name contains "sp." or "/"', async (t) => {
   }
 })
 
-test('bundled file: logs every kept species name, then the count', async (t) => {
-  const { result, logs } = await parseBundled(t)
-  assert.equal(logs.length, 149)
-  assert.deepEqual(logs.slice(0, -1), names(result))
-  assert.equal(logs.at(-1), 148)
+test('bundled file: logs nothing', async (t) => {
+  const { logs } = await parseBundled(t)
+  assert.deepEqual(logs, [])
 })
 
 // ---------------------------------------------------------------------------
@@ -306,22 +304,22 @@ test('a header-only file yields an empty species list', async (t) => {
 // Logging
 // ---------------------------------------------------------------------------
 
-test('logs each kept species name once, in order, then the species count', async (t) => {
-  const { logs } = await parse(t, fixture('basic.txt'))
-  assert.deepEqual(logs, [
+test('keeps each species once, in order, and logs nothing', async (t) => {
+  const { result, logs } = await parse(t, fixture('basic.txt'))
+  assert.deepEqual(logs, [])
+  assert.deepEqual(names(result), [
     'Snow Goose',
     'Canada Goose',
     'Mallard (Domestic type)',
     'Mallard x American Black Duck (hybrid)',
     'Black-capped Chickadee',
-    'American Robin',
-    6
+    'American Robin'
   ])
 })
 
-test('does not log spuh or slash taxa', async (t) => {
+test('logs nothing for a file of only spuh and slash taxa', async (t) => {
   const { logs } = await parse(t, fixture('all-spuh.txt'))
-  assert.deepEqual(logs, [0])
+  assert.deepEqual(logs, [])
 })
 
 // ---------------------------------------------------------------------------

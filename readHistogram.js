@@ -3,15 +3,14 @@
 // cover seeing all birds which might be seen or which have been seen outside
 // of the area of the Histogram file.
 
-import { promises as fs } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import removeEmptyLines from 'remove-blank-lines'
 
 async function getData (input) {
   const results = {}
-  if (fs) {
+  if (typeof input === 'string') {
     // Normalise CRLF first: remove-blank-lines would otherwise strip every "\n".
-    const text = (await fs.readFile(input, 'utf8')).replace(/\r\n/g, '\n')
+    const text = (await (await import('./io.js')).readText(input)).replace(/\r\n/g, '\n')
     input = removeEmptyLines(text).split('\n').filter(s => s.trim() !== '')
     results.taxa = input.filter(s => s.includes('Number of taxa'))[0].split('\t')[1]
     results.sampleSize = input.filter(s => s.includes('Sample Size'))[0].split('\t').slice(1).filter(x => x !== '')
@@ -25,7 +24,6 @@ async function getData (input) {
       // Basically, remove spuh
       const paraspecial = ['sp.', '/']
       if (!paraspecial.some(s => speciesName.includes(s))) {
-        console.log(speciesName)
         dict[speciesName] = {
           species: speciesName,
           'Scientific Name': scientificName,
@@ -38,7 +36,6 @@ async function getData (input) {
     results.species = input.filter(s => s !== null)
   }
 
-  console.log(results.species.length)
   return results
 }
 
