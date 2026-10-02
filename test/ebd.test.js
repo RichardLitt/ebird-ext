@@ -239,6 +239,16 @@ test('rareReport shows the breeding code in the nesting bucket', () => {
   ])
 })
 
+test('rareReport leaves out the link for a sighting with no checklist (issr)', () => {
+  const lines = rareReport({ Vermont: [{ Date: '2026-02-01', 'Common Name': 'King Eider', Location: 'Burlington', Town: 'Burlington', County: 'Chittenden' }] })
+  assert.equal(lines[1], '  2026-02-01 | King Eider | Burlington, Chittenden')
+})
+
+test('rareReport names a place once when the location is the town', () => {
+  const lines = rareReport({ Vermont: [{ Date: '2026-02-01', 'Common Name': 'King Eider', Location: 'Burlington', Town: 'BURLINGTON', County: 'Chittenden', 'Submission ID': 'S1' }] })
+  assert.equal(lines[1], '  2026-02-01 | King Eider | Burlington, Chittenden | https://ebird.org/checklist/S1')
+})
+
 test('rareReport says so when there is nothing to report', () => {
   assert.deepEqual(rareReport({ Vermont: [], Unknown: [] }), ['No records to report to the VBRC.'])
 })
