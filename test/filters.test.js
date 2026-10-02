@@ -176,6 +176,10 @@ test('orderByDate is stable for identical dates', () => {
 // durationFilter
 // ===========================================================================
 
+test('durationFilter throws on a duration that is not a number', () => {
+  assert.throws(() => durationFilter(clone(), { duration: 'long' }), /must be a number of minutes, not "long"/)
+})
+
 test('durationFilter { duration: 30 } keeps checklists >= 30 min', () => {
   const result = durationFilter(clone(), { duration: 30 })
   assert.ok(result.every(x => parseInt(x['Duration (Min)']) >= 30))

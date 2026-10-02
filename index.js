@@ -16,23 +16,8 @@ import * as f from './filters.js'
 import * as banding from './bandingCodes.js'
 import * as ebd from './ebd.js'
 
-// Why eBird uses this format I have no idea.
-const eBirdCountyIds = {
-  1: 'Addison',
-  3: 'Bennington',
-  5: 'Caledonia',
-  7: 'Chittenden',
-  9: 'Essex',
-  11: 'Franklin',
-  13: 'Grand Isle',
-  15: 'Lamoille',
-  17: 'Orange',
-  19: 'Orleans',
-  21: 'Rutland',
-  23: 'Washington',
-  25: 'Windham',
-  27: 'Windsor'
-}
+// Exported for the site and hotspots.js; the table lives in helpers.js
+const { eBirdCountyIds } = helpers
 
 // Project 251: the species on complete checklists of 5 minutes or more in each
 // Vermont town in one year. input is a MyEBirdData.csv or an EBD file; an EBD

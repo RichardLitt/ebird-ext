@@ -12,24 +12,6 @@ import nearestPoint from '@turf/nearest-point'
 import turfCenter from '@turf/center'
 import { point as turfPoint, featureCollection } from '@turf/helpers'
 
-// Why eBird uses this format I have no idea.
-const eBirdCountyIds = {
-  1: 'Addison',
-  3: 'Bennington',
-  5: 'Caledonia',
-  7: 'Chittenden',
-  9: 'Essex',
-  11: 'Franklin',
-  13: 'Grand Isle',
-  15: 'Lamoille',
-  17: 'Orange',
-  19: 'Orleans',
-  21: 'Rutland',
-  23: 'Washington',
-  25: 'Windham',
-  27: 'Windsor'
-}
-
 // Used more than once.
 const townCentroids = getTownCentroids()
 
@@ -158,7 +140,7 @@ function locationFilter (list, opts) {
           Longitude: checklist.Longitude,
           Latitude: checklist.Latitude
           // This is ugly but it should work.
-        }, Number(Object.keys(eBirdCountyIds).filter(key => eBirdCountyIds[key] === checklist.County)[0]))
+        }, Number(Object.keys(helpers.eBirdCountyIds).filter(key => helpers.eBirdCountyIds[key] === checklist.County)[0]))
         // Upper case, to match the geojson town keys that every caller compares against
         checklist.Town = point?.toUpperCase()
       }
@@ -167,7 +149,7 @@ function locationFilter (list, opts) {
           Longitude: checklist.Longitude,
           Latitude: checklist.Latitude
           // This is ugly but it should work.
-        }, Number(Object.keys(eBirdCountyIds).filter(key => eBirdCountyIds[key] === checklist.County)[0]))
+        }, Number(Object.keys(helpers.eBirdCountyIds).filter(key => helpers.eBirdCountyIds[key] === checklist.County)[0]))
         checklist.Region = point && helpers.capitalizeFirstLetters(point)
       }
     }
@@ -215,8 +197,7 @@ function dateFilter (list, opts) {
 
 function durationFilter (list, opts) {
   if (opts.duration && !parseInt(opts.duration)) {
-    console.log('Duration filter not a number!')
-    process.exit(1)
+    throw new Error(`The duration filter must be a number of minutes, not "${opts.duration}".`)
   }
   return (opts.duration) ? list.filter(x => parseInt(x['Duration (Min)']) >= opts.duration) : list
 }
