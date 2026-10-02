@@ -49,8 +49,9 @@ Holland, Lemington and Warner's Grant.
 - [x] **Renamed species.** `EBIRD_NAME_TO_CODE` is in `bandingCodes.js`, so
       birds eBird renamed in 2025 get their 2021 banding codes.
 - [x] **Data date.** `vt251` writes `vt_town_counts_meta.json`.
-- [ ] The same kind of date file for `updateAreaSightings.js`, so the dates on
-      the towns, regions and counties pages don't go stale either.
+- [x] The same kind of date file for `updateAreaSightings.js`
+      (`area_sightings_meta.json`), so the towns, regions and counties pages
+      say which release they use.
 
 ### Website (birdinginvermont.com)
 
