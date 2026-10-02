@@ -27,7 +27,7 @@ const cli = meow(`
     rare          Show which rarities to report to records committee. Takes
                   MyEBirdData.csv or eBird Basic Dataset ebd_*.txt files. With
                   --year, includes earlier sightings last edited that year
-    251           Show 251
+    251           Project 251 town lists for --year (default: this year), from --input
     subspecies    Show subspecies, spuhs, and other leaf nodes
     checklists    Show checklists for a given region and time
     getLastDate   Show most recent date from checklist
@@ -192,8 +192,8 @@ async function run () {
     }
   } else if (cli.input[0] === 'withinDistance') {
     await main.withinDistance({ coordinates: [-72.5766799, 44.2581012], input: 'MyEBirdData.csv' })
-  } else if (cli.input[0] === 251) {
-    await main.vt251(cli.flags.input)
+  } else if (cli.input[0] === '251') {
+    await main.vt251(cli.flags.input, { year: cli.flags.year && Number(cli.flags.year), output: cli.flags.output })
   } else if (cli.input[0] === 'subspecies') {
     await main.subspecies(cli.flags)
   } else if (cli.input[0] === 'checklists') {

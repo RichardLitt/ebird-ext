@@ -15,7 +15,6 @@ import * as helpers from './helpers.js'
 import * as f from './filters.js'
 import * as banding from './bandingCodes.js'
 import * as ebd from './ebd.js'
-import townDataFor2022 from './data/townDataFor2022-May-Export.json' with { type: 'json' }
 
 // Why eBird uses this format I have no idea.
 const eBirdCountyIds = {
@@ -35,17 +34,18 @@ const eBirdCountyIds = {
   27: 'Windsor'
 }
 
-async function vt251 (input) {
+// Project 251: the species on complete checklists of 5 minutes or more in each
+// Vermont town in one year. input is a MyEBirdData.csv or an EBD file; an EBD
+// download for the year covers everyone, so no shared account is needed. See
+// docs/project-251.md.
+async function vt251 (input, { year = new Date().getFullYear(), output = 'data/vt_town_counts.json' } = {}) {
   const opts = {
-    year: 2022,
+    year,
     state: 'Vermont',
     all: true,
     complete: true,
     duration: 5,
-    // TODO Enable this, instead of requiring above.
-    // baseData: 'data/townDataFor2022-May-Export.json',
-    baseData: true,
-    output: 'data/vt_town_counts.json',
+    output,
     input
   }
   await towns(opts)
@@ -216,12 +216,6 @@ async function towns (opts) {
         })
       })
     })
-
-    if (opts.baseData === true) {
-      Object.keys(townDataFor2022).forEach(x => {
-        towns[x] = _.union(towns[x], townDataFor2022[x])
-      })
-    }
 
     if (opts.output) {
       await fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(towns), 'utf8')

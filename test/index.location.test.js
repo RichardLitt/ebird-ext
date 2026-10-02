@@ -15,7 +15,6 @@ import {
   quadBirds
 } from '../index.js'
 import vtTowns from '../geojson/vt_towns.json' with { type: 'json' }
-import townDataFor2022 from '../data/townDataFor2022-May-Export.json' with { type: 'json' }
 import CountyBarcharts from '../data/countyBarcharts.json' with { type: 'json' }
 
 // Fixtures live in test/fixtures/index-location/ and are hand-made CSVs in the
@@ -262,14 +261,6 @@ test('towns { all } lists a species once when it was seen both as a subspecies a
   assert.deepEqual(result.BURLINGTON, ['DEJU'])
 })
 
-test('towns { all, baseData } does not double-count a subspecies against the 2022 base data', async (t) => {
-  quiet(t)
-  assert.ok(townDataFor2022.BURLINGTON.includes('DEJU'))
-  const result = await towns({ input: SIGHTINGS, all: true, baseData: true })
-  assert.equal(result.BURLINGTON.filter(c => c === 'DEJU').length, 1)
-  assert.ok(!result.BURLINGTON.includes('Dark-eyed Junco (Slate-colored)'))
-})
-
 test('towns { all } falls back to the raw common name when no banding code exists', async (t) => {
   quiet(t)
   const result = await towns({ input: [burlingtonRow('Zzyzx Test Bird', 'Testus zzyzx')], all: true })
@@ -304,21 +295,11 @@ test('towns { all, year } keeps only that year, in checklist row order', async (
   assert.deepEqual(result.BRIGHTON, [])
 })
 
-test('towns { all, baseData: true } unions in the 2022 town data', async (t) => {
+test('towns { all } lists only the input: the old baseData option merges nothing', async (t) => {
   quiet(t)
+  // Stowe had species in the May 2022 base data that towns() used to merge in
   const result = await towns({ input: SIGHTINGS, all: true, baseData: true })
-  const base = townDataFor2022.BURLINGTON
-  assert.ok(Array.isArray(base) && base.length > 0)
-  for (const code of base) assert.ok(result.BURLINGTON.includes(code), `missing ${code}`)
-  for (const code of ['SNBU', 'BOWA']) assert.ok(result.BURLINGTON.includes(code))
-  assert.equal(new Set(result.BURLINGTON).size, result.BURLINGTON.length, 'no duplicates')
-})
-
-test('towns { all } without baseData does not include the 2022 town data', async (t) => {
-  quiet(t)
-  const result = await towns({ input: SIGHTINGS, all: true })
-  assert.ok(result.STOWE.length === 0)
-  assert.ok(townDataFor2022.STOWE.length > 0)
+  assert.deepEqual(result.STOWE, [])
 })
 
 test('towns { all, output } writes the result to <output>.json', async (t) => {
