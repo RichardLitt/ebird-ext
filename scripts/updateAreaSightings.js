@@ -11,6 +11,11 @@
 //   --dry-run            Read the EBD and print the change report, but don't write.
 //   --include-escapees   Keep records marked as escapees (exotic code X). eBird
 //                        doesn't count them, so by default neither do we.
+//   --release="Aug 2026" The EBD release, if the file name doesn't say (see below).
+//
+// Also writes data/area_sightings_meta.json, { release, updated }, so the site
+// can say which EBD release the maps come from. The release is read from the
+// EBD file name (ebd_US-VT_smp_relAug-2026.txt -> 'Aug 2026').
 //
 // Each list holds a species if it was reported there at least once. Only
 // countable taxa are kept: species, and subspecies or forms counted as their
@@ -42,6 +47,7 @@ import path from 'node:path'
 import readline from 'node:readline'
 import { fileURLToPath } from 'node:url'
 import * as banding from '../bandingCodes.js'
+import { releaseFromFileName } from '../ebd.js'
 import * as f from '../filters.js'
 import * as helpers from '../helpers.js'
 
@@ -52,6 +58,7 @@ const OUTPUTS = {
   counties: path.join(root, 'data/countyBarcharts.json')
 }
 const KINDS = Object.keys(OUTPUTS)
+const META = path.join(root, 'data/area_sightings_meta.json')
 
 // Vermont species on eBird's sensitive list: https://support.ebird.org/en/support/solutions/articles/48000803210
 // Hawk Owl, Great Gray Owl and Gyrfalcon were only ever in the county lists,
@@ -107,7 +114,7 @@ async function readEBD (file, opts) {
   const lines = readline.createInterface({ input: createReadStream(file, 'utf8'), crlfDelay: Infinity })
   for await (const line of lines) {
     if (!col) {
-      const header = line.replace(/^﻿/, '').split('\t')
+      const header = line.replace(/^\uFEFF/, '').split('\t')
       col = Object.fromEntries(header.map((name, i) => [name.trim(), i]))
       for (const name of ['CATEGORY', 'COMMON NAME', 'SCIENTIFIC NAME', 'TAXONOMIC ORDER', 'COUNTY', 'EXOTIC CODE', 'COUNTY CODE', 'LOCALITY ID', 'LATITUDE', 'LONGITUDE', 'APPROVED']) {
         if (!(name in col)) throw new Error(`${file} has no ${name} column; is it an EBD file?`)
@@ -257,10 +264,16 @@ async function main () {
   const args = process.argv.slice(2)
   const file = args.find(a => !a.startsWith('--'))
   if (!file) {
-    console.error('Usage: node scripts/updateAreaSightings.js <ebd_US-VT_*.txt> [--dry-run] [--include-escapees]')
+    console.error('Usage: node scripts/updateAreaSightings.js <ebd_US-VT_*.txt> [--dry-run] [--include-escapees] [--release="Aug 2026"]')
     process.exit(1)
   }
   const opts = { dryRun: args.includes('--dry-run'), includeEscapees: args.includes('--include-escapees') }
+  const releaseArg = args.find(a => a.startsWith('--release='))
+  const release = releaseArg ? releaseArg.slice('--release='.length) : releaseFromFileName(path.basename(file))
+  if (!release) {
+    console.error('The EBD release is not in the file name; pass --release="Aug 2026".')
+    process.exit(1)
+  }
 
   const { areas, stats, unplaced, scientificNames, localities } = await readEBD(file, opts)
   console.error(`${stats.rows} rows, ${stats.kept} countable records kept, ${stats.escapees} escapee records skipped, ${localities} localities`)
@@ -285,6 +298,13 @@ async function main () {
       await fs.writeFile(OUTPUTS[kind], format(lists), 'utf8')
       console.error(`Wrote ${path.relative(root, OUTPUTS[kind])}`)
     }
+  }
+
+  if (!opts.dryRun) {
+    // Local date, as YYYY-MM-DD
+    const meta = { release, updated: new Date().toLocaleDateString('en-CA') }
+    await fs.writeFile(META, JSON.stringify(meta, null, 2) + '\n', 'utf8')
+    console.error(`Wrote ${path.relative(root, META)}: ${release}`)
   }
 
   if (unplaced.size) {

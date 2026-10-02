@@ -8,7 +8,6 @@ export default [
       // Claude Code agent worktrees
       '.claude/**',
       // One-off data scripts: untested, not maintained to this standard
-      'montpelier.js',
       'shimeBirdData/**',
       'scripts/**'
     ]

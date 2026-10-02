@@ -95,7 +95,15 @@ function parseEBD (text) {
   return fromEBD(Papa.parse(text.replace(/^\uFEFF/, ''), EBD_PARSE_OPTIONS).data)
 }
 
+// The release in an EBD file name, e.g. 'Aug 2026' for
+// ebd_US-VT_smp_relAug-2026.txt, or null if the name doesn't have one
+function releaseFromFileName (file) {
+  const match = typeof file === 'string' && file.match(/rel([A-Z][a-z]{2})-(\d{4})/)
+  return match ? `${match[1]} ${match[2]}` : null
+}
+
 export {
+  releaseFromFileName,
   EBD_PARSE_OPTIONS,
   parseEBD,
   isEBDHeader,

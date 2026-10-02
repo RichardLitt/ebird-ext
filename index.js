@@ -53,10 +53,9 @@ async function vt251 (input, { year = new Date().getFullYear(), output = 'data/v
     input
   }
   await towns(opts)
-  const fromName = typeof input === 'string' && input.match(/rel([A-Z][a-z]{2})-(\d{4})/)
   const meta = {
     year: Number(year),
-    release: release || (fromName ? `${fromName[1]} ${fromName[2]}` : null),
+    release: release || ebd.releaseFromFileName(input),
     // Local date, as YYYY-MM-DD
     updated: new Date().toLocaleDateString('en-CA')
   }

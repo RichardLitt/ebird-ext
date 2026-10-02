@@ -4,7 +4,7 @@ import { promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import Papa from 'papaparse'
-import { isEBDHeader, isEBDRows, fromEBDRow, fromEBD, collapseSharedChecklists, parseEBD, EBD_PARSE_OPTIONS } from '../ebd.js'
+import { isEBDHeader, isEBDRows, fromEBDRow, fromEBD, collapseSharedChecklists, parseEBD, EBD_PARSE_OPTIONS, releaseFromFileName } from '../ebd.js'
 import { getData, rare, rareReport, rareByCounty, rareSlackReport, splitSlackMessages } from '../index.js'
 
 // eBird Basic Dataset files are named ebd_*.txt, which .gitignore keeps out of
@@ -85,6 +85,18 @@ after(async () => {
 // ===========================================================================
 // Detection
 // ===========================================================================
+
+test('releaseFromFileName reads the release from an EBD file name', () => {
+  assert.equal(releaseFromFileName('ebd_US-VT_smp_relAug-2026.txt'), 'Aug 2026')
+  assert.equal(releaseFromFileName('/data/ebd_US-VT-023_202310_202408_relJun-2024_sampling.txt'), 'Jun 2024')
+})
+
+test('releaseFromFileName returns null when there is no release', () => {
+  assert.equal(releaseFromFileName('MyEBirdData.csv'), null)
+  assert.equal(releaseFromFileName('ebd_relaug-2026.txt'), null)
+  assert.equal(releaseFromFileName(undefined), null)
+  assert.equal(releaseFromFileName([{ 'Common Name': 'Snow Bunting' }]), null)
+})
 
 test('isEBDHeader spots an EBD file by its first line', () => {
   assert.equal(isEBDHeader(toEBDText(ROWS)), true)
