@@ -27,8 +27,7 @@ const cli = meow(`
     rare          Show which rarities to report to records committee. Takes
                   MyEBirdData.csv or eBird Basic Dataset ebd_*.txt files. With
                   --year, includes earlier sightings last edited that year
-    251           Show 251
-    winterFinch   Show winterFinch needs
+    251           Project 251 town lists for --year (default: this year), from --input
     subspecies    Show subspecies, spuhs, and other leaf nodes
     checklists    Show checklists for a given region and time
     getLastDate   Show most recent date from checklist
@@ -116,8 +115,6 @@ async function run () {
     if (cli.flags.county) console.log(result)
   } else if (cli.input[0] === 'state') {
     await main.state(cli.flags)
-  } else if (cli.input[0] === 'winterFinch') {
-    await main.winterFinch(cli.flags)
   } else if (cli.input[0] === 'rare') {
     const output = await main.rare(cli.flags)
     if (cli.flags.slack) {
@@ -129,8 +126,6 @@ async function run () {
     } else {
       console.log(main.rareReport(output).join('\n'))
     }
-  } else if (cli.input[0] === 'rareAZ') {
-    await main.rareAZ(cli.flags)
   } else if (cli.input[0] === 'big') {
     cli.flags.list = undefined
     let timespan = 'year'
@@ -197,8 +192,8 @@ async function run () {
     }
   } else if (cli.input[0] === 'withinDistance') {
     await main.withinDistance({ coordinates: [-72.5766799, 44.2581012], input: 'MyEBirdData.csv' })
-  } else if (cli.input[0] === 251) {
-    await main.vt251(cli.flags.input)
+  } else if (cli.input[0] === '251') {
+    await main.vt251(cli.flags.input, { year: cli.flags.year && Number(cli.flags.year), output: cli.flags.output, release: cli.flags.release })
   } else if (cli.input[0] === 'subspecies') {
     await main.subspecies(cli.flags)
   } else if (cli.input[0] === 'checklists') {

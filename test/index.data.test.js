@@ -15,7 +15,6 @@ import {
   datesSpeciesObserved
 } from '../index.js'
 import vtTowns from '../geojson/vt_towns.json' with { type: 'json' }
-import townDataFor2022 from '../data/townDataFor2022-May-Export.json' with { type: 'json' }
 
 // Tests for the data-loading and small utility functions in index.js.
 //
@@ -684,17 +683,19 @@ test('getLastDate resolves undefined and ignores opts', async (t) => {
 // vt251
 // ===========================================================================
 //
-// vt251 runs towns() with a fixed 2022 / complete / >=5 minute config and
-// writes data/vt_town_counts.json. fs.promises.writeFile is mocked so nothing
-// is written to the repository.
+// vt251 runs towns() for one year (complete, >=5 minute checklists) and
+// writes data/vt_town_counts.json, then data/vt_town_counts_meta.json. The
+// fixture's checklists are from 2022. fs.promises.writeFile is mocked so
+// nothing is written to the repository.
 
-async function runVt251 (t) {
+async function runVt251 (t, opts = { year: 2022 }, input = VT251) {
   muteLog(t)
   const write = t.mock.method(fsp, 'writeFile', async () => {})
-  const result = await vt251(VT251)
-  assert.equal(write.mock.calls.length, 1)
+  const result = await vt251(input, opts)
+  assert.equal(write.mock.calls.length, 2)
   const [file, json, encoding] = write.mock.calls[0].arguments
-  return { result, file, encoding, towns: JSON.parse(json) }
+  const [metaFile, metaJson] = write.mock.calls[1].arguments
+  return { result, file, encoding, towns: JSON.parse(json), metaFile, meta: JSON.parse(metaJson) }
 }
 
 test('vt251 writes data/vt_town_counts.json as utf8 and resolves undefined', async (t) => {
@@ -706,8 +707,7 @@ test('vt251 writes data/vt_town_counts.json as utf8 and resolves undefined', asy
 
 test('vt251 output has an array for every Vermont town', async (t) => {
   const { towns } = await runVt251(t)
-  const expected = new Set([...Object.keys(getAllTowns(vtTowns)), ...Object.keys(townDataFor2022)])
-  assert.deepEqual(new Set(Object.keys(towns)), expected)
+  assert.deepEqual(new Set(Object.keys(towns)), new Set(Object.keys(getAllTowns(vtTowns))))
   assert.ok(Object.values(towns).every(Array.isArray))
 })
 
@@ -726,29 +726,69 @@ test('vt251 excludes other years, incomplete, short, out-of-state and spuh recor
   }
 })
 
-test('vt251 merges in the May 2022 base data without duplicates', async (t) => {
+test('vt251 lists only the input, with no other data merged in', async (t) => {
   const { towns } = await runVt251(t)
-  // No fixture rows fall in Addison, so it is exactly the (deduped) base data.
-  assert.deepEqual(towns.ADDISON, [...new Set(townDataFor2022.ADDISON)])
+  // No fixture rows fall in Addison
+  assert.deepEqual(towns.ADDISON, [])
   for (const list of Object.values(towns)) {
     assert.equal(new Set(list).size, list.length)
   }
 })
 
-test('vt251 resolves only after data/vt_town_counts.json is written', async (t) => {
+test('vt251 { year } counts that year\'s checklists instead', async (t) => {
+  const { towns } = await runVt251(t, { year: 2021 })
+  assert.deepEqual(towns.BURLINGTON, ['Yearfiltered Test Bird'])
+  assert.deepEqual(towns.MONTPELIER, [])
+})
+
+test('vt251 defaults to the current year', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: new Date('2021-07-01T12:00:00Z') })
+  const { towns } = await runVt251(t, {})
+  assert.deepEqual(towns.BURLINGTON, ['Yearfiltered Test Bird'])
+})
+
+test('vt251 { output } writes there instead, with the meta file beside it', async (t) => {
+  const { file, metaFile } = await runVt251(t, { year: 2022, output: 'elsewhere/vt251-2022.json' })
+  assert.equal(file, 'elsewhere/vt251-2022.json')
+  assert.equal(metaFile, 'elsewhere/vt251-2022_meta.json')
+})
+
+test('vt251 writes data/vt_town_counts_meta.json with the year and today\'s date', async (t) => {
+  t.mock.timers.enable({ apis: ['Date'], now: new Date(2022, 9, 15, 12) })
+  const { metaFile, meta } = await runVt251(t)
+  assert.equal(metaFile, 'data/vt_town_counts_meta.json')
+  assert.deepEqual(meta, { year: 2022, release: null, updated: '2022-10-15' })
+})
+
+test('vt251 takes the EBD release from the input file name', async (t) => {
+  const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'ebird-ext-vt251-'))
+  t.after(() => fsp.rm(dir, { recursive: true, force: true }))
+  const input = path.join(dir, 'ebd_US-VT_202201_202212_relOct-2022.txt')
+  await fsp.copyFile(VT251, input)
+  const { meta } = await runVt251(t, { year: 2022 }, input)
+  assert.equal(meta.release, 'Oct 2022')
+})
+
+test('vt251 { release } overrides the file name', async (t) => {
+  const { meta } = await runVt251(t, { year: 2022, release: 'Jan 2023' })
+  assert.equal(meta.release, 'Jan 2023')
+})
+
+test('vt251 resolves only after both files are written', async (t) => {
   muteLog(t)
-  let finishWrite
-  t.mock.method(fsp, 'writeFile', () => new Promise(resolve => { finishWrite = resolve }))
+  const pending = []
+  t.mock.method(fsp, 'writeFile', () => new Promise(resolve => { pending.push(resolve) }))
   let settled = false
-  const run = vt251(VT251).then(() => { settled = true })
-  // Let towns() read and process the CSV until it is waiting on the write.
-  // finishWrite is set by the writeFile mock, which the loop's awaits let run
-  // eslint-disable-next-line no-unmodified-loop-condition
-  for (let i = 0; i < 1000 && !finishWrite; i++) await new Promise(resolve => setTimeout(resolve, 5))
-  assert.ok(finishWrite, 'writeFile was never called')
-  await new Promise(resolve => setTimeout(resolve, 20))
-  assert.equal(settled, false, 'vt251 resolved before the write finished')
-  finishWrite()
+  const run = vt251(VT251, { year: 2022 }).then(() => { settled = true })
+  // Let vt251 run until it is waiting on each write in turn. pending is filled
+  // by the writeFile mock, which the loop's awaits let run
+  for (const n of [1, 2]) {
+    for (let i = 0; i < 1000 && pending.length < n; i++) await new Promise(resolve => setTimeout(resolve, 5))
+    assert.equal(pending.length, n, `write ${n} never started`)
+    await new Promise(resolve => setTimeout(resolve, 20))
+    assert.equal(settled, false, `vt251 resolved before write ${n} finished`)
+    pending[n - 1]()
+  }
   await run
   assert.equal(settled, true)
 })
@@ -756,5 +796,5 @@ test('vt251 resolves only after data/vt_town_counts.json is written', async (t) 
 test('vt251 rejects when writing data/vt_town_counts.json fails', async (t) => {
   muteLog(t)
   t.mock.method(fsp, 'writeFile', async () => { throw new Error('disk full') })
-  await assert.rejects(vt251(VT251), /disk full/)
+  await assert.rejects(vt251(VT251, { year: 2022 }), /disk full/)
 })

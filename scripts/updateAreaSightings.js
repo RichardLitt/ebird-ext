@@ -19,10 +19,11 @@
 //
 // Species are stored as four-letter banding codes from
 // data/ibpAlphaCodes2021.json, which follows the 2021 taxonomy, while the EBD
-// uses the current eBird taxonomy. EBIRD_NAME_TO_CODE maps the names that have
-// changed since then back to their old code. The website compares these lists
-// with an older Vermont taxonomy, so the old codes are what it expects. The
-// script lists any name it still can't map; add those to the map.
+// uses the current eBird taxonomy. EBIRD_NAME_TO_CODE in bandingCodes.js maps
+// the names that have changed since then back to their old code. The website
+// compares these lists with an older Vermont taxonomy, so the old codes are
+// what it expects. The script lists any name it still can't map; add those to
+// that map.
 //
 // countyBarcharts.json began as eBird's county bar charts, and keeps their
 // shape, { County: { taxa, species: { 'Common Name': { 'Scientific Name' } } } },
@@ -52,24 +53,6 @@ const OUTPUTS = {
 }
 const KINDS = Object.keys(OUTPUTS)
 
-// Current eBird common name -> the 2021 banding code for the same bird
-export const EBIRD_NAME_TO_CODE = {
-  // Splits, where Vermont's bird keeps the old code
-  'Northern Yellow Warbler': 'YEWA',
-  'Hudsonian Whimbrel': 'WHIM',
-  'American Herring Gull': 'HERG',
-  'American Goshawk': 'NOGO',
-  'American Barn Owl': 'BANO',
-  'Northern House Wren': 'HOWR',
-  'Eastern Warbling Vireo': 'WAVI',
-  'Western Cattle-Egret': 'CAEG',
-  // Renames
-  'Black-crowned Night Heron': 'BCNH',
-  'Yellow-crowned Night Heron': 'YCNH',
-  // Common and Hoary Redpoll, lumped
-  Redpoll: 'CORE'
-}
-
 // Vermont species on eBird's sensitive list: https://support.ebird.org/en/support/solutions/articles/48000803210
 // Hawk Owl, Great Gray Owl and Gyrfalcon were only ever in the county lists,
 // which came from eBird's bar charts rather than the EBD.
@@ -82,12 +65,12 @@ function isCountable (category, commonName) {
 }
 
 function toCode (commonName) {
-  return EBIRD_NAME_TO_CODE[commonName] || banding.commonNameToCode(commonName)
+  return banding.commonNameToCode(commonName)
 }
 
 // The name the county lists use: the 2021 name if eBird has since changed it
 function toOldName (commonName) {
-  const code = EBIRD_NAME_TO_CODE[commonName]
+  const code = banding.EBIRD_NAME_TO_CODE[commonName]
   return code ? banding.codeToCommonName(code) : commonName
 }
 
@@ -292,7 +275,7 @@ async function main () {
       }
       lists[area] = toCodes(species)
       for (const name of species.keys()) {
-        if (!EBIRD_NAME_TO_CODE[name] && !banding.isBandingCode(toCode(name))) unmapped.add(name)
+        if (!banding.isBandingCode(toCode(name))) unmapped.add(name)
       }
     }
     const old = await readOld(kind)

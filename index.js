@@ -1,7 +1,6 @@
 import townBoundaries from './geojson/vt_towns.json' with { type: 'json' }
 import vermontRegionsRaw from './geojson/Polygon_VT_Biophysical_Regions.json' with { type: 'json' }
 import VermontRecords from './data/vermont_records.json' with { type: 'json' }
-import ArizonaRecords from './data/arizona_records.json' with { type: 'json' }
 import CountyBarcharts from './data/countyBarcharts.json' with { type: 'json' }
 import VermontSubspecies from './data/vermont_records_subspecies.json' with { type: 'json' }
 import GeoJsonGeometriesLookup from 'geojson-geometries-lookup'
@@ -16,7 +15,6 @@ import * as helpers from './helpers.js'
 import * as f from './filters.js'
 import * as banding from './bandingCodes.js'
 import * as ebd from './ebd.js'
-import townDataFor2022 from './data/townDataFor2022-May-Export.json' with { type: 'json' }
 
 // Why eBird uses this format I have no idea.
 const eBirdCountyIds = {
@@ -36,20 +34,33 @@ const eBirdCountyIds = {
   27: 'Windsor'
 }
 
-async function vt251 (input) {
+// Project 251: the species on complete checklists of 5 minutes or more in each
+// Vermont town in one year. input is a MyEBirdData.csv or an EBD file; an EBD
+// download for the year covers everyone, so no shared account is needed. See
+// docs/project-251.md.
+//
+// Also writes <output>_meta.json, { year, release, updated }, for the website
+// to say what the map covers. release is the EBD release, e.g. 'Aug 2026',
+// taken from an EBD file name (ebd_..._relAug-2026.txt) unless given.
+async function vt251 (input, { year = new Date().getFullYear(), output = 'data/vt_town_counts.json', release } = {}) {
   const opts = {
-    year: 2022,
+    year,
     state: 'Vermont',
     all: true,
     complete: true,
     duration: 5,
-    // TODO Enable this, instead of requiring above.
-    // baseData: 'data/townDataFor2022-May-Export.json',
-    baseData: true,
-    output: 'data/vt_town_counts.json',
+    output,
     input
   }
   await towns(opts)
+  const fromName = typeof input === 'string' && input.match(/rel([A-Z][a-z]{2})-(\d{4})/)
+  const meta = {
+    year: Number(year),
+    release: release || (fromName ? `${fromName[1]} ${fromName[2]}` : null),
+    // Local date, as YYYY-MM-DD
+    updated: new Date().toLocaleDateString('en-CA')
+  }
+  await fs.writeFile(`${output.replace(/\.json$/, '')}_meta.json`, JSON.stringify(meta, null, 2) + '\n', 'utf8')
 }
 
 // Useful for when Rock Pigeon is being compared against other lists, or for times when a single sighting contains only subspecies
@@ -218,12 +229,6 @@ async function towns (opts) {
       })
     })
 
-    if (opts.baseData === true) {
-      Object.keys(townDataFor2022).forEach(x => {
-        towns[x] = _.union(towns[x], townDataFor2022[x])
-      })
-    }
-
     if (opts.output) {
       await fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(towns), 'utf8')
     }
@@ -295,59 +300,6 @@ async function counties (opts) {
   }
 
   return newObj
-}
-
-async function winterFinch (opts) {
-  function sortedList (list, orderedList) {
-    list = list.map(species => species.split(' (')[0])
-    return list.sort((a, b) => orderedList.indexOf(a) - orderedList.indexOf(b))
-  }
-
-  const owls = [
-    'Eastern Screech-Owl',
-    'Great Horned Owl',
-    'Snowy Owl',
-    'Barred Owl',
-    'Long-eared Owl',
-    'Short-eared Owl',
-    'Boreal Owl',
-    'Northern Saw-whet Owl'
-  ]
-
-  const winterFinches = [
-    'Rough-legged Hawk',
-    'Snowy Owl',
-    'Northern Shrike',
-    'Boreal Chickadee',
-    'Horned Lark',
-    'Bohemian Waxwing',
-    'Evening Grosbeak',
-    'Pine Grosbeak',
-    'Common Redpoll',
-    'Hoary Redpoll',
-    'Red Crossbill',
-    'White-winged Crossbill',
-    'Pine Siskin',
-    'Lapland Longspur',
-    'Snow Bunting',
-    'American Tree Sparrow'
-  ]
-
-  let data = await counties(opts)
-  if (opts.county) {
-    // counties returns a single county entry (or undefined) when opts.county is set
-    data = (data) ? { [data.county]: data } : {}
-  }
-  Object.keys(data).forEach(county => {
-    const intersection = sortedList(_.intersection(cleanCommonName(data[county].species), winterFinches), winterFinches)
-    console.log(`${county} (${intersection.length})${(intersection.length !== 0) ? `: ${intersection.join(', ')}.` : ''}`)
-  })
-
-  console.log('')
-  Object.keys(data).forEach(county => {
-    const intersection = sortedList(_.intersection(cleanCommonName(data[county].species), owls), owls)
-    console.log(`${county} (${intersection.length})${(intersection.length !== 0) ? `: ${intersection.join(', ')}.` : ''}`)
-  })
 }
 
 /* node cli.js count -i=MyEBirdData.csv --town="Fayston" --state=Vermont
@@ -564,70 +516,6 @@ async function isSpeciesSightingRare (opts) {
 
   opts.manual = true
   return rare(opts)
-}
-
-async function rareAZ (opts) {
-  let data
-  opts.state = 'Arizona'
-  // Use only data from this year
-  if (!opts.manual) {
-    // console.log(opts)
-    data = f.orderByDate(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts).reverse()
-  } else {
-    // This will incorrectly flag as 'Unknown' TODO. OUt of area.
-    if (opts.data) {
-      data = opts.data
-    } else {
-      const spoof = [{
-        County: 'Washington',
-        Date: '2020-03-02',
-        Region: 'Northern Piedmont',
-        'Scientific Name': 'Martes martes',
-        Species: 'Pine Marten',
-        Town: 'Montpelier'
-      }]
-      data = spoof
-    }
-  }
-  const allSpecies = ArizonaRecords.map(x => x['Scientific Name'])
-  const speciesToReport = ArizonaRecords.map(x => x['Scientific Name'])
-  // TODO Update needs JSON file
-  const output = {
-    Breeding: [],
-    Arizona: [],
-    Unknown: [],
-    Subspecies: []
-  }
-
-  data.forEach(e => {
-    const species = e['Scientific Name']
-    if (speciesToReport.includes(species)) {
-      const recordEntry = ArizonaRecords.find(x => x['Scientific Name'] === species)
-      // This checks if there is a breeding code but this species hasn't been confirmed breeding before.
-      if (recordEntry.Breeding !== 'n' && e['Breeding Code'] && !IGNORED_BREEDING_CODES.includes(e['Breeding Code'])) {
-        output.Breeding.push(e)
-      } else if (recordEntry.Reporting === 'V') {
-        // Anyhwere in Vermont
-        output.Arizona.push(e)
-      }
-    } else if (!allSpecies.includes(species)) {
-      output.Unknown.push(e)
-    }
-
-    // Do nothing at the moment.
-    if (e.Subspecies) {
-      // TODO
-    }
-  })
-
-  if (opts.output) {
-    await fs.writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(output), 'utf8')
-    console.log(`Wrote ${opts.output.toString().replace('.json', '')}.json.`)
-  } else {
-    console.log(output)
-  }
-
-  return output
 }
 
 // We need both the single letter and the full-text;
@@ -1262,12 +1150,10 @@ export {
   rareSlackReport,
   splitSlackMessages,
   RARITY_CATEGORIES,
-  rareAZ,
   regions,
   towns,
   counties,
   state,
-  winterFinch,
   vt251,
   subspecies,
   checklists,
@@ -1294,12 +1180,10 @@ export default {
   rareSlackReport,
   splitSlackMessages,
   RARITY_CATEGORIES,
-  rareAZ,
   regions,
   towns,
   counties,
   state,
-  winterFinch,
   vt251,
   subspecies,
   checklists,
