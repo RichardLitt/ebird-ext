@@ -57,6 +57,14 @@ test('codeToScientificName falls back to the input code when unknown', () => {
   assert.equal(codeToScientificName('ZZZZ'), 'ZZZZ')
 })
 
+test('commonNameToCode maps names eBird changed in 2025 to the 2021 code', () => {
+  assert.equal(commonNameToCode('Northern Yellow Warbler'), 'YEWA')
+  assert.equal(commonNameToCode('American Herring Gull'), 'HERG')
+  assert.equal(commonNameToCode('Redpoll'), 'CORE')
+  // and still knows the old names
+  assert.equal(commonNameToCode('Yellow Warbler'), 'YEWA')
+})
+
 test('commonNameToCode falls back to the input when unknown', () => {
   assert.equal(commonNameToCode('Imaginary Bird'), 'Imaginary Bird')
 })

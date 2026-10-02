@@ -38,7 +38,11 @@ const eBirdCountyIds = {
 // Vermont town in one year. input is a MyEBirdData.csv or an EBD file; an EBD
 // download for the year covers everyone, so no shared account is needed. See
 // docs/project-251.md.
-async function vt251 (input, { year = new Date().getFullYear(), output = 'data/vt_town_counts.json' } = {}) {
+//
+// Also writes <output>_meta.json, { year, release, updated }, for the website
+// to say what the map covers. release is the EBD release, e.g. 'Aug 2026',
+// taken from an EBD file name (ebd_..._relAug-2026.txt) unless given.
+async function vt251 (input, { year = new Date().getFullYear(), output = 'data/vt_town_counts.json', release } = {}) {
   const opts = {
     year,
     state: 'Vermont',
@@ -49,6 +53,14 @@ async function vt251 (input, { year = new Date().getFullYear(), output = 'data/v
     input
   }
   await towns(opts)
+  const fromName = typeof input === 'string' && input.match(/rel([A-Z][a-z]{2})-(\d{4})/)
+  const meta = {
+    year: Number(year),
+    release: release || (fromName ? `${fromName[1]} ${fromName[2]}` : null),
+    // Local date, as YYYY-MM-DD
+    updated: new Date().toLocaleDateString('en-CA')
+  }
+  await fs.writeFile(`${output.replace(/\.json$/, '')}_meta.json`, JSON.stringify(meta, null, 2) + '\n', 'utf8')
 }
 
 // Useful for when Rock Pigeon is being compared against other lists, or for times when a single sighting contains only subspecies

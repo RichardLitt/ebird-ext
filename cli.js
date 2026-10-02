@@ -193,7 +193,7 @@ async function run () {
   } else if (cli.input[0] === 'withinDistance') {
     await main.withinDistance({ coordinates: [-72.5766799, 44.2581012], input: 'MyEBirdData.csv' })
   } else if (cli.input[0] === '251') {
-    await main.vt251(cli.flags.input, { year: cli.flags.year && Number(cli.flags.year), output: cli.flags.output })
+    await main.vt251(cli.flags.input, { year: cli.flags.year && Number(cli.flags.year), output: cli.flags.output, release: cli.flags.release })
   } else if (cli.input[0] === 'subspecies') {
     await main.subspecies(cli.flags)
   } else if (cli.input[0] === 'checklists') {

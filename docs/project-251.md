@@ -32,8 +32,11 @@ node cli.js 251 --input=path/to/ebd_US-VT_2027.txt --year=2027
 ```
 
 This writes `data/vt_town_counts.json`: every town, with the banding codes of
-the species on its qualifying checklists. Use `--output=<file>` to write
-somewhere else.
+the species on its qualifying checklists. Beside it goes
+`data/vt_town_counts_meta.json`, `{ year, release, updated }`, which the site
+uses to say what the map covers. The release ("Aug 2026") comes from the EBD
+file name; pass `--release="Aug 2026"` if the file was renamed. Use
+`--output=<file>` to write somewhere else.
 
 Tested on January–July 2026 (933,603 rows, 343 MB): 21 seconds, about 2 GB of
 memory. 252 of 255 towns had a qualifying checklist; the three missing were
@@ -43,16 +46,11 @@ Holland, Lemington and Warner's Grant.
 
 ### Data (ebird-ext)
 
-- [ ] **Renamed species.** `towns()` maps names to banding codes with the 2021
-      table, so birds eBird renamed in 2025 come out as names ("Redpoll",
-      "Northern Yellow Warbler"). The map still shows them, but they don't
-      match the site's taxonomy. Move `EBIRD_NAME_TO_CODE` from
-      `scripts/updateAreaSightings.js` into `bandingCodes.js`, so both use it.
-- [ ] **Data date.** Have the update write a small file with the project year
-      and the EBD release it used (e.g. `{ "year": 2027, "release": "relApr-2027" }`),
-      so the site can show "as of April 2027" without anyone editing page text.
-      The same idea would keep the dates on the towns, regions and counties
-      pages from going stale.
+- [x] **Renamed species.** `EBIRD_NAME_TO_CODE` is in `bandingCodes.js`, so
+      birds eBird renamed in 2025 get their 2021 banding codes.
+- [x] **Data date.** `vt251` writes `vt_town_counts_meta.json`.
+- [ ] The same kind of date file for `updateAreaSightings.js`, so the dates on
+      the towns, regions and counties pages don't go stale either.
 
 ### Website (birdinginvermont.com)
 

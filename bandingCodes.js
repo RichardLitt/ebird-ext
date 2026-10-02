@@ -37,6 +37,26 @@ codes.push({
   scientific_name: 'Anser indicus',
 })
 
+// Current eBird common name -> the 2021 banding code for the same bird. The
+// codes follow the 2021 taxonomy, and the website compares lists with an
+// older Vermont taxonomy, so birds eBird has renamed since keep their old code.
+const EBIRD_NAME_TO_CODE = {
+  // Splits, where Vermont's bird keeps the old code
+  'Northern Yellow Warbler': 'YEWA',
+  'Hudsonian Whimbrel': 'WHIM',
+  'American Herring Gull': 'HERG',
+  'American Goshawk': 'NOGO',
+  'American Barn Owl': 'BANO',
+  'Northern House Wren': 'HOWR',
+  'Eastern Warbling Vireo': 'WAVI',
+  'Western Cattle-Egret': 'CAEG',
+  // Renames
+  'Black-crowned Night Heron': 'BCNH',
+  'Yellow-crowned Night Heron': 'YCNH',
+  // Common and Hoary Redpoll, lumped
+  Redpoll: 'CORE'
+}
+
 function isBandingCode (code) {
   return (codes.find(x => x.alpha === code))
 }
@@ -64,6 +84,7 @@ function codeToScientificName (code, log) {
 }
 
 function commonNameToCode (commonName, log) {
+  if (EBIRD_NAME_TO_CODE[commonName]) return EBIRD_NAME_TO_CODE[commonName]
   const species = codes.find(x => {
     return x.common_name.replace(/'/g, '') === commonName.replace(/'/g, '')
   })
@@ -101,6 +122,7 @@ function unfurlObjToSpecies (obj) {
 // speciesNameToCode('Bucephala clangula')
 
 export {
+  EBIRD_NAME_TO_CODE,
   codeToCommonName,
   commonNameToCode,
   speciesNameToCode,
