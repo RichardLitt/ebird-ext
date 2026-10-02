@@ -107,7 +107,7 @@ async function readEBD (file, opts) {
   const lines = readline.createInterface({ input: createReadStream(file, 'utf8'), crlfDelay: Infinity })
   for await (const line of lines) {
     if (!col) {
-      const header = line.replace(/^﻿/, '').split('\t')
+      const header = line.replace(/^\uFEFF/, '').split('\t')
       col = Object.fromEntries(header.map((name, i) => [name.trim(), i]))
       for (const name of ['CATEGORY', 'COMMON NAME', 'SCIENTIFIC NAME', 'TAXONOMIC ORDER', 'COUNTY', 'EXOTIC CODE', 'COUNTY CODE', 'LOCALITY ID', 'LATITUDE', 'LONGITUDE', 'APPROVED']) {
         if (!(name in col)) throw new Error(`${file} has no ${name} column; is it an EBD file?`)
