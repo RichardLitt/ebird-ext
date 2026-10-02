@@ -55,23 +55,12 @@ Holland, Lemington and Warner's Grant.
 
 ### Website (birdinginvermont.com)
 
-- [ ] Put Project 251 back in the menu (#121 hid it).
-- [ ] Rewrite `public/project251.md`:
-  - the year, and the rules above;
-  - replace "share with the vermont251 account" with "submit to eBird as usual;
-    the map catches up at the next update";
-  - show "last updated" from the data date, not by hand.
-- [ ] Contributors: the EBD identifies observers only by ID, not by name, and
-      the site shouldn't publish those IDs. Either drop the contributors list
-      or keep it as a hand-kept list of people who ask to be named.
-- [ ] Green (low-carbon) towns stay a hand-kept list (`src/vt_local_towns.json`),
-      added to when people email in. Empty it at the start of each year.
-- [ ] Tidy `src/Project251.js`: the meta description is about the 150 project,
-      and the Norwich Quest 2022 link is out of date.
-- [ ] Credit the data, as the EBD terms of use require: "eBird Basic Dataset.
-      Version: EBD_rel<Mon>-<YYYY>. Cornell Lab of Ornithology, Ithaca, New
-      York." The terms also ask for a link to (or copy of) products made with
-      the data, sent to ebird@cornell.edu.
+Done for 2026: Project 251 is back in the menu, the page explains the EBD
+approach and credits the data, the "as of" line comes from
+`vt_town_counts_meta.json`, and the panel beside the map lists the towns with
+no checklists, the 15 with the fewest species and the 5 with the most. The
+contributors list is gone (the EBD identifies observers only by ID), and so
+are green (low-carbon) towns.
 
 ## Quarterly update
 
