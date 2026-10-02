@@ -73,8 +73,7 @@ ebird-ext merge, Dependabot opens a site PR that moves the submodule pointer.
 Don't re-propose these.
 
 - Keep `norwich.js` and the CLI commands `quad`, `issr`, `countTheBirds`,
-  `withinDistance`, `getLastDate`. winterFinch, the Arizona code and the
-  150-club lists were removed deliberately.
+  `withinDistance`, `getLastDate`.
 - No taxonomy-drift tooling. When eBird renames species, add them to
   `EBIRD_NAME_TO_CODE`, and rerun `scripts/updateVermontRecords.js` when VCE
   publishes a new list.
