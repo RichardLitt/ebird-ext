@@ -24,7 +24,6 @@ async function getData (input) {
       // Basically, remove spuh
       const paraspecial = ['sp.', '/']
       if (!paraspecial.some(s => speciesName.includes(s))) {
-        console.log(speciesName)
         dict[speciesName] = {
           species: speciesName,
           'Scientific Name': scientificName,
@@ -37,7 +36,6 @@ async function getData (input) {
     results.species = input.filter(s => s !== null)
   }
 
-  console.log(results.species.length)
   return results
 }
 

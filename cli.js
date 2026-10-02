@@ -3,6 +3,7 @@
 import meow from 'meow'
 import main from './index.js'
 import * as hotspots from './hotspots.js'
+import * as reports from './reports.js'
 import _ from 'lodash'
 import moment from 'moment'
 
@@ -124,6 +125,10 @@ const cli = meow(`
 // TODO Make input automatic based on file location
 // TODO This is ugly. Make it better.
 
+function print (lines) {
+  lines.forEach(line => console.log(line))
+}
+
 // One line per area with any species, most species first
 function printAreaTotals (areas) {
   Object.entries(areas)
@@ -135,10 +140,10 @@ function printAreaTotals (areas) {
 
 async function run () {
   if (cli.input[0] === 'quad') {
-    await main.quadBirds(cli.flags)
+    print(reports.quadReport(await main.quadBirds(cli.flags), cli.flags))
   } else if (cli.input[0] === 'towns') {
     if (cli.flags.town) {
-      await main.towns(cli.flags)
+      print(reports.townReport(await main.towns(cli.flags), cli.flags.town))
     } else {
       printAreaTotals(await main.towns({ ...cli.flags, all: true }))
     }
@@ -150,9 +155,10 @@ async function run () {
       console.log(result)
     } else {
       printAreaTotals(result)
+      if (cli.flags.ticks) console.log(reports.countyTicks(result))
     }
   } else if (cli.input[0] === 'state') {
-    await main.state(cli.flags)
+    print(reports.stateReport(await main.state(cli.flags)))
   } else if (cli.input[0] === 'rare') {
     const output = await main.rare(cli.flags)
     if (cli.flags.slack) {
@@ -237,27 +243,34 @@ async function run () {
   } else if (cli.input[0] === '251') {
     await main.vt251(cli.flags.input, { year: cli.flags.year && Number(cli.flags.year), output: cli.flags.output, release: cli.flags.release })
   } else if (cli.input[0] === 'subspecies') {
-    await main.subspecies(cli.flags)
+    console.log(await main.subspecies(cli.flags))
   } else if (cli.input[0] === 'checklists') {
     const checklists = await main.checklists(cli.flags)
     checklists.forEach(c => console.log(`${c.Date} ${c.Time || ''} | ${c.Location} | https://ebird.org/checklist/${c['Submission ID']}`))
     console.log(`${checklists.length} checklists.`)
   } else if (cli.input[0] === 'getLastDate') {
-    await main.getLastDate(cli.flags)
+    console.log(await main.getLastDate(cli.flags))
   } else if (cli.input[0] === 'countTheBirds') {
-    await main.countTheBirds(cli.flags)
+    console.log(await main.countTheBirds(cli.flags))
   } else if (cli.input[0] === 'townHotspots') {
-    await hotspots.townHotspots(cli.flags)
+    const result = await hotspots.townHotspots(cli.flags)
+    if (cli.flags.noVisits && cli.flags.print) {
+      print(reports.unvisitedHotspotsByTown(result, hotspots.allTowns()))
+    } else if (cli.flags.all) {
+      print(reports.townHotspotCounts(result, hotspots.allTowns()))
+    } else {
+      console.log(result)
+    }
   } else if (cli.input[0] === 'unbirdedHotspots') {
-    await hotspots.unbirdedHotspots(cli.flags)
+    console.log((await hotspots.unbirdedHotspots(cli.flags)).map(x => `${x.Name}, ${x['Last visited']}`))
   } else if (cli.input[0] === 'csvToJsonHotspots') {
     await hotspots.csvToJsonHotspots(cli.flags)
   } else if (cli.input[0] === 'weeksYouveBirdedAtHotspot') {
-    await hotspots.weeksYouveBirdedAtHotspot(cli.flags)
+    print(reports.weeksReport(await hotspots.weeksYouveBirdedAtHotspot(cli.flags)))
   } else if (cli.input[0] === 'datesSpeciesObserved') {
-    await main.datesSpeciesObserved(cli.flags)
+    console.log(await main.datesSpeciesObserved(cli.flags))
   } else if (cli.input[0] === 'daylistTargets') {
-    await main.daylistTargets({ ...cli.flags, today: true })
+    print(await main.daylistTargets({ ...cli.flags, today: true }))
   } else if (cli.input[0] === 'issr') {
     const output = await main.isSpeciesSightingRare(cli.flags)
     console.log(main.rareReport(output).join('\n'))
@@ -266,4 +279,7 @@ async function run () {
   }
 }
 
-run()
+run().catch(error => {
+  console.error(`Error: ${error.message}`)
+  process.exitCode = 1
+})

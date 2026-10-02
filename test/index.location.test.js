@@ -14,6 +14,7 @@ import {
   radialSearch,
   quadBirds
 } from '../index.js'
+import { townReport, stateReport, quadReport, countyTicks } from '../reports.js'
 import vtTowns from '../geojson/vt_towns.json' with { type: 'json' }
 import CountyBarcharts from '../data/countyBarcharts.json' with { type: 'json' }
 
@@ -78,6 +79,19 @@ function quiet (t) {
 }
 const logged = () => console.log.mock.calls.map(c => c.arguments)
 const loggedLines = () => console.log.mock.calls.map(c => c.arguments.join(' '))
+
+// These functions return data and the CLI prints it with reports.js. asCli()
+// does both, so the tests below check what the CLI shows.
+async function asCli (fn, opts) {
+  const result = await fn(opts)
+  let lines = []
+  if (fn === towns && opts.town && !opts.all) lines = townReport(result, opts.town)
+  if (fn === state) lines = stateReport(result)
+  if (fn === quadBirds) lines = quadReport(result, opts)
+  if (fn === counties && opts.ticks) lines = [countyTicks(result)]
+  lines.forEach(line => console.log(line))
+  return result
+}
 
 // towns and counties await their fs.writeFile, so the output file must exist
 // as soon as the returned promise resolves: read it once, without polling.
@@ -350,7 +364,7 @@ test('counties { output } rejects when the file write fails', async (t) => {
 
 test('towns { town } logs one numbered line per first-seen species', async (t) => {
   quiet(t)
-  await towns({ input: SIGHTINGS, town: 'Fayston' })
+  await asCli(towns, { input: SIGHTINGS, town: 'Fayston' })
   // locationFilter (filters.js) also logs "Wrong state ..." noise for the
   // out-of-state rows, so keep only the numbered species lines.
   assert.deepEqual(loggedLines().filter(l => /^\d+ \|/.test(l)), [
@@ -362,7 +376,7 @@ test('towns { town } logs one numbered line per first-seen species', async (t) =
 
 test('towns { town } numbers species across dates in chronological order', async (t) => {
   quiet(t)
-  await towns({ input: SIGHTINGS, town: 'Montpelier' })
+  await asCli(towns, { input: SIGHTINGS, town: 'Montpelier' })
   const lines = loggedLines().filter(l => /^\d+ \|/.test(l))
   assert.deepEqual(lines.map(l => l.split(' | ')[1].split(' - ')[0]), [
     'Common Raven', 'Barred Owl', 'Evening Grosbeak', 'Black-capped Chickadee'
@@ -373,27 +387,30 @@ test('towns { town } numbers species across dates in chronological order', async
 
 test('towns { town } matches the town name case-insensitively', async (t) => {
   quiet(t)
-  await towns({ input: SIGHTINGS, town: 'fayston' })
+  await asCli(towns, { input: SIGHTINGS, town: 'fayston' })
   const lines = loggedLines().filter(l => /^\d+ \|/.test(l))
   assert.equal(lines.length, 3)
   assert.ok(lines[0].includes('| fayston, Washington, Vermont |'))
 })
 
-test('towns { town } returns undefined', async (t) => {
+test('towns { town } returns the species by date, and logs nothing', async (t) => {
   quiet(t)
-  assert.equal(await towns({ input: SIGHTINGS, town: 'Fayston' }), undefined)
+  const result = await towns({ input: SIGHTINGS, town: 'Fayston' })
+  assert.deepEqual(Object.keys(result), ['2023-12-30'])
+  assert.deepEqual(result['2023-12-30'].map(x => x['Common Name']), ['Pine Grosbeak', 'Red Crossbill (Type 10)', 'Eastern Screech-Owl'])
+  assert.equal(console.log.mock.calls.length, 0)
 })
 
 test('towns { town } for a town with no sightings logs no species lines', async (t) => {
   quiet(t)
-  await towns({ input: SIGHTINGS, town: 'Stowe' })
+  await asCli(towns, { input: SIGHTINGS, town: 'Stowe' })
   assert.equal(loggedLines().filter(l => /^\d+ \|/.test(l)).length, 0)
 })
 
 test('towns { town, output } writes the species-by-date object', async (t) => {
   quiet(t)
   const dir = await tempDir(t)
-  await towns({ input: SIGHTINGS, town: 'Montpelier', output: join(dir, 'montpelier') })
+  await asCli(towns, { input: SIGHTINGS, town: 'Montpelier', output: join(dir, 'montpelier') })
   const written = await readJson(join(dir, 'montpelier.json'))
   assert.deepEqual(Object.keys(written), ['2023-06-01', '2024-02-20'])
   assert.deepEqual(written['2024-02-20'].map(r => r['Common Name']), ['Evening Grosbeak', 'Black-capped Chickadee'])
@@ -401,7 +418,7 @@ test('towns { town, output } writes the species-by-date object', async (t) => {
 
 test('towns { town: "Burlington" } includes the Lake Champlain Common Loon (nearest-town fallback)', async (t) => {
   quiet(t)
-  await towns({ input: SIGHTINGS, town: 'Burlington' })
+  await asCli(towns, { input: SIGHTINGS, town: 'Burlington' })
   const lines = loggedLines().filter(l => /^\d+ \|/.test(l))
   assert.ok(lines.some(l => l.includes('Common Loon - Gavia immer')))
 })
@@ -548,13 +565,13 @@ test('counties { county } returns just that county without logging it', async (t
 
 test('counties { ticks } logs the sum of species totals across counties', async (t) => {
   quiet(t)
-  await counties({ input: SIGHTINGS, ticks: true })
+  await asCli(counties, { input: SIGHTINGS, ticks: true })
   assert.deepEqual(loggedLines(), ['Total ticks: 22.'])
 })
 
 test('counties { ticks, year } logs ticks for that year only', async (t) => {
   quiet(t)
-  await counties({ input: SIGHTINGS, ticks: true, year: 2024 })
+  await asCli(counties, { input: SIGHTINGS, ticks: true, year: 2024 })
   // Chittenden 3, Washington 2, Windham 1, Windsor 1, Rutland 1, Bennington 2
   assert.deepEqual(loggedLines(), ['Total ticks: 10.'])
 })
@@ -708,13 +725,13 @@ test('regions forces opts.state to "Vermont"', async (t) => {
 
 test('state logs the Vermont species total first', async (t) => {
   quiet(t)
-  await state({ input: SIGHTINGS })
-  assert.deepEqual(logged()[0], [21])
+  await asCli(state, { input: SIGHTINGS })
+  assert.deepEqual(logged()[0], ['21'])
 })
 
 test('state logs one line per date, oldest first, listing first-seen species', async (t) => {
   quiet(t)
-  await state({ input: SIGHTINGS })
+  await asCli(state, { input: SIGHTINGS })
   assert.deepEqual(loggedLines().slice(1), [
     '2023-05-10: American Robin, Black-capped Chickadee, Blue Jay, Dark-eyed Junco (Slate-colored).',
     '2023-06-01: Common Raven, Barred Owl.',
@@ -734,7 +751,7 @@ test('state logs one line per date, oldest first, listing first-seen species', a
 
 test('state excludes out-of-state sightings, spuhs, hybrids and rows without coordinates', async (t) => {
   quiet(t)
-  await state({ input: SIGHTINGS })
+  await asCli(state, { input: SIGHTINGS })
   const text = loggedLines().join('\n')
   for (const name of ['Tufted Titmouse', 'Red-winged Blackbird', 'duck sp.', 'Mallard x American Black Duck']) {
     assert.ok(!text.includes(name), name)
@@ -743,23 +760,23 @@ test('state excludes out-of-state sightings, spuhs, hybrids and rows without coo
 
 test('state { year } counts only that year', async (t) => {
   quiet(t)
-  await state({ input: SIGHTINGS, year: 2024 })
+  await asCli(state, { input: SIGHTINGS, year: 2024 })
   const calls = logged()
-  assert.deepEqual(calls[0], [10])
+  assert.deepEqual(calls[0], ['10'])
   assert.equal(calls[1][0], '2024-01-15: Snow Bunting, American Robin, Bohemian Waxwing.')
 })
 
 test('state forces opts.state to "Vermont"', async (t) => {
   quiet(t)
   const opts = { input: SIGHTINGS, state: 'New Hampshire' }
-  await state(opts)
+  await asCli(state, opts)
   assert.equal(opts.state, 'Vermont')
-  assert.deepEqual(logged()[0], [21])
+  assert.deepEqual(logged()[0], ['21'])
 })
 
 test('state normalises MM/DD/YYYY dates to YYYY-MM-DD and sorts them', async (t) => {
   quiet(t)
-  await state({ input: SLASH_DATES })
+  await asCli(state, { input: SLASH_DATES })
   assert.deepEqual(loggedLines(), [
     '2',
     '2022-04-15: Song Sparrow.',
@@ -769,13 +786,13 @@ test('state normalises MM/DD/YYYY dates to YYYY-MM-DD and sorts them', async (t)
 
 test('state on an empty CSV logs 0 and nothing else', async (t) => {
   quiet(t)
-  await state({ input: EMPTY })
-  assert.deepEqual(logged(), [[0]])
+  await asCli(state, { input: EMPTY })
+  assert.deepEqual(logged(), [['0']])
 })
 
 test('state resolves to { species, speciesByDate }', async (t) => {
   quiet(t)
-  const result = await state({ input: SIGHTINGS })
+  const result = await asCli(state, { input: SIGHTINGS })
   assert.deepEqual(Object.keys(result).sort(), ['species', 'speciesByDate'])
   assert.equal(result.species.length, 21)
   assert.deepEqual(result.species.slice(0, 4), ['American Robin', 'Black-capped Chickadee', 'Blue Jay', 'Dark-eyed Junco (Slate-colored)'])
@@ -784,7 +801,7 @@ test('state resolves to { species, speciesByDate }', async (t) => {
 
 test('state returns speciesByDate keyed by date with the first-seen rows', async (t) => {
   quiet(t)
-  const result = await state({ input: SIGHTINGS, year: 2024 })
+  const result = await asCli(state, { input: SIGHTINGS, year: 2024 })
   assert.equal(result.species.length, 10)
   assert.deepEqual(result.speciesByDate['2024-01-15'].map(r => r['Common Name']), ['Snow Bunting', 'American Robin', 'Bohemian Waxwing'])
 })
@@ -954,25 +971,25 @@ const summaryLine = () => loggedLines().at(-1)
 
 test('quadBirds counts species seen, photographed and recorded across comma-separated files', async (t) => {
   quiet(t)
-  await quadBirds({ input: QUAD_BOTH })
+  await asCli(quadBirds, { input: QUAD_BOTH })
   assert.equal(summaryLine(), 'You have seen, photographed, and recorded a total of 4 species.')
 })
 
 test('quadBirds with only checklist data (no media) counts zero', async (t) => {
   quiet(t)
-  await quadBirds({ input: QUAD_SIGHTINGS })
+  await asCli(quadBirds, { input: QUAD_SIGHTINGS })
   assert.equal(summaryLine(), 'You have seen, photographed, and recorded a total of 0 species.')
 })
 
 test('quadBirds with only media data (no checklists) counts zero', async (t) => {
   quiet(t)
-  await quadBirds({ input: QUAD_MEDIA })
+  await asCli(quadBirds, { input: QUAD_MEDIA })
   assert.equal(summaryLine(), 'You have seen, photographed, and recorded a total of 0 species.')
 })
 
 test('quadBirds gives the same answer regardless of input file order', async (t) => {
   quiet(t)
-  await quadBirds({ input: `${QUAD_MEDIA},${QUAD_SIGHTINGS}`, list: true })
+  await asCli(quadBirds, { input: `${QUAD_MEDIA},${QUAD_SIGHTINGS}`, list: true })
   assert.deepEqual(loggedLines(), [
     '2023-02-04: Tufted Titmouse.',
     '2023-03-15: Barred Owl.',
@@ -984,7 +1001,7 @@ test('quadBirds gives the same answer regardless of input file order', async (t)
 
 test('quadBirds { list } logs each completion date (the later of photo/audio), oldest first', async (t) => {
   quiet(t)
-  await quadBirds({ input: QUAD_BOTH, list: true })
+  await asCli(quadBirds, { input: QUAD_BOTH, list: true })
   const lines = loggedLines()
   assert.equal(lines.length, 5)
   assert.ok(lines.includes('2023-03-15: Barred Owl.')) // audio after photo
@@ -993,61 +1010,64 @@ test('quadBirds { list } logs each completion date (the later of photo/audio), o
 
 test('quadBirds completes a species when photo and audio are on the same day', async (t) => {
   quiet(t)
-  await quadBirds({ input: QUAD_BOTH, list: true })
+  await asCli(quadBirds, { input: QUAD_BOTH, list: true })
   assert.ok(loggedLines().includes('2024-06-01: Veery.'))
 })
 
 test('quadBirds does not count a species that was never on a checklist', async (t) => {
   quiet(t)
-  await quadBirds({ input: QUAD_BOTH, list: true })
+  await asCli(quadBirds, { input: QUAD_BOTH, list: true })
   assert.ok(!loggedLines().some(l => l.includes('Common Loon')))
 })
 
 test('quadBirds does not count a species missing audio', async (t) => {
   quiet(t)
-  await quadBirds({ input: QUAD_BOTH, list: true })
+  await asCli(quadBirds, { input: QUAD_BOTH, list: true })
   assert.ok(!loggedLines().some(l => l.includes('Blue Jay')))
 })
 
 test('quadBirds ignores spuhs', async (t) => {
   quiet(t)
-  await quadBirds({ input: QUAD_BOTH, list: true })
+  await asCli(quadBirds, { input: QUAD_BOTH, list: true })
   assert.ok(!loggedLines().some(l => l.includes('gull')))
 })
 
 test('quadBirds without list logs only the summary line', async (t) => {
   quiet(t)
-  await quadBirds({ input: QUAD_BOTH })
+  await asCli(quadBirds, { input: QUAD_BOTH })
   assert.equal(console.log.mock.calls.length, 1)
 })
 
 test('quadBirds { year } in the past says "saw" and names the year', async (t) => {
   quiet(t)
-  await quadBirds({ input: QUAD_BOTH, year: 2023 })
+  await asCli(quadBirds, { input: QUAD_BOTH, year: 2023 })
   assert.equal(summaryLine(), 'You saw, photographed, and recorded a total of 3 species in 2023.')
 })
 
 test('quadBirds { year } equal to the current year says "have seen"', async (t) => {
   quiet(t)
   const year = moment().format('YYYY')
-  await quadBirds({ input: QUAD_BOTH, year: Number(year) })
+  await asCli(quadBirds, { input: QUAD_BOTH, year: Number(year) })
   assert.equal(summaryLine(), `You have seen, photographed, and recorded a total of 0 species in ${year}.`)
 })
 
 test('quadBirds { state: "Vermont" } drops the out-of-state species', async (t) => {
   quiet(t)
-  await quadBirds({ input: QUAD_BOTH, state: 'Vermont', list: true })
+  await asCli(quadBirds, { input: QUAD_BOTH, state: 'Vermont', list: true })
   assert.ok(!loggedLines().some(l => l.includes('Tufted Titmouse')))
   assert.equal(summaryLine(), 'You have seen, photographed, and recorded a total of 3 species.')
 })
 
 test('quadBirds { county } restricts to that county', async (t) => {
   quiet(t)
-  await quadBirds({ input: QUAD_BOTH, county: 'Chittenden' })
+  await asCli(quadBirds, { input: QUAD_BOTH, county: 'Chittenden' })
   assert.equal(summaryLine(), 'You have seen, photographed, and recorded a total of 0 species.')
 })
 
-test('quadBirds resolves to undefined', async (t) => {
+test('quadBirds returns { Date, species } per completed species, and logs nothing', async (t) => {
   quiet(t)
-  assert.equal(await quadBirds({ input: QUAD_BOTH }), undefined)
+  const result = await quadBirds({ input: QUAD_BOTH })
+  assert.equal(console.log.mock.calls.length, 0)
+  assert.ok(result.length > 0)
+  assert.ok(result.every(c => /^\d{4}-\d{2}-\d{2}$/.test(c.Date) && c.species['Common Name']))
 })

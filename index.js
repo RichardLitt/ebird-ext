@@ -196,14 +196,8 @@ async function towns (opts) {
       await (await io()).writeFile(`${opts.output.toString().replace('.json', '')}.json`, JSON.stringify(data))
     }
 
-    let i = 1
-    // TODO Doesn't work for MyEBirdData for some reason
-    _.sortBy(f.createPeriodArray(data), 'Date').forEach((e) => {
-      e.Species.forEach((specie) => {
-        console.log(`${i} | ${specie['Common Name']} - ${specie['Scientific Name']} | ${opts.town}, ${(specie.County) ? specie.County + ', ' : ''}${specie.State} | ${e.Date}`)
-        i++
-      })
-    })
+    // Species by the date first seen in the town; reports.townReport prints it
+    return data
   }
 }
 
@@ -232,17 +226,6 @@ async function counties (opts) {
   // Again, as above es6 probably has a better way of doing this.
   const newObj = {}
   counties.forEach(c => { newObj[c.county] = c })
-
-  function countyTicks () {
-    const total = Object.keys(newObj).reduce((prev, cur) => {
-      return prev + newObj[cur].speciesTotal
-    }, 0)
-    console.log(`Total ticks: ${total}.`)
-  }
-
-  if (opts.ticks) {
-    countyTicks()
-  }
 
   if (opts.county) {
     // locationFilter matched the county case-insensitively, so look it up the same way
@@ -315,11 +298,7 @@ async function state (opts) {
     })
   })
 
-  console.log(newObj.species.length)
-  Object.keys(newObj.speciesByDate).forEach(d => {
-    console.log(`${d}: ${newObj.speciesByDate[d].map(submission => submission['Common Name']).join(', ')}.`)
-  })
-  // fs.writeFile('vt_region_counts.json', JSON.stringify(regions), 'utf8')
+  // reports.stateReport prints it
   return newObj
 }
 
@@ -410,12 +389,8 @@ async function quadBirds (opts) {
 
   completionDates = f.orderByDate(completionDates)
 
-  if (opts.list) {
-    for (const species in completionDates) {
-      console.log(`${completionDates[species].Date}: ${completionDates[species].species['Common Name']}.`)
-    }
-  }
-  console.log(`You ${(!opts.year || opts.year.toString() === moment().format('YYYY')) ? 'have seen' : 'saw'}, photographed, and recorded a total of ${completionDates.length} species${(opts.year) ? ` in ${opts.year}` : ''}.`)
+  // { Date, species } for each species seen, photographed and recorded; reports.quadReport prints it
+  return completionDates
 }
 
 // - Get scientific name for a given bird
@@ -465,8 +440,6 @@ async function isSpeciesSightingRare (opts) {
     'Common Name': species.Species,
     Location: helpers.capitalizeFirstLetters(opts.town)
   }]
-
-  console.log(opts.data)
 
   opts.manual = true
   return rare(opts)
@@ -861,7 +834,7 @@ async function subspecies (opts) {
             // These seem to be the only weird adjectival spuhs, though.
             if (['Anatinae', 'Anatidae'].includes(genus)) {
               const anatinae = ['Amazonetta', 'Sibirionetta', 'Spatula', 'Mareca', 'Lophonetta', 'Speculanas', 'Anas']
-              if (!anatinae.some(ducks => species.join(' ').includes(ducks))) {
+              if (opts.verbose && !anatinae.some(ducks => species.join(' ').includes(ducks))) {
                 console.log(`Unsure what to do with ${x} spuh identifation.`)
               }
             }
@@ -950,7 +923,6 @@ async function subspecies (opts) {
     // non-leaf nodes, including species identifications if subspecies identified
     leaves: createLeavesList(species, allIdentifications).sort()
   }
-  console.log(output)
   // console.log(output.leaves.length)
   return output
 }
@@ -975,7 +947,7 @@ async function checklists (opts) {
 /* Used when updating the 251 page */
 async function getLastDate (opts) {
   // Just use the date it is actually updated
-  console.log(moment().format('MMMM Do, YYYY'))
+  return moment().format('MMMM Do, YYYY')
 }
 
 async function countTheBirds (opts) {
@@ -985,7 +957,7 @@ async function countTheBirds (opts) {
       return parseInt(o.Count)
     }
   })
-  console.log(sum)
+  return sum
 }
 
 async function datesSpeciesObserved (opts) {
@@ -1033,9 +1005,9 @@ async function datesSpeciesObserved (opts) {
     // })
   })
 
-  console.log(speciesArray.sort(function (a, b) {
+  return speciesArray.sort(function (a, b) {
     return a[1] - b[1]
-  }).map(x => `${x[0]}: ${daysInChart - x[1]}`).slice(0, 20))
+  }).map(x => `${x[0]}: ${daysInChart - x[1]}`).slice(0, 20)
 }
 
 async function daylistTargets (opts) {
@@ -1075,12 +1047,9 @@ async function daylistTargets (opts) {
     const month = moment().format('MM')
     const date = Number(moment().format('DD'))
     // Species never seen on today's month-day: today is still unbirded for them
-    Object.keys(speciesArray).forEach(species => {
-      if (speciesArray[species][month].indexOf(date) !== -1) {
-        console.log(species)
-      }
-    })
+    return Object.keys(speciesArray).filter(species => speciesArray[species][month].indexOf(date) !== -1)
   }
+  return speciesArray
 }
 
 // async function today (opts) {

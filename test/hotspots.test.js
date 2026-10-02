@@ -15,6 +15,7 @@ import {
 } from '../hotspots.js'
 import hotspotsDefault from '../hotspots.js'
 import { eBirdCountyIds, getAllTowns } from '../index.js'
+import { townHotspotCounts, unvisitedHotspotsByTown, weeksReport } from '../reports.js'
 import VermontHotspots from '../data/hotspots.json' with { type: 'json' }
 import townBoundaries from '../geojson/vt_towns.json' with { type: 'json' }
 
@@ -408,7 +409,9 @@ async function runUnbirded (t, opts, hotspots) {
     'data/hotspots.json': hotspots ? JSON.stringify(hotspots) : await seedFixture('hotspots.json')
   })
   const ret = await unbirdedHotspots(opts)
-  return { ret, logs: logs() }
+  assert.equal(logs().length, 0)
+  // As the CLI prints it: one array of "Name, Last visited"
+  return { ret, logs: [[ret.map(x => `${x.Name}, ${x['Last visited']}`)]] }
 }
 
 const hs = (ID, lastVisited, Name = `Hotspot ${ID}`) => ({ ID, Name, 'Last visited': lastVisited })
@@ -419,11 +422,10 @@ test('unbirdedHotspots reads data/hotspots.json from the cwd: rejects with ENOEN
   await assert.rejects(unbirdedHotspots({}), { code: 'ENOENT' })
 })
 
-test('unbirdedHotspots resolves to undefined and prints a single array', async (t) => {
-  const { ret, logs } = await runUnbirded(t, {})
-  assert.equal(ret, undefined)
-  assert.equal(logs.length, 1)
-  assert.ok(Array.isArray(logs[0][0]))
+test('unbirdedHotspots returns the hotspot records, without logging', async (t) => {
+  const { ret } = await runUnbirded(t, {})
+  assert.ok(ret.length > 0)
+  assert.ok(ret.every(x => x.ID && x.Name))
 })
 
 test('unbirdedHotspots with no filters lists every hotspot as "Name, Last visited", oldest first', async (t) => {
@@ -600,9 +602,11 @@ test('unbirdedHotspots lists never-visited hotspots first, then oldest visit fir
 const pristineUnvisitedIds = () => pristineHotspots.filter(x => !x['Last visited']).map(x => x.ID).sort()
 const allTowns = Object.keys(getAllTowns(townBoundaries)).sort((a, b) => a.localeCompare(b))
 
-test('townHotspots with no mode option resolves to undefined and logs nothing', async (t) => {
+test('townHotspots with no mode option returns the located hotspots and logs nothing', async (t) => {
   const logs = captureLog(t)
-  assert.equal(await townHotspots({}), undefined)
+  const result = await townHotspots({})
+  assert.ok(result.length > 0)
+  assert.ok(result.every(x => x.State === 'Vermont'))
   assert.equal(logs().length, 0)
 })
 
@@ -655,15 +659,16 @@ test('townHotspots { noVisits, county } narrows to one county', async (t) => {
 })
 
 test('townHotspots { noVisits, print } prints a header, then "Town: N" and links per town', async (t) => {
-  const logs = captureLog(t)
+  captureLog(t)
   const result = await townHotspots({ noVisits: true, print: true })
-  const lines = logs().map(args => args[0])
+  const lines = unvisitedHotspotsByTown(result, allTowns)
   assert.equal(lines[0], 'Towns with unvisited hotspots:')
   const countLines = lines.filter(l => /^[A-Z][^:]*: \d+$/.test(l))
   assert.ok(countLines.length > 0)
-  assert.equal(lines.length, 1 + countLines.length * 2)
   const linkLines = lines.filter(l => l.includes('https://ebird.org/hotspot/'))
-  assert.equal(linkLines.length, countLines.length)
+  // One indented link line per hotspot, under its town's count
+  assert.equal(linkLines.length, countLines.reduce((sum, l) => sum + Number(l.split(': ')[1]), 0))
+  assert.equal(lines.length, 1 + countLines.length + linkLines.length)
   // Every printed link refers to a returned (unvisited) hotspot.
   const ids = new Set(result.map(x => x.ID))
   for (const m of linkLines.join('\n').matchAll(/https:\/\/ebird\.org\/hotspot\/(L\d+)/g)) {
@@ -672,9 +677,9 @@ test('townHotspots { noVisits, print } prints a header, then "Town: N" and links
 })
 
 test('townHotspots { noVisits, print } lists towns alphabetically with Title Case names', async (t) => {
-  const logs = captureLog(t)
-  await townHotspots({ noVisits: true, print: true })
-  const towns = logs().map(args => args[0]).filter(l => /^[A-Z][^:]*: \d+$/.test(l)).map(l => l.split(':')[0])
+  captureLog(t)
+  const lines = unvisitedHotspotsByTown(await townHotspots({ noVisits: true, print: true }), allTowns)
+  const towns = lines.filter(l => /^[A-Z][^:]*: \d+$/.test(l)).map(l => l.split(':')[0])
   assert.deepEqual(towns, [...towns].sort((a, b) => a.localeCompare(b)))
   assert.ok(towns.every(t => t !== t.toUpperCase() || t.length === 1))
 })
@@ -698,56 +703,47 @@ test('townHotspots { noVisits, town } returns only that town\'s unvisited hotspo
 })
 
 test('townHotspots { all } prints a header and one "Town: N" line per Vermont town', async (t) => {
-  const logs = captureLog(t)
-  assert.equal(await townHotspots({ all: true }), undefined)
-  const lines = logs().map(args => args[0])
+  captureLog(t)
+  const lines = townHotspotCounts(await townHotspots({ all: true }), allTowns)
   assert.equal(lines[0], 'Town hotspots:')
   assert.equal(lines.length, 1 + allTowns.length)
   assert.ok(lines.slice(1).every(l => /^.+: \d+$/.test(l)))
 })
 
 test('townHotspots { all } prints towns in alphabetical order', async (t) => {
-  const logs = captureLog(t)
-  await townHotspots({ all: true })
-  const names = logs().slice(1).map(args => args[0].split(':')[0].toUpperCase())
+  captureLog(t)
+  const lines = townHotspotCounts(await townHotspots({ all: true }), allTowns)
+  const names = lines.slice(1).map(l => l.split(':')[0].toUpperCase())
   assert.deepEqual(names, allTowns)
 })
 
 test('townHotspots { all } per-town count matches { town } for the same town', async (t) => {
-  const logs = captureLog(t)
-  await townHotspots({ all: true })
-  const line = logs().map(args => args[0]).find(l => l.startsWith('Montpelier:'))
+  captureLog(t)
+  const line = townHotspotCounts(await townHotspots({ all: true }), allTowns).find(l => l.startsWith('Montpelier:'))
   const allCount = Number(line.split(': ')[1])
   restoreBundledHotspots()
-  console.log.mock.resetCalls()
-  await townHotspots({ town: 'Montpelier' })
-  assert.equal(logs()[0][0].length, allCount)
+  assert.equal((await townHotspots({ town: 'Montpelier' })).length, allCount)
   assert.ok(allCount > 0)
 })
 
-test('townHotspots { town } logs the hotspots in that town and resolves to undefined', async (t) => {
+test('townHotspots { town } returns the hotspots in that town, without logging', async (t) => {
   const logs = captureLog(t)
-  assert.equal(await townHotspots({ town: 'Middlebury' }), undefined)
-  assert.equal(logs().length, 1)
-  const [hotspots] = logs()[0]
+  const hotspots = await townHotspots({ town: 'Middlebury' })
+  assert.equal(logs().length, 0)
   assert.ok(hotspots.length > 0)
   assert.ok(hotspots.every(x => x.Town === 'MIDDLEBURY' && x.County === 'Addison'))
 })
 
 test('townHotspots { town } is case-insensitive', async (t) => {
-  const logs = captureLog(t)
-  await townHotspots({ town: 'middlebury' })
-  const lower = logs()[0][0].map(x => x.ID)
+  captureLog(t)
+  const lower = (await townHotspots({ town: 'middlebury' })).map(x => x.ID)
   restoreBundledHotspots()
-  console.log.mock.resetCalls()
-  await townHotspots({ town: 'MIDDLEBURY' })
-  assert.deepEqual(logs()[0][0].map(x => x.ID), lower)
+  assert.deepEqual((await townHotspots({ town: 'MIDDLEBURY' })).map(x => x.ID), lower)
 })
 
-test('townHotspots { town } logs [] for a name that is not a Vermont town', async (t) => {
-  const logs = captureLog(t)
-  await townHotspots({ town: 'Atlantis' })
-  assert.deepEqual(logs()[0][0], [])
+test('townHotspots { town } returns [] for a name that is not a Vermont town', async (t) => {
+  captureLog(t)
+  assert.deepEqual(await townHotspots({ town: 'Atlantis' }), [])
 })
 
 test('townHotspots does not mutate the shared bundled hotspot records', async (t) => {
@@ -764,9 +760,9 @@ test('townHotspots is callable twice in one process, with the same result', asyn
 })
 
 test('townHotspots { all } counts every hotspot, including towns resolved by the nearest-town fallback', async (t) => {
-  const logs = captureLog(t)
-  await townHotspots({ all: true })
-  const total = logs().slice(1).reduce((sum, args) => sum + Number(args[0].split(': ')[1]), 0)
+  captureLog(t)
+  const lines = townHotspotCounts(await townHotspots({ all: true }), allTowns)
+  const total = lines.slice(1).reduce((sum, l) => sum + Number(l.split(': ')[1]), 0)
   assert.equal(total, pristineHotspots.length)
 })
 
@@ -782,7 +778,9 @@ async function runWeeks (t, opts, rows) {
     input = path.join(sandboxDir, 'MyEBirdData.csv')
   }
   const ret = await weeksYouveBirdedAtHotspot({ ...opts, input })
-  return { ret, lines: logs().map(args => args[0]) }
+  // What the CLI prints; the function itself logs nothing
+  assert.equal(logs().length, 0)
+  return { ret, lines: weeksReport(ret) }
 }
 
 const unbirdedLine = lines => lines.find(l => typeof l === 'string' && l.startsWith("You've not birded here on weeks:"))
@@ -795,9 +793,12 @@ test('weeksYouveBirdedAtHotspot lists the weeks you have not birded at the locat
   assert.deepEqual(unbirdedWeeks(lines), [...range(2, 10), ...range(12, 52)])
 })
 
-test('weeksYouveBirdedAtHotspot resolves to undefined', async (t) => {
+test('weeksYouveBirdedAtHotspot returns the unbirded weeks and the next one', async (t) => {
   const { ret } = await runWeeks(t, { id: 'L9000001', input: myEBirdData })
-  assert.equal(ret, undefined)
+  assert.deepEqual(Object.keys(ret).sort(), ['id', 'name', 'nextWeek', 'nextWeekStart', 'unbirdedWeeks'])
+  assert.equal(ret.id, 'L9000001')
+  assert.ok(ret.unbirdedWeeks.includes(ret.nextWeek))
+  assert.match(ret.nextWeekStart, /^\d{4}-\d{2}-\d{2}$/)
 })
 
 test('weeksYouveBirdedAtHotspot counts the same week-of-year across different years once', async (t) => {
@@ -868,8 +869,8 @@ test('weeksYouveBirdedAtHotspot "next unbirded week" uses the week-year for late
 
 test('weeksYouveBirdedAtHotspot frames its output with blank lines and a caveat', async (t) => {
   const { lines } = await runWeeks(t, { id: 'L9000001', input: myEBirdData })
-  assert.equal(lines[0], undefined)
-  assert.equal(lines.at(-1), undefined)
+  assert.equal(lines[0], '')
+  assert.equal(lines.at(-1), '')
   assert.equal(lines.at(-2), 'Note this only takes into account your bird sightings, not the databases.')
   assert.equal(lines.length, 5)
 })
@@ -877,7 +878,7 @@ test('weeksYouveBirdedAtHotspot frames its output with blank lines and a caveat'
 test('weeksYouveBirdedAtHotspot congratulates you by hotspot name after all 52 weeks', async (t) => {
   const hotspot = pristineHotspots[0]
   const { lines } = await runWeeks(t, { id: hotspot.ID }, wednesdays2023.map(date => ({ loc: hotspot.ID, date })))
-  assert.ok(lines.includes(`\nYou've birded at ${hotspot.Name} every week of the calendar year!`))
+  assert.ok(lines.includes(`You've birded at ${hotspot.Name} every week of the calendar year!`))
   assert.equal(unbirdedLine(lines), undefined)
 })
 
@@ -886,10 +887,9 @@ test('weeksYouveBirdedAtHotspot rejects with ENOENT when the eBird export is mis
   await assert.rejects(weeksYouveBirdedAtHotspot({ id: 'L1', input: path.join(os.tmpdir(), 'ebird-ext-does-not-exist.csv') }), { code: 'ENOENT' })
 })
 
-test('weeksYouveBirdedAtHotspot warns and stops when no --id is given', async (t) => {
-  const { ret, lines } = await runWeeks(t, { input: myEBirdData })
-  assert.equal(ret, undefined)
-  assert.deepEqual(lines, ['Get the ID for this location first, manually. Send it as --id.'])
+test('weeksYouveBirdedAtHotspot rejects when no --id is given', async (t) => {
+  captureLog(t)
+  await assert.rejects(weeksYouveBirdedAtHotspot({ input: myEBirdData }), /Get the ID for this location first, manually\. Send it as --id\./)
 })
 
 test('weeksYouveBirdedAtHotspot falls back to the generic message after 52 weeks at a non-hotspot location', async (t) => {
@@ -901,7 +901,7 @@ test('weeksYouveBirdedAtHotspot folds locale week 53 (e.g. 2022-12-31) into week
   const hotspot = pristineHotspots[0]
   const dates = [...wednesdays2023, '2022-12-31']
   const { lines } = await runWeeks(t, { id: hotspot.ID }, dates.map(date => ({ loc: hotspot.ID, date })))
-  assert.ok(lines.includes(`\nYou've birded at ${hotspot.Name} every week of the calendar year!`))
+  assert.ok(lines.includes(`You've birded at ${hotspot.Name} every week of the calendar year!`))
 })
 
 test('weeksYouveBirdedAtHotspot does not claim "every week" when a week is missing but a week-53 visit is present', async (t) => {
@@ -932,8 +932,8 @@ test('csvToJsonHotspots output feeds unbirdedHotspots in the same sandbox', asyn
   const logs = captureLog(t)
   await sandbox()
   await csvToJsonHotspots({ input: fixture('hotspots-api.csv') })
-  await unbirdedHotspots({ sinceYear: 2019 })
-  const printed = logs()[0][0]
+  const printed = (await unbirdedHotspots({ sinceYear: 2019 })).map(x => `${x.Name}, ${x['Last visited']}`)
+  assert.equal(logs().length, 0)
   assert.ok(printed.includes('Test Park (Rutland), 2010-03-13 16:20'))
   assert.ok(printed.includes('Fake Marsh, North End, 2019-05-16 08:00'))
   assert.ok(!printed.some(l => l.startsWith('Test Pond')))
