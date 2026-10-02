@@ -12,8 +12,7 @@ import {
   regions,
   state,
   radialSearch,
-  quadBirds,
-  winterFinch
+  quadBirds
 } from '../index.js'
 import vtTowns from '../geojson/vt_towns.json' with { type: 'json' }
 import townDataFor2022 from '../data/townDataFor2022-May-Export.json' with { type: 'json' }
@@ -1070,102 +1069,4 @@ test('quadBirds { county } restricts to that county', async (t) => {
 test('quadBirds resolves to undefined', async (t) => {
   quiet(t)
   assert.equal(await quadBirds({ input: QUAD_BOTH }), undefined)
-})
-
-// ===========================================================================
-// winterFinch
-// ===========================================================================
-
-test('winterFinch logs a finch block, a blank line, then an owl block (one line per county each)', async (t) => {
-  quiet(t)
-  await winterFinch({ input: SIGHTINGS })
-  const lines = loggedLines()
-  assert.equal(lines.length, COUNTY_NAMES.length * 2 + 1)
-  assert.equal(lines[COUNTY_NAMES.length], '')
-  assert.deepEqual(lines.slice(0, 14).map(l => l.split(' (')[0]), COUNTY_NAMES)
-  assert.deepEqual(lines.slice(15).map(l => l.split(' (')[0]), COUNTY_NAMES)
-})
-
-test('winterFinch lists the winter finches found in each county', async (t) => {
-  quiet(t)
-  await winterFinch({ input: SIGHTINGS })
-  const finches = loggedLines().slice(0, 14)
-  assert.ok(finches.includes('Chittenden (2): Bohemian Waxwing, Snow Bunting.'))
-  assert.ok(finches.includes('Essex (1): Boreal Chickadee.'))
-  assert.ok(finches.includes('Washington (3): Evening Grosbeak, Pine Grosbeak, Red Crossbill.'))
-})
-
-test('winterFinch orders species by its own list, not by observation order', async (t) => {
-  quiet(t)
-  await winterFinch({ input: SIGHTINGS })
-  // Snow Bunting was observed before Bohemian Waxwing, but waxwing comes first in the list.
-  assert.ok(loggedLines().includes('Chittenden (2): Bohemian Waxwing, Snow Bunting.'))
-})
-
-test('winterFinch strips subspecies/type suffixes before matching ("Red Crossbill (Type 10)")', async (t) => {
-  quiet(t)
-  await winterFinch({ input: SIGHTINGS })
-  const washington = loggedLines().find(l => l.startsWith('Washington'))
-  assert.ok(washington.includes('Red Crossbill.'))
-  assert.ok(!washington.includes('Type 10'))
-})
-
-test('winterFinch prints "(0)" with no colon for counties without matches', async (t) => {
-  quiet(t)
-  await winterFinch({ input: SIGHTINGS })
-  const lines = loggedLines()
-  assert.equal(lines[0], 'Addison (0)')
-  assert.equal(lines[15], 'Addison (0)')
-})
-
-test('winterFinch lists owls in the second block', async (t) => {
-  quiet(t)
-  await winterFinch({ input: SIGHTINGS })
-  const owls = loggedLines().slice(15)
-  assert.ok(owls.find(l => l.startsWith('Washington')).includes('Barred Owl'))
-  assert.equal(owls.filter(l => !l.endsWith('(0)')).length, 1)
-})
-
-test('winterFinch { year } passes the year through to counties', async (t) => {
-  quiet(t)
-  await winterFinch({ input: SIGHTINGS, year: 2023 })
-  const lines = loggedLines()
-  assert.ok(lines.includes('Chittenden (0)')) // SNBU/BOWA were 2024
-  assert.ok(lines.includes('Washington (2): Pine Grosbeak, Red Crossbill.')) // EVGR was 2024
-})
-
-test('winterFinch on an empty CSV prints (0) for every county', async (t) => {
-  quiet(t)
-  await winterFinch({ input: EMPTY })
-  const lines = loggedLines().filter(l => l !== '')
-  assert.equal(lines.length, 28)
-  assert.ok(lines.every(l => l.endsWith('(0)')))
-})
-
-test('winterFinch resolves to undefined', async (t) => {
-  quiet(t)
-  assert.equal(await winterFinch({ input: SIGHTINGS }), undefined)
-})
-
-test('winterFinch matches Eastern Screech-Owl (eBird capitalisation) in the owl block', async (t) => {
-  quiet(t)
-  await winterFinch({ input: SIGHTINGS })
-  const owls = loggedLines().slice(15)
-  assert.equal(owls.find(l => l.startsWith('Washington')), 'Washington (2): Eastern Screech-Owl, Barred Owl.')
-})
-
-test('winterFinch { county } prints just that county\'s finch and owl lines', async (t) => {
-  quiet(t)
-  await winterFinch({ input: SIGHTINGS, county: 'washington' })
-  assert.deepEqual(loggedLines(), [
-    'Washington (3): Evening Grosbeak, Pine Grosbeak, Red Crossbill.',
-    '',
-    'Washington (2): Eastern Screech-Owl, Barred Owl.'
-  ])
-})
-
-test('winterFinch { county } for an unknown county prints only the blank separator', async (t) => {
-  quiet(t)
-  await winterFinch({ input: SIGHTINGS, county: 'Grafton' })
-  assert.deepEqual(loggedLines(), [''])
 })

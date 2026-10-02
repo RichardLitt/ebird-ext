@@ -4,7 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { promises as fs } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { rare, rareAZ, subspecies, isSpeciesSightingRare } from '../index.js'
+import { rare, subspecies, isSpeciesSightingRare } from '../index.js'
 import VermontRecords from '../data/vermont_records.json' with { type: 'json' }
 import VermontSubspecies from '../data/vermont_records_subspecies.json' with { type: 'json' }
 
@@ -16,8 +16,6 @@ import VermontSubspecies from '../data/vermont_records_subspecies.json' with { t
 //                                        'N' only when breeding, '' never.
 //                                        Breeding: '*' = confirmed breeder.
 //                                        Occurrence: expected-date ranges.
-//   data/arizona_records.json            Reporting: 'V' anywhere in Arizona.
-//                                        Breeding: 'n' = known breeder.
 //   data/vermont_records_subspecies.json Target / Vermont subspecies lists.
 //
 // Species used below (and why):
@@ -39,11 +37,9 @@ import VermontSubspecies from '../data/vermont_records_subspecies.json' with { t
 const here = path.dirname(fileURLToPath(import.meta.url))
 const fixtureDir = path.join(here, 'fixtures', 'index-rarity')
 const VT_CSV = path.join(fixtureDir, 'vermont.csv')
-const AZ_CSV = path.join(fixtureDir, 'arizona.csv')
 const LIFE_CSV = path.join(fixtureDir, 'lifelist.csv')
 
 const BUCKETS = ['Breeding', 'Vermont', 'Champlain', 'NEK', 'Unknown', 'Subspecies', 'OutsideExpectedDates']
-const AZ_BUCKETS = ['Breeding', 'Arizona', 'Unknown', 'Subspecies']
 
 // Build a sighting in the shape isSpeciesSightingRare hands to rare().
 function sighting (overrides = {}) {
@@ -100,15 +96,6 @@ async function tmpCsv (t, rows, { trailingNewline = false } = {}) {
   const file = path.join(dir, 'MyEBirdData.csv')
   await fs.writeFile(file, [CSV_HEADER, ...lines].join('\n') + (trailingNewline ? '\n' : ''), 'utf8')
   return { file, dir }
-}
-
-// rareAZ returns its output object (and console.logs it when there is no
-// opts.output). Silence the logging and keep the calls for inspection.
-async function runRareAZ (t, opts) {
-  t.mock.method(console, 'log', () => {})
-  const ret = await rareAZ(opts)
-  const calls = console.log.mock.calls.filter(c => !(typeof c.arguments[0] === 'string' && c.arguments[0].startsWith('Wrong state')))
-  return { ret, calls, output: ret }
 }
 
 // ===========================================================================
@@ -702,148 +689,6 @@ test('isSpeciesSightingRare does not build opts.data for an unknown town', async
   const opts = { species: 'King Eider', town: 'Atlantis', date: '2024-01-15' }
   await assert.rejects(isSpeciesSightingRare(opts))
   assert.equal(opts.data, undefined)
-})
-
-// ===========================================================================
-// rareAZ
-// ===========================================================================
-
-test('rareAZ resolves to the output object it console.logs', async (t) => {
-  const { ret, calls } = await runRareAZ(t, { manual: true, data: [] })
-  assert.equal(calls.length, 1)
-  assert.equal(calls[0].arguments[0], ret)
-  assert.deepEqual(Object.keys(ret), AZ_BUCKETS)
-})
-
-test('rareAZ returns its output object like rare() does', async (t) => {
-  t.mock.method(console, 'log', () => {})
-  const out = await rareAZ({ manual: true, data: [] })
-  assert.deepEqual(Object.keys(out), AZ_BUCKETS)
-})
-
-test('rareAZ with opts.output still returns the output object', async (t) => {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ebird-ext-rareaz-'))
-  t.after(() => fs.rm(dir, { recursive: true, force: true }))
-  const e = { 'Scientific Name': 'Dendrocygna bicolor', Date: '2024-02-01' }
-  const { ret } = await runRareAZ(t, { manual: true, data: [e], output: path.join(dir, 'az') })
-  assert.deepEqual(bucketsOf(ret, e), ['Arizona'])
-})
-
-test('rareAZ with manual: true and no data puts the Pine Marten spoof in Unknown', async (t) => {
-  const { output } = await runRareAZ(t, { manual: true })
-  assert.equal(output.Unknown.length, 1)
-  assert.equal(output.Unknown[0].Species, 'Pine Marten')
-})
-
-test('rareAZ sets opts.state to "Arizona"', async (t) => {
-  const opts = { manual: true, data: [] }
-  await runRareAZ(t, opts)
-  assert.equal(opts.state, 'Arizona')
-})
-
-test('rareAZ: a "V" species (Fulvous Whistling-Duck) goes to the Arizona bucket', async (t) => {
-  const e = { 'Scientific Name': 'Dendrocygna bicolor', Date: '2024-02-01' }
-  const { output } = await runRareAZ(t, { manual: true, data: [e] })
-  assert.deepEqual(bucketsOf(output, e), ['Arizona'])
-})
-
-test('rareAZ: a non-breeder with a confirmed breeding code goes to Breeding', async (t) => {
-  const e = { 'Scientific Name': 'Anser caerulescens', Date: '2024-03-02', 'Breeding Code': 'NY Nest with Young (Confirmed)' }
-  const { output } = await runRareAZ(t, { manual: true, data: [e] })
-  assert.deepEqual(bucketsOf(output, e), ['Breeding'])
-})
-
-test('rareAZ: Breeding takes precedence over Arizona for a non-breeding "V" species', async (t) => {
-  const e = { 'Scientific Name': 'Dendrocygna bicolor', Date: '2024-03-05', 'Breeding Code': 'NY Nest with Young (Confirmed)' }
-  const { output } = await runRareAZ(t, { manual: true, data: [e] })
-  assert.deepEqual(bucketsOf(output, e), ['Breeding'])
-})
-
-test('rareAZ: a known breeder (Breeding "n") with a breeding code is not flagged as Breeding', async (t) => {
-  const bbwd = { 'Scientific Name': 'Dendrocygna autumnalis', Date: '2024-03-04', 'Breeding Code': 'NY Nest with Young (Confirmed)' }
-  const quetzal = { 'Scientific Name': 'Euptilotis neoxenus', Date: '2024-03-01', 'Breeding Code': 'NY Nest with Young (Confirmed)' }
-  const { output } = await runRareAZ(t, { manual: true, data: [bbwd, quetzal] })
-  assert.deepEqual(bucketsOf(output, bbwd), [])
-  assert.deepEqual(bucketsOf(output, quetzal), ['Arizona'])
-})
-
-test('rareAZ: an ignored breeding code (F Flyover) on a common species is not reported', async (t) => {
-  const e = { 'Scientific Name': 'Anser caerulescens', Date: '2024-03-03', 'Breeding Code': 'F Flyover' }
-  const { output } = await runRareAZ(t, { manual: true, data: [e] })
-  assert.deepEqual(bucketsOf(output, e), [])
-})
-
-test('rareAZ: a species absent from arizona_records.json goes to Unknown', async (t) => {
-  const e = { 'Scientific Name': 'Canachites canadensis', Date: '2024-03-06' }
-  const { output } = await runRareAZ(t, { manual: true, data: [e] })
-  assert.deepEqual(bucketsOf(output, e), ['Unknown'])
-})
-
-test('rareAZ never fills the Subspecies bucket (not implemented yet)', async (t) => {
-  const e = { 'Scientific Name': 'Anser caerulescens', Date: '2024-03-03', Subspecies: 'Anser caerulescens atlanticus' }
-  const { output } = await runRareAZ(t, { manual: true, data: [e] })
-  assert.equal(output.Subspecies.length, 0)
-})
-
-test('rareAZ: classifies every row of the Arizona fixture CSV, newest first', async (t) => {
-  const { output } = await runRareAZ(t, { input: AZ_CSV })
-  assert.deepEqual(summarize(output), {
-    Breeding: ['A900000006', 'A900000003'],
-    Arizona: ['A900000002', 'A900000001', 'A900000009'],
-    Unknown: ['A900000007']
-  })
-})
-
-test('rareAZ: spuh rows are removed from the CSV', async (t) => {
-  const { output } = await runRareAZ(t, { input: AZ_CSV })
-  const all = Object.values(output).flat().map(x => x['Submission ID'])
-  assert.ok(!all.includes('A900000010'))
-})
-
-test('rareAZ: opts.year keeps only that year\'s sightings', async (t) => {
-  const { output } = await runRareAZ(t, { input: AZ_CSV, year: 2024 })
-  assert.deepEqual(ids(output.Arizona), ['A900000002', 'A900000001'])
-})
-
-test('rareAZ only considers Arizona sightings from the CSV (the Vermont King Eider is dropped)', async (t) => {
-  const { output } = await runRareAZ(t, { input: AZ_CSV })
-  const all = Object.values(output).flat().map(x => x['Submission ID'])
-  assert.ok(!all.includes('A900000008'))
-  assert.ok(Object.values(output).flat().every(x => x.State === 'Arizona'))
-})
-
-test('rareAZ with opts.output writes <output>.json and logs where it wrote', async (t) => {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ebird-ext-rareaz-'))
-  t.after(() => fs.rm(dir, { recursive: true, force: true }))
-  const target = path.join(dir, 'az-rare')
-  const { calls } = await runRareAZ(t, { manual: true, data: [{ 'Scientific Name': 'Dendrocygna bicolor', Date: '2024-02-01' }], output: target })
-  assert.equal(calls.length, 1)
-  assert.equal(calls[0].arguments[0], `Wrote ${target}.json.`)
-  const written = JSON.parse(await fs.readFile(`${target}.json`, 'utf8'))
-  assert.deepEqual(Object.keys(written), AZ_BUCKETS)
-  assert.equal(written.Arizona[0]['Scientific Name'], 'Dendrocygna bicolor')
-})
-
-test('rareAZ with an opts.output that already ends in .json does not double the extension', async (t) => {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ebird-ext-rareaz-'))
-  t.after(() => fs.rm(dir, { recursive: true, force: true }))
-  const target = path.join(dir, 'az-rare.json')
-  const { calls } = await runRareAZ(t, { manual: true, data: [], output: target })
-  assert.equal(calls[0].arguments[0], `Wrote ${target}.`)
-})
-
-test('rareAZ with opts.output has written the file by the time it resolves', async (t) => {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ebird-ext-rareaz-'))
-  t.after(() => fs.rm(dir, { recursive: true, force: true }))
-  const target = path.join(dir, 'az-rare')
-  await runRareAZ(t, { manual: true, data: [{ 'Scientific Name': 'Dendrocygna bicolor', Date: '2024-02-01' }], output: target })
-  const written = JSON.parse(await fs.readFile(`${target}.json`, 'utf8'))
-  assert.equal(written.Arizona[0]['Scientific Name'], 'Dendrocygna bicolor')
-})
-
-test('rareAZ with opts.output rejects when the file write fails', async (t) => {
-  t.mock.method(fs, 'writeFile', async () => { throw new Error('disk full') })
-  await assert.rejects(runRareAZ(t, { manual: true, data: [], output: 'unused' }), /disk full/)
 })
 
 // ===========================================================================

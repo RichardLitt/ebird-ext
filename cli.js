@@ -28,7 +28,6 @@ const cli = meow(`
                   MyEBirdData.csv or eBird Basic Dataset ebd_*.txt files. With
                   --year, includes earlier sightings last edited that year
     251           Show 251
-    winterFinch   Show winterFinch needs
     subspecies    Show subspecies, spuhs, and other leaf nodes
     checklists    Show checklists for a given region and time
     getLastDate   Show most recent date from checklist
@@ -116,8 +115,6 @@ async function run () {
     if (cli.flags.county) console.log(result)
   } else if (cli.input[0] === 'state') {
     await main.state(cli.flags)
-  } else if (cli.input[0] === 'winterFinch') {
-    await main.winterFinch(cli.flags)
   } else if (cli.input[0] === 'rare') {
     const output = await main.rare(cli.flags)
     if (cli.flags.slack) {
@@ -129,8 +126,6 @@ async function run () {
     } else {
       console.log(main.rareReport(output).join('\n'))
     }
-  } else if (cli.input[0] === 'rareAZ') {
-    await main.rareAZ(cli.flags)
   } else if (cli.input[0] === 'big') {
     cli.flags.list = undefined
     let timespan = 'year'
