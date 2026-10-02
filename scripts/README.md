@@ -16,3 +16,14 @@ node scripts/updateVermontRecords.js /tmp/VTStateList.pdf --taxonomy /tmp/ebird_
 ```
 
 It prints the species added, removed, renamed and changed compared with the current file; check those against the PDF before committing. The VBRC list uses AOS scientific names, but `rare()` matches eBird exports by scientific name, so the script swaps in eBird's name where the two differ (the `EBIRD_SCIENTIFIC_NAMES` map in the script; pass `--aos-names` to skip it). `--taxonomy` warns about any name eBird doesn't know, which is how to find new entries for that map. Then run `npm test`.
+
+## Update Town, Region and County Sightings
+
+[updateAreaSightings.js](updateAreaSightings.js) regenerates `data/townsightings.json`, `data/regionssightings.json` and `data/countyBarcharts.json`, the all-time species lists behind the website's `/towns`, `/regions` and `/counties` maps, from a statewide eBird Basic Dataset download (request `ebd_US-VT_*` at <https://ebird.org/data/download>). It reads the multi-gigabyte file a line at a time and takes a few minutes.
+
+```sh
+node scripts/updateAreaSightings.js ~/data/ebd_US-VT_smp_relAug-2026/ebd_US-VT_smp_relAug-2026.txt --dry-run
+node scripts/updateAreaSightings.js ~/data/ebd_US-VT_smp_relAug-2026/ebd_US-VT_smp_relAug-2026.txt
+```
+
+It prints, for every town and region, how many species were added and which were removed compared with the current file. Escapees (exotic code X) are left out, as eBird leaves them out of counts; pass `--include-escapees` to keep them. eBird omits sensitive species (Spruce Grouse, Long-eared Owl) from the EBD, so the script keeps them wherever the current file already has them. Lists are stored as 2021 banding codes; if the script reports names without a code after an eBird taxonomy update, add them to `EBIRD_NAME_TO_CODE`. `countyBarcharts.json` keeps the shape of the eBird county bar charts it was first made from, but holds only species names, not the weekly frequencies.

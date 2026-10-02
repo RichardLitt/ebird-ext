@@ -1,3 +1,6 @@
+// REDUNDANT: scripts/updateAreaSightings.js now builds data/townsightings.json
+// and data/regionssightings.json straight from a statewide EBD file, without
+// the per-county files this script joins. Kept for reference.
 import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import * as banding from '../bandingCodes.js'

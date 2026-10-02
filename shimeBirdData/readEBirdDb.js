@@ -1,3 +1,7 @@
+// REDUNDANT for towns and regions: scripts/updateAreaSightings.js now builds
+// data/townsightings.json and data/regionssightings.json straight from a
+// statewide EBD file. This script's hardcoded columns also no longer match the
+// current EBD layout. Kept for reference and its other modes.
 // This function reads only the eBird database files, requestable from eBird.
 import fs from 'node:fs'
 import stream from 'node:stream'
