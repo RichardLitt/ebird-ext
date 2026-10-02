@@ -110,7 +110,8 @@ function pointLookup (geojson, geojsonLookup, data) {
   if (data.type === 'Point') {
     point = data
   } else {
-    point = { type: 'Point', coordinates: [data.Longitude, data.Latitude] }
+    // MyEBirdData spells these Longitude/Latitude, the EBD LONGITUDE/LATITUDE
+    point = { type: 'Point', coordinates: [Number(data.Longitude ?? data.LONGITUDE), Number(data.Latitude ?? data.LATITUDE)] }
   }
   // TODO Add a fallback if it fails
   const containerArea = geojsonLookup.getContainers(point)

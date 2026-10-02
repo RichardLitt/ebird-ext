@@ -441,6 +441,13 @@ test('getPoint accepts UPPERCASE LATITUDE/LONGITUDE keys (eBird DB format)', () 
   assert.equal(result, 'BURLINGTON')
 })
 
+test('getPoint looks up UPPERCASE keys by containment, not the nearest-town fallback', () => {
+  // Inside West Haven, whose centroid is in New York, so the fallback finds nothing
+  const coordinates = { LATITUDE: '43.6516261', LONGITUDE: '-73.3180830' }
+  assert.equal(getPoint('towns', coordinates, 21), 'WEST HAVEN')
+  assert.equal(getPoint('regions', coordinates, 21), 'Champlain Valley')
+})
+
 test('getPoint returns undefined, without logging an error, when there are no coordinates', (t) => {
   const error = t.mock.method(console, 'error', () => {})
   assert.equal(getPoint('towns', { Latitude: '', Longitude: '' }, 1), undefined)
