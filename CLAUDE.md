@@ -25,7 +25,9 @@ CI runs lint, tests and `node cli.js --help` on Node 22 and 24.
 ## Layout
 
 - `index.js`: the analysis functions (towns, counties, regions, rare, vt251, …) and `getData`, which reads MyEBirdData.csv, EBD files or parsed rows.
-- `cli.js`: the CLI. It should only parse flags, call `index.js` and print.
+- `cli.js`: the CLI. It only parses flags, calls the library and prints, using `reports.js`.
+- `reports.js`: turns what the library returns into the lines the CLI prints.
+- `io.js`: all file reading and writing. The library loads it with `import('./io.js')` only when given a file path or an output file, so the site's bundle never runs it.
 - `filters.js`: date, location, completeness and duration filters; `getPoint` (which town or region a point is in).
 - `ebd.js`: EBD support: renames EBD columns to MyEBirdData names, collapses shared checklists, `releaseFromFileName`.
 - `bandingCodes.js`: common name ↔ four-letter banding code, from `data/ibpAlphaCodes2021.json`, plus `EBIRD_NAME_TO_CODE` for birds eBird renamed after 2021.
@@ -53,9 +55,10 @@ ebird-ext merge, Dependabot opens a site PR that moves the submodule pointer.
 
 - ESM throughout. JSON imports use `with { type: 'json' }`; the site's Craco
   config supports that syntax.
-- Code imported by the site has to bundle for the browser. Node built-ins only
-  work there because Craco gives them empty fallbacks, so don't call them on a
-  path the site uses.
+- Library code returns data and doesn't print (diagnostics behind `--verbose`
+  are the exception) or import `node:fs`: file access goes through `io.js`,
+  text output through `reports.js` and `cli.js`. The site bundles the library
+  for the browser, where Node built-ins are only empty fallbacks.
 - Tests use `node:test` and `node:assert/strict`. Fixtures are made up: never
   commit a real `MyEBirdData.csv` (not even renamed) or real EBD rows. The EBD
   terms forbid republishing the data in its original form; build fake
