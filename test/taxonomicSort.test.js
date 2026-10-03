@@ -1,12 +1,12 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import taxonomicSort from '../taxonomicSort.js'
-import taxonomy from '../taxonomies/eBird_Taxonomy_2020_VT.json' with { type: 'json' }
+import taxonomy from '../taxonomies/eBird_Taxonomy_VT.json' with { type: 'json' }
 import { commonInOrder, scientificInOrder, unknowns } from './fixtures/taxonomicSort.js'
 
 // taxonomicSort(list, name = 'common') sorts an array of species names in
 // place with Array.prototype.sort, using each name's index in
-// taxonomies/eBird_Taxonomy_2020_VT.json as the sort key. `name` selects
+// taxonomies/eBird_Taxonomy_VT.json as the sort key. `name` selects
 // common names ('common', the default; anything other than 'scientific'
 // behaves the same) or scientific names ('scientific').
 //
@@ -20,7 +20,8 @@ const fn = taxonomicSort
 
 test('taxonomy file is a non-empty array', () => {
   assert.ok(Array.isArray(taxonomy))
-  assert.equal(taxonomy.length, 532)
+  // Species and hybrids eBird lists for Vermont (scripts/updateTaxonomy.js)
+  assert.ok(taxonomy.length > 400)
 })
 
 test('every taxonomy entry has PRIMARY_COM_NAME and SCI_NAME strings', () => {
@@ -239,7 +240,7 @@ test('is stable for tied distinct objects that compare equal', () => {
 // ---------------------------------------------------------------------------
 
 test('accepts the output of Object.keys (how shimeBirdData callers use it)', () => {
-  const byTaxon = { 'Branta canadensis': {}, 'Bubulcus ibis': {}, 'Passer domesticus': {} }
+  const byTaxon = { 'Branta canadensis': {}, 'Ardea ibis': {}, 'Passer domesticus': {} }
   assert.deepEqual(fn(Object.keys(byTaxon), 'scientific'), Object.keys(byTaxon))
 })
 
@@ -298,7 +299,7 @@ test('reorders shuffled common names into taxonomic order', () => {
 })
 
 test('reorders an interleaved common-name list', () => {
-  const list = ['House Sparrow', 'Snow Goose', 'Red-tailed Hawk', 'Canada Goose', 'Blue Jay', 'Mallard', 'Cattle Egret']
+  const list = ['House Sparrow', 'Snow Goose', 'Red-tailed Hawk', 'Canada Goose', 'Blue Jay', 'Mallard', 'Western Cattle-Egret']
   assert.deepEqual(fn(list), commonInOrder)
 })
 

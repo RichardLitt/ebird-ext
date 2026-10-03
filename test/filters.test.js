@@ -478,8 +478,28 @@ test('getPoint falls back to nearest in-county town for a point on a river', () 
 
 test('getTownCentroids() returns one feature per Vermont town', () => {
   const result = getTownCentroids()
-  // Vermont has 255 towns/cities; the geojson reflects that.
-  assert.equal(result.length, 255)
+  // 256 towns, cities, gores and grants, with Essex Junction (a city since 2022)
+  assert.equal(result.length, 256)
+})
+
+test('getTownCentroids() puts every centre inside its own town', () => {
+  // The bounding-box centre is outside some towns (West Haven's is in New
+  // York; Rutland's is in Rutland City, which it surrounds)
+  for (const c of getTownCentroids()) {
+    const [lng, lat] = c.geometry.coordinates
+    assert.equal(getPoint('towns', { Longitude: lng, Latitude: lat }, c.properties.county), c.properties.town)
+  }
+})
+
+test('the town map has Essex Junction, separate from Essex', () => {
+  // Essex Junction village, by its library; Essex town, at Essex Center
+  assert.equal(getPoint('towns', { Latitude: 44.4903, Longitude: -73.1129 }, 7), 'ESSEX JUNCTION')
+  assert.equal(getPoint('towns', { Latitude: 44.5195, Longitude: -73.0597 }, 7), 'ESSEX')
+})
+
+test('getPoint falls back to a town inside Vermont for a point just across the Poultney River', () => {
+  // Outside every town polygon; West Haven is the nearest town in Rutland County
+  assert.equal(getPoint('towns', { Latitude: 43.5922176, Longitude: -73.3818637 }, 21), 'WEST HAVEN')
 })
 
 test('getTownCentroids() centroids carry the town\'s properties', () => {

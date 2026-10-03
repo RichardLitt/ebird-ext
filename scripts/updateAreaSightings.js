@@ -25,15 +25,14 @@
 // Species are stored as four-letter banding codes from
 // data/ibpAlphaCodes2021.json, which follows the 2021 taxonomy, while the EBD
 // uses the current eBird taxonomy. EBIRD_NAME_TO_CODE in bandingCodes.js maps
-// the names that have changed since then back to their old code. The website
-// compares these lists with an older Vermont taxonomy, so the old codes are
-// what it expects. The script lists any name it still can't map; add those to
-// that map.
+// the names that have changed since then to their old code (and
+// codeToCommonName back to the current name). The script lists any name it
+// still can't map; add those to that map.
 //
 // countyBarcharts.json began as eBird's county bar charts, and keeps their
 // shape, { County: { taxa, species: { 'Common Name': { 'Scientific Name' } } } },
-// without the weekly frequencies, which nothing used. It holds names, not
-// codes: the 2021 name for birds in EBIRD_NAME_TO_CODE, the EBD's otherwise.
+// without the weekly frequencies, which nothing used. It holds the EBD's
+// (current eBird) names, not codes.
 //
 // eBird leaves sensitive species out of the EBD entirely. SENSITIVE_CODES are
 // kept wherever the file being replaced already had them, so an update doesn't
@@ -73,12 +72,6 @@ function isCountable (category, commonName) {
 
 function toCode (commonName) {
   return banding.commonNameToCode(commonName)
-}
-
-// The name the county lists use: the 2021 name if eBird has since changed it
-function toOldName (commonName) {
-  const code = banding.EBIRD_NAME_TO_CODE[commonName]
-  return code ? banding.codeToCommonName(code) : commonName
 }
 
 // Every town, region and county, so the map finds a list for each shape even
@@ -199,8 +192,7 @@ function toCodes (species) {
 function toCounty (species, scientificNames) {
   const entries = {}
   for (const name of inTaxonomicOrder(species)) {
-    const oldName = toOldName(name)
-    if (!entries[oldName]) entries[oldName] = { 'Scientific Name': scientificNames.get(name) }
+    if (!entries[name]) entries[name] = { 'Scientific Name': scientificNames.get(name) }
   }
   return { taxa: String(Object.keys(entries).length), species: entries }
 }

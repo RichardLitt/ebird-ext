@@ -15,25 +15,44 @@ import { point as turfPoint, featureCollection } from '@turf/helpers'
 // Used more than once.
 const townCentroids = getTownCentroids()
 
+// A point inside a town: the centre of its bounding box if that's inside,
+// otherwise the middle of the widest stretch of town along a line of latitude
+// through it. The plain centre lies outside some towns (West Haven's is in New
+// York; Rutland's is in Rutland City, which it surrounds), and the
+// nearest-town fallback in getPoint needs a point that is in the town.
+function interiorPoint (feature) {
+  const center = turfCenter(feature).geometry.coordinates
+  const polygons = feature.geometry.type === 'Polygon' ? [feature.geometry.coordinates] : feature.geometry.coordinates
+  // Crossings of a line of latitude with every ring: between pairs of
+  // crossings is inside (holes included), by the even-odd rule
+  const crossings = (polygon, lat) => polygon.flatMap(ring => ring.slice(1).flatMap((b, i) => {
+    const a = ring[i]
+    return (a[1] > lat) !== (b[1] > lat) ? [a[0] + (lat - a[1]) * (b[0] - a[0]) / (b[1] - a[1])] : []
+  })).sort((x, y) => x - y)
+  const inside = ([lng, lat]) => polygons.some(polygon => crossings(polygon, lat).filter(x => x < lng).length % 2 === 1)
+  if (inside(center)) return center
+
+  const lats = polygons.flat(2).map(c => c[1])
+  const [south, north] = [Math.min(...lats), Math.max(...lats)]
+  // Try the centre's latitude first, then lines further from it
+  const steps = [0, ...Array.from({ length: 20 }, (_, i) => (i % 2 ? 1 : -1) * Math.ceil((i + 1) / 2) / 21)]
+  for (const step of steps) {
+    const lat = center[1] + step * (north - south)
+    let best
+    for (const polygon of polygons) {
+      const xs = crossings(polygon, lat)
+      for (let i = 0; i + 1 < xs.length; i += 2) {
+        if (!best || xs[i + 1] - xs[i] > best[1] - best[0]) best = [xs[i], xs[i + 1]]
+      }
+    }
+    if (best) return [(best[0] + best[1]) / 2, lat]
+  }
+  return center
+}
+
 // Defaults to all
 function getTownCentroids (town) {
-  const centers = townBoundaries.features.map(feature => {
-    let center
-    // This center of West Haven is in New York.
-    if (feature.properties.town === 'West Haven'.toUpperCase()) {
-      // This breaks the whole thing!
-      center = turfCenter(feature)
-      // TODO Unfortunately, the enclaves are broken. All Rutland counts are in Rutland City.
-    } else if (feature.properties.town.includes('Rutland'.toUpperCase())) {
-      center = turfCenter(feature)
-      // console.log(feature.properties.town, center.geometry.coordinates.reverse())
-    } else {
-      center = turfCenter(feature)
-    }
-    // console.log(feature.properties, center)
-    center.properties = feature.properties
-    return center
-  })
+  const centers = townBoundaries.features.map(feature => turfPoint(interiorPoint(feature), feature.properties))
   if (town) {
     return centers.find(c => c.properties.town === town.toUpperCase())
   } else {

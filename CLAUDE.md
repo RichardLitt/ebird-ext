@@ -47,6 +47,8 @@ CI runs lint, tests and `node cli.js --help` on Node 22 and 24.
 | `data/vermont_records.json` | `scripts/updateVermontRecords.js` (VCE's VBRC list PDF) | /vbrc-checker |
 | `data/hotspots.json`, `hotspots.csv`, `hotspotsList.md`, `novisits-hotspots.json` | `scripts/updateHotspots.sh` (needs `EBIRD_API_TOKEN`) | /hotspots |
 | `data/hotspotsDates.json` | `node montpelier.js hotspotDates <EBD sampling file>` | no |
+| `taxonomies/eBird_Taxonomy_VT.json` | `scripts/updateTaxonomy.js` (eBird API; after eBird's autumn taxonomy update) | "not seen" lists on the maps |
+| `geojson/vt_towns.json` | `scripts/updateTownBoundaries.js` (VCGI's town boundaries) | every map |
 
 The data is refreshed about quarterly, from an EBD download. After an
 ebird-ext merge, Dependabot opens a site PR that moves the submodule pointer.
@@ -80,8 +82,11 @@ Don't re-propose these.
 - The area lists leave out escapees (exotic code X). eBird omits sensitive
   species from the EBD, so `SENSITIVE_CODES` are carried forward from the
   current files.
-- Species lists store 2021 banding codes, because the site compares them with
-  its 2020 Vermont taxonomy.
+- Town, region and Project 251 lists store 2021 banding codes; county lists
+  store names. `codeToCommonName` gives codes their current eBird name, so
+  everything matches `taxonomies/eBird_Taxonomy_VT.json`.
+- Town names keep this repo's style (ST. ALBANS, AVERYS GORE, RUTLAND), not
+  VCGI's (SAINT ALBANS, AVERY'S GORE, RUTLAND TOWN).
 - Project 251 runs from EBD downloads, not a shared eBird account.
 - No JSDoc.
 

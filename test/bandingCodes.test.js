@@ -21,6 +21,18 @@ test('codeToCommonName resolves BCCH to Black-capped Chickadee', () => {
   assert.equal(codeToCommonName('BCCH'), 'Black-capped Chickadee')
 })
 
+test('codeToCommonName gives the current eBird name for birds renamed since 2021', () => {
+  assert.equal(codeToCommonName('YEWA'), 'Northern Yellow Warbler')
+  assert.equal(codeToCommonName('BCNH'), 'Black-crowned Night Heron')
+  assert.equal(codeToCommonName('CORE'), 'Redpoll')
+})
+
+test('commonNameToCode and codeToCommonName round-trip current eBird names', () => {
+  for (const name of ['Northern Yellow Warbler', 'American Herring Gull', 'Redpoll', 'Black-capped Chickadee']) {
+    assert.equal(codeToCommonName(commonNameToCode(name)), name)
+  }
+})
+
 test('codeToCommonName falls back to the input code when unknown', () => {
   assert.equal(codeToCommonName('ZZZZ'), 'ZZZZ')
 })
