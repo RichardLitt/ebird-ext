@@ -1,7 +1,7 @@
 # Project 251
 
 Project 251 asks Vermont birders to submit a complete checklist in every one of
-the state's 251 towns (255 with the gores and grants) within one calendar year.
+the state's towns and cities (256 with the gores and grants) within one calendar year.
 The [/251 map](https://birdinginvermont.com/251) shows which towns have been
 covered and how many species each has.
 
@@ -47,7 +47,8 @@ Holland, Lemington and Warner's Grant.
 ### Data (ebird-ext)
 
 - [x] **Renamed species.** `EBIRD_NAME_TO_CODE` is in `bandingCodes.js`, so
-      birds eBird renamed in 2025 get their 2021 banding codes.
+      birds eBird renamed in 2025 get their 2021 banding codes, and display
+      under their current names.
 - [x] **Data date.** `vt251` writes `vt_town_counts_meta.json`.
 - [x] The same kind of date file for `updateAreaSightings.js`
       (`area_sightings_meta.json`), so the towns, regions and counties pages

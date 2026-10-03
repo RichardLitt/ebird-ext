@@ -27,3 +27,19 @@ node scripts/updateAreaSightings.js ~/data/ebd_US-VT_smp_relAug-2026/ebd_US-VT_s
 ```
 
 It prints, for every town and region, how many species were added and which were removed compared with the current file. Escapees (exotic code X) are left out, as eBird leaves them out of counts; pass `--include-escapees` to keep them. eBird omits sensitive species (Spruce Grouse, Long-eared Owl) from the EBD, so the script keeps them wherever the current file already has them. Lists are stored as 2021 banding codes; if the script reports names without a code after an eBird taxonomy update, add them to `EBIRD_NAME_TO_CODE` in `bandingCodes.js`. `countyBarcharts.json` keeps the shape of the eBird county bar charts it was first made from, but holds only species names, not the weekly frequencies. It also writes `data/area_sightings_meta.json` with the EBD release (read from the file name, or pass `--release="Aug 2026"`), which the site's Towns, Bioregions and Counties pages show.
+
+## Update the eBird Taxonomy
+
+[updateTaxonomy.js](updateTaxonomy.js) rebuilds `taxonomies/eBird_Taxonomy_VT.json`, the species and hybrids eBird lists as reported in Vermont, in taxonomic order, with current eBird names. The site's maps use it for each area's "not seen" list. eBird updates its taxonomy each autumn; run this afterwards.
+
+```sh
+EBIRD_API_TOKEN=... node scripts/updateTaxonomy.js --dry-run
+EBIRD_API_TOKEN=... node scripts/updateTaxonomy.js
+```
+
+It prints the taxa added and removed, and any Vermont species whose name doesn't survive the trip to a banding code and back. Add those to `EBIRD_NAME_TO_CODE` in `bandingCodes.js`, then rerun `updateAreaSightings.js` so the lists use the new names.
+
+## Update Town Boundaries
+
+[updateTownBoundaries.js](updateTownBoundaries.js) rebuilds `geojson/vt_towns.json` from the Vermont Center for Geographic Information's [town boundaries](https://geodata.vermont.gov/datasets/VCGI::vt-data-town-boundaries). It keeps this repo's town names where VCGI's differ (ST. ALBANS, not SAINT ALBANS) and rounds coordinates to 6 decimal places. It prints the towns added and removed; `--dry-run` only prints. After a change, rerun `updateAreaSightings.js` and Project 251.
+
