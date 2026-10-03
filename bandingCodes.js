@@ -59,6 +59,14 @@ const EBIRD_NAME_TO_CODE = {
   Redpoll: 'CORE'
 }
 
+// Vermont species on eBird's sensitive list, which eBird leaves out of the EBD:
+// https://support.ebird.org/en/support/solutions/articles/48000803210
+// scripts/updateAreaSightings.js carries them forward from the current lists,
+// without dates, so they go at the end; the site marks them undated. Hawk Owl,
+// Great Gray Owl and Gyrfalcon were only ever in the county lists, which came
+// from eBird's bar charts rather than the EBD.
+const SENSITIVE_CODES = ['SPGR', 'LEOW', 'NHOW', 'GGOW', 'GYRF']
+
 const CODE_TO_EBIRD_NAME = Object.fromEntries(Object.entries(EBIRD_NAME_TO_CODE).map(([name, code]) => [code, name]))
 
 function isBandingCode (code) {
@@ -129,6 +137,7 @@ function unfurlObjToSpecies (obj) {
 
 export {
   EBIRD_NAME_TO_CODE,
+  SENSITIVE_CODES,
   codeToCommonName,
   commonNameToCode,
   speciesNameToCode,
