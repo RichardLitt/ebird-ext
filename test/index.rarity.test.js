@@ -392,7 +392,25 @@ test('rare: redpoll forms after the Common/Hoary lump', async () => {
   const exilipes = form('Acanthis flammea exilipes')
   const common = form('Acanthis flammea flammea')
   const out = await rareManual(hornemanni, greenland, lesser, hoary, exilipes, common)
-  assert.deepEqual(out.Subspecies, [hornemanni, greenland, lesser])
+  assert.deepEqual(out.Subspecies, [hornemanni, greenland, lesser, hoary, exilipes])
+})
+
+test('rare: subspecies Vermont expects are not flagged; the rest are', async () => {
+  const s = (species, Subspecies) => sighting({ 'Scientific Name': species, Subspecies })
+  const expected = [
+    s('Branta canadensis', 'Branta canadensis moffitti/maxima'),
+    s('Ammospiza nelsoni', 'Ammospiza nelsoni nelsoni/altera'),
+    s('Larus glaucoides', 'Larus glaucoides thayeri'),
+    s('Anser albifrons', 'Anser albifrons flavirostris')
+  ]
+  const flagged = [
+    s('Ammospiza nelsoni', 'Ammospiza nelsoni subvirgata'),
+    s('Eremophila alpestris', 'Eremophila alpestris [alpestris Group]'),
+    s('Tringa semipalmata', 'Tringa semipalmata inornata'),
+    s('Anser albifrons', 'Anser albifrons gambelli/sponsa')
+  ]
+  const out = await rareManual(...expected, ...flagged)
+  assert.deepEqual(out.Subspecies, flagged)
 })
 
 test('rare: Eurasian Whimbrel (now its own species) is a Vermont first, not a subspecies', async () => {
