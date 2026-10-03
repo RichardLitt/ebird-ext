@@ -32,8 +32,8 @@ const parser = csv({
 const allRows = {}
 
 async function analyzeFiles () {
-  // const file = 'data/NE-species.csv'
-  const file = 'WA-species.csv'
+  // The New England states' lists, joined by runStateData.sh
+  const file = 'data/NE-species.csv'
   console.log(`Analyzing ${file}.`)
   await runFile(file)
   console.log(`Analyzed ${file}.`)
