@@ -13,7 +13,9 @@
 //                        doesn't count them, so by default neither do we.
 //   --release="Aug 2026" The EBD release, if the file name doesn't say (see below).
 //
-// Also writes data/area_sightings_meta.json, { release, updated }, so the site
+// Also writes data/grid_sightings.json, the species recorded in each square
+// of a grid of about 2 km, for the site's radius page; and
+// data/area_sightings_meta.json, { release, updated }, so the site
 // can say which EBD release the maps come from. The release is read from the
 // EBD file name (ebd_US-VT_smp_relAug-2026.txt -> 'Aug 2026').
 //
@@ -60,6 +62,13 @@ const OUTPUTS = {
 const KINDS = Object.keys(OUTPUTS)
 const META = path.join(root, 'data/area_sightings_meta.json')
 
+// The species recorded in each grid square, for the site's radius page:
+// squares of about 2 km (0.018 degrees of latitude by 0.025 of longitude, at
+// Vermont's latitude). Square [i, j] covers latitudes i * lat to (i + 1) * lat
+// and longitudes j * lng to (j + 1) * lng.
+const GRID = { lat: 0.018, lng: 0.025 }
+const GRID_OUTPUT = path.join(root, 'data/grid_sightings.json')
+
 const { SENSITIVE_CODES } = banding
 
 const COUNTABLE = new Set(['species', 'issf', 'form', 'intergrade'])
@@ -95,6 +104,7 @@ async function readEBD (file, opts) {
   const places = new Map()
   const unplaced = new Set()
   const scientificNames = new Map()
+  const grid = new Map()
   // The regions map has gaps (the East Bay marshes in West Haven, for one).
   // Records there go to whichever region the rest of their town is in.
   const regionVotes = new Map()
@@ -159,6 +169,13 @@ async function readEBD (file, opts) {
       }
       note(species, commonName, { order, first: date })
     }
+    const lat = Number(row[col.LATITUDE])
+    const lng = Number(row[col.LONGITUDE])
+    if (row[col.LATITUDE] && Number.isFinite(lat) && Number.isFinite(lng)) {
+      const square = `${Math.floor(lat / GRID.lat)},${Math.floor(lng / GRID.lng)}`
+      if (!grid.has(square)) grid.set(square, new Set())
+      grid.get(square).add(commonName)
+    }
     stats.kept++
   }
   process.stderr.write('\n')
@@ -173,7 +190,7 @@ async function readEBD (file, opts) {
     for (const [name, seen] of species) note(region, name, seen)
     console.error(`${species.size} species from outside the regions map in ${town} counted in ${votes[0][0]}`)
   }
-  return { areas, stats, unplaced, scientificNames, localities: places.size }
+  return { areas, grid, stats, unplaced, scientificNames, localities: places.size }
 }
 
 // Record a species in an area: { order, first }, its taxonomic order and the
@@ -277,7 +294,7 @@ async function main () {
     process.exit(1)
   }
 
-  const { areas, stats, unplaced, scientificNames, localities } = await readEBD(file, opts)
+  const { areas, grid, stats, unplaced, scientificNames, localities } = await readEBD(file, opts)
   console.error(`${stats.rows} rows, ${stats.kept} countable records kept, ${stats.escapees} escapee records skipped, ${localities} localities`)
 
   const unmapped = new Set()
@@ -300,6 +317,25 @@ async function main () {
       await fs.writeFile(OUTPUTS[kind], format(lists), 'utf8')
       console.error(`Wrote ${path.relative(root, OUTPUTS[kind])}`)
     }
+  }
+
+  // { lat, lng, species: [banding codes], squares: { 'i,j': bitmap } }: each
+  // square's bitmap (base64) has bit n set if species[n] was seen there. A
+  // list of codes per square would be four times the size.
+  const species = [...new Set([...grid.values()].flatMap(names => [...names].map(toCode)))].sort()
+  const index = new Map(species.map((code, i) => [code, i]))
+  const squares = [...grid].sort(([a], [b]) => a.localeCompare(b)).map(([square, names]) => {
+    const bits = Buffer.alloc(Math.ceil(species.length / 8))
+    for (const name of names) {
+      const i = index.get(toCode(name))
+      bits[i >> 3] |= 1 << (i & 7)
+    }
+    return `${JSON.stringify(square)}:"${bits.toString('base64')}"`
+  })
+  console.error(`\ngrid: ${squares.length} squares with sightings, ${species.length} species`)
+  if (!opts.dryRun) {
+    await fs.writeFile(GRID_OUTPUT, `{"lat":${GRID.lat},"lng":${GRID.lng},"species":${JSON.stringify(species)},"squares":{\n${squares.join(',\n')}\n}}\n`, 'utf8')
+    console.error(`Wrote ${path.relative(root, GRID_OUTPUT)}`)
   }
 
   if (!opts.dryRun) {
