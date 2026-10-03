@@ -41,5 +41,9 @@ It prints the taxa added and removed, and any Vermont species whose name doesn't
 
 ## Update Town Boundaries
 
-[updateTownBoundaries.js](updateTownBoundaries.js) rebuilds `geojson/vt_towns.json` from the Vermont Center for Geographic Information's [town boundaries](https://geodata.vermont.gov/datasets/VCGI::vt-data-town-boundaries). It keeps this repo's town names where VCGI's differ (ST. ALBANS, not SAINT ALBANS) and rounds coordinates to 6 decimal places. It prints the towns added and removed; `--dry-run` only prints. After a change, rerun `updateAreaSightings.js` and Project 251.
+[updateTownBoundaries.js](updateTownBoundaries.js) rebuilds `geojson/vt_towns.json` from the Vermont Center for Geographic Information's [town boundaries](https://geodata.vermont.gov/datasets/VCGI::vt-data-town-boundaries). It keeps this repo's town names where VCGI's differ (ST. ALBANS, not SAINT ALBANS) and rounds coordinates to 6 decimal places. It prints the towns added and removed; `--dry-run` only prints. After a change, run `simplifyForDisplay.js`, then rerun `updateAreaSightings.js` and Project 251.
+
+## Simplify Boundaries for Display
+
+[simplifyForDisplay.js](simplifyForDisplay.js) writes simplified copies of the four boundary files to `geojson/display/`, which the site draws. The files in `geojson/` stay precise, because they decide which town and region a checklist is in. It uses [mapshaper](https://github.com/mbloch/mapshaper) through `npx`, keeping 10% of the vertices (about 585 kB → 72 kB gzipped, with no visible difference at the site's map size). Run it after any change to `geojson/`.
 

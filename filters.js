@@ -1,6 +1,5 @@
 import townBoundaries from './geojson/vt_towns.json' with { type: 'json' }
 import vermontRegionsGeojson from './geojson/Polygon_VT_Biophysical_Regions.json' with { type: 'json' }
-import CountyBarcharts from './data/countyBarcharts.json' with { type: 'json' }
 import GeoJsonGeometriesLookup from 'geojson-geometries-lookup'
 const vermontTowns = new GeoJsonGeometriesLookup(townBoundaries)
 const vermontRegions = new GeoJsonGeometriesLookup(vermontRegionsGeojson)
@@ -8,6 +7,9 @@ import _ from 'lodash'
 import moment from 'moment'
 import provinces from 'provinces'
 import * as helpers from './helpers.js'
+// Re-exported below; they live in spuh.js, which the site can import without
+// this file's town and region boundaries
+import { removeSpuh, removeSpuhFromCounties } from './spuh.js'
 import nearestPoint from '@turf/nearest-point'
 import turfCenter from '@turf/center'
 import { point as turfPoint, featureCollection } from '@turf/helpers'
@@ -240,53 +242,6 @@ function createPeriodArray (data) {
     })
   }
   return _.sortBy(periodArray, 'SpeciesTotal').reverse()
-}
-
-function removeSpuh (arr, reverse) {
-  const newArr = []
-  for (const i in arr) {
-    if (arr[i]['Scientific Name'] &&
-      !arr[i]['Scientific Name'].includes('sp.') &&
-      !arr[i]['Scientific Name'].includes(' x ') && // Get rid of hybrids
-      !arr[i]['Scientific Name'].includes('hybrid') && // Get rid of Lawrence's and Brewster's Warblers
-      !arr[i]['Scientific Name'].includes('Domestic type') && // Get rid of Domestic types
-      !arr[i]['Scientific Name'].split(' ').slice(0, 2).join(' ').includes('/') && // No Genus-level splits
-      !reverse
-      // !arr[i]['Scientific Name'].includes('[') &&
-      // !arr[i]['Scientific Name'].match(/.* .* .*/g) &&
-      // !arr[i]['Scientific Name'].includes('/')
-    ) {
-      // Remove subspecies only entries
-      // For some reason, simply copying over the field before redefining it doesn't work.
-      // Probably due to JavaScript reference errors.
-      const specie = arr[i]
-      if (specie['Scientific Name'].split(' ').slice(2).length !== 0) {
-        arr[i].Subspecies = _.clone(arr[i]['Scientific Name'])
-      }
-      specie['Scientific Name'] = specie['Scientific Name'].split(' ').slice(0, 2).join(' ')
-      newArr.push(specie)
-      // } else {
-      // Use this to find excluded entries
-      // console.log(arr[i]['Scientific Name'])
-    } else if (reverse) {
-      const specie = arr[i]
-      newArr.push(specie)
-    }
-  }
-  return _.uniq(newArr)
-}
-
-function removeSpuhFromCounties (countyBarcharts) {
-  const newObj = {}
-  Object.keys(CountyBarcharts).forEach(county => {
-    newObj[county] = removeSpuh(Object.keys(CountyBarcharts[county].species).map(s => {
-      const species = CountyBarcharts[county].species[s]
-      // ES6 probably has a better way of doing this.
-      species.name = s
-      return species
-    })).map(s => s.name)
-  })
-  return newObj
 }
 
 export {

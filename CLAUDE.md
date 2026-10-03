@@ -29,6 +29,7 @@ CI runs lint, tests and `node cli.js --help` on Node 22 and 24.
 - `reports.js`: turns what the library returns into the lines the CLI prints.
 - `io.js`: all file reading and writing. The library loads it with `import('./io.js')` only when given a file path or an output file, so the site's bundle never runs it.
 - `filters.js`: date, location, completeness and duration filters; `getPoint` (which town or region a point is in).
+- `spuh.js`: `removeSpuh` and `removeSpuhFromCounties`, without the boundaries `filters.js` imports, so the site's maps can use them cheaply.
 - `ebd.js`: EBD support: renames EBD columns to MyEBirdData names, collapses shared checklists, `releaseFromFileName`.
 - `bandingCodes.js`: common name ↔ four-letter banding code, from `data/ibpAlphaCodes2021.json`, plus `EBIRD_NAME_TO_CODE` for birds eBird renamed after 2021.
 - `hotspots.js`, `helpers.js`, `appearsDuringExpectedDates.js`, `taxonomicSort.js`, `readHistogram.js`: what they say.
@@ -48,7 +49,8 @@ CI runs lint, tests and `node cli.js --help` on Node 22 and 24.
 | `data/hotspots.json`, `hotspots.csv`, `hotspotsList.md`, `novisits-hotspots.json` | `scripts/updateHotspots.sh` (needs `EBIRD_API_TOKEN`) | /hotspots |
 | `data/hotspotsDates.json` | `node montpelier.js hotspotDates <EBD sampling file>` | no |
 | `taxonomies/eBird_Taxonomy_VT.json` | `scripts/updateTaxonomy.js` (eBird API; after eBird's autumn taxonomy update) | "not seen" lists on the maps |
-| `geojson/vt_towns.json` | `scripts/updateTownBoundaries.js` (VCGI's town boundaries) | every map |
+| `geojson/vt_towns.json` | `scripts/updateTownBoundaries.js` (VCGI's town boundaries) | town lookups (on upload) |
+| `geojson/display/*.json` | `scripts/simplifyForDisplay.js`, after any boundary change | every map (drawing only) |
 
 The data is refreshed about quarterly, from an EBD download. After an
 ebird-ext merge, Dependabot opens a site PR that moves the submodule pointer.
