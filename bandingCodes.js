@@ -38,8 +38,10 @@ codes.push({
 })
 
 // Current eBird common name -> the 2021 banding code for the same bird. The
-// codes follow the 2021 taxonomy, and the website compares lists with an
-// older Vermont taxonomy, so birds eBird has renamed since keep their old code.
+// codes come from the 2021 IBP list, so birds eBird has renamed or split since
+// keep their old code; codeToCommonName gives them their current eBird name,
+// to match taxonomies/eBird_Taxonomy_VT.json. scripts/updateTaxonomy.js lists
+// any Vermont species these tables miss.
 const EBIRD_NAME_TO_CODE = {
   // Splits, where Vermont's bird keeps the old code
   'Northern Yellow Warbler': 'YEWA',
@@ -57,11 +59,15 @@ const EBIRD_NAME_TO_CODE = {
   Redpoll: 'CORE'
 }
 
+const CODE_TO_EBIRD_NAME = Object.fromEntries(Object.entries(EBIRD_NAME_TO_CODE).map(([name, code]) => [code, name]))
+
 function isBandingCode (code) {
   return (codes.find(x => x.alpha === code))
 }
 
+// The current eBird name for a code
 function codeToCommonName (code, log) {
+  if (CODE_TO_EBIRD_NAME[code]) return CODE_TO_EBIRD_NAME[code]
   const species = codes.find(x => x.alpha === code)
   if (!species) {
     if (log) {
