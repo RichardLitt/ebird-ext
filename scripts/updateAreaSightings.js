@@ -17,7 +17,8 @@
 // can say which EBD release the maps come from. The release is read from the
 // EBD file name (ebd_US-VT_smp_relAug-2026.txt -> 'Aug 2026').
 //
-// Each list holds a species if it was reported there at least once. Only
+// Each list holds a species if it was reported there at least once, in the
+// order the species were first reported there (oldest first). Only
 // countable taxa are kept: species, and subspecies or forms counted as their
 // species. Spuhs, slashes, hybrids and domestic types are dropped, except Feral
 // Pigeon, which counts as Rock Pigeon.
@@ -109,7 +110,7 @@ async function readEBD (file, opts) {
     if (!col) {
       const header = line.replace(/^\uFEFF/, '').split('\t')
       col = Object.fromEntries(header.map((name, i) => [name.trim(), i]))
-      for (const name of ['CATEGORY', 'COMMON NAME', 'SCIENTIFIC NAME', 'TAXONOMIC ORDER', 'COUNTY', 'EXOTIC CODE', 'COUNTY CODE', 'LOCALITY ID', 'LATITUDE', 'LONGITUDE', 'APPROVED']) {
+      for (const name of ['CATEGORY', 'COMMON NAME', 'SCIENTIFIC NAME', 'TAXONOMIC ORDER', 'OBSERVATION DATE', 'COUNTY', 'EXOTIC CODE', 'COUNTY CODE', 'LOCALITY ID', 'LATITUDE', 'LONGITUDE', 'APPROVED']) {
         if (!(name in col)) throw new Error(`${file} has no ${name} column; is it an EBD file?`)
       }
       continue
@@ -143,6 +144,7 @@ async function readEBD (file, opts) {
     }
 
     const order = Number(row[col['TAXONOMIC ORDER']])
+    const date = row[col['OBSERVATION DATE']]
     if (!scientificNames.has(commonName)) scientificNames.set(commonName, row[col['SCIENTIFIC NAME']])
     // A few localities on the Connecticut River have no county, or one in New
     // Hampshire; use the county of the town they were placed in
@@ -158,7 +160,7 @@ async function readEBD (file, opts) {
         unplaced.add(`${kind}: ${locality} (${row[col.LATITUDE]}, ${row[col.LONGITUDE]})`)
         continue
       }
-      if (!species.has(commonName)) species.set(commonName, order)
+      note(species, commonName, { order, first: date })
     }
     stats.kept++
   }
@@ -171,27 +173,38 @@ async function readEBD (file, opts) {
       continue
     }
     const region = areas.regions.get(votes[0][0])
-    for (const [name, order] of species) {
-      if (!region.has(name)) region.set(name, order)
-    }
+    for (const [name, seen] of species) note(region, name, seen)
     console.error(`${species.size} species from outside the regions map in ${town} counted in ${votes[0][0]}`)
   }
   return { areas, stats, unplaced, scientificNames, localities: places.size }
 }
 
-function inTaxonomicOrder (species) {
-  return [...species].sort((a, b) => a[1] - b[1]).map(([name]) => name)
+// Record a species in an area: { order, first }, its taxonomic order and the
+// earliest date it was seen there
+function note (species, name, seen) {
+  const known = species.get(name)
+  if (!known) species.set(name, { ...seen })
+  else if (seen.first < known.first) known.first = seen.first
 }
 
-// Species names -> unique banding codes, in taxonomic order
+// The species in the order they were first seen in the area, oldest first, so
+// the site can number them; species first seen on the same day in taxonomic
+// order
+function inSeenOrder (species) {
+  return [...species]
+    .sort(([, a], [, b]) => (a.first < b.first ? -1 : a.first > b.first ? 1 : a.order - b.order))
+    .map(([name]) => name)
+}
+
+// Species names -> unique banding codes, in the order first seen
 function toCodes (species) {
-  return [...new Set(inTaxonomicOrder(species).map(toCode))]
+  return [...new Set(inSeenOrder(species).map(toCode))]
 }
 
 // Species names -> a county bar chart entry
 function toCounty (species, scientificNames) {
   const entries = {}
-  for (const name of inTaxonomicOrder(species)) {
+  for (const name of inSeenOrder(species)) {
     if (!entries[name]) entries[name] = { 'Scientific Name': scientificNames.get(name) }
   }
   return { taxa: String(Object.keys(entries).length), species: entries }

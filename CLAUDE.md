@@ -85,7 +85,8 @@ Don't re-propose these.
   species from the EBD, so `SENSITIVE_CODES` are carried forward from the
   current files.
 - Town, region and Project 251 lists store 2021 banding codes; county lists
-  store names. `codeToCommonName` gives codes their current eBird name, so
+  store names. Every list is in the order each species was first seen in the
+  area, oldest first: the site numbers them that way. `codeToCommonName` gives codes their current eBird name, so
   everything matches `taxonomies/eBird_Taxonomy_VT.json`.
 - Town names keep this repo's style (ST. ALBANS, AVERYS GORE, RUTLAND), not
   VCGI's (SAINT ALBANS, AVERY'S GORE, RUTLAND TOWN).
