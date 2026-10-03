@@ -44,6 +44,7 @@ CI runs lint, tests and `node cli.js --help` on Node 22 and 24.
 | File | Refreshed by | Used by the site |
 |---|---|---|
 | `data/townsightings.json`, `regionssightings.json`, `countyBarcharts.json`, `area_sightings_meta.json` | `node scripts/updateAreaSightings.js <statewide EBD>` | /towns, /regions, /counties |
+| `data/grid_sightings.json` (species per ~2 km square, as bitmaps) | `node scripts/updateAreaSightings.js <statewide EBD>` | /radius |
 | `data/vt_town_counts.json`, `vt_town_counts_meta.json` | `node cli.js 251 --input=<EBD for the year> --year=<year>` | /251 |
 | `data/vermont_records.json` | `scripts/updateVermontRecords.js` (VCE's VBRC list PDF) | /vbrc-checker |
 | `data/hotspots.json`, `hotspots.csv`, `hotspotsList.md`, `novisits-hotspots.json` | `scripts/updateHotspots.sh` (needs `EBIRD_API_TOKEN`) | /hotspots |
