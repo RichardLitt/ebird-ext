@@ -60,10 +60,7 @@ const OUTPUTS = {
 const KINDS = Object.keys(OUTPUTS)
 const META = path.join(root, 'data/area_sightings_meta.json')
 
-// Vermont species on eBird's sensitive list: https://support.ebird.org/en/support/solutions/articles/48000803210
-// Hawk Owl, Great Gray Owl and Gyrfalcon were only ever in the county lists,
-// which came from eBird's bar charts rather than the EBD.
-export const SENSITIVE_CODES = ['SPGR', 'LEOW', 'NHOW', 'GGOW', 'GYRF']
+const { SENSITIVE_CODES } = banding
 
 const COUNTABLE = new Set(['species', 'issf', 'form', 'intergrade'])
 
