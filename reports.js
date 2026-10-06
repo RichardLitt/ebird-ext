@@ -4,7 +4,7 @@
 // the site also uses them from.)
 
 import _ from 'lodash'
-import moment from 'moment'
+import { format } from 'date-fns'
 import * as f from './filters.js'
 import * as helpers from './helpers.js'
 
@@ -36,7 +36,7 @@ function stateReport (state) {
 // quadBirds(): the date each species was completed (with --list), then the total
 function quadReport (completionDates, opts = {}) {
   const lines = opts.list ? completionDates.map(c => `${c.Date}: ${c.species['Common Name']}.`) : []
-  const thisYear = !opts.year || opts.year.toString() === moment().format('YYYY')
+  const thisYear = !opts.year || opts.year.toString() === format(new Date(), 'yyyy')
   lines.push(`You ${thisYear ? 'have seen' : 'saw'}, photographed, and recorded a total of ${completionDates.length} species${(opts.year) ? ` in ${opts.year}` : ''}.`)
   return lines
 }
@@ -68,7 +68,7 @@ function weeksReport (result) {
       : "You've birded at this location every week of the year!")
   } else {
     lines.push(`You've not birded here on weeks: ${result.unbirdedWeeks.join(', ')}.`)
-    lines.push(`The next unbirded week (#${result.nextWeek}) starts on ${moment(result.nextWeekStart).format('dddd, MMMM Do')}.`)
+    lines.push(`The next unbirded week (#${result.nextWeek}) starts on ${format(helpers.parseDate(result.nextWeekStart), 'EEEE, MMMM do')}.`)
   }
   lines.push('Note this only takes into account your bird sightings, not the databases.', '')
   return lines

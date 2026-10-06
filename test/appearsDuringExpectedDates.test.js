@@ -20,7 +20,7 @@ import appearsDuringExpectedDates from '../appearsDuringExpectedDates.js'
 // Each range is padded by ~1 month on each side ("Leave one month on either
 // side", per a comment in the source). Tests use dates that are clearly
 // inside or clearly outside (accounting for padding) to stay deterministic
-// across the moment-weekofmonth week-boundary math.
+// across the week-of-month boundary math.
 
 const fn = appearsDuringExpectedDates
 

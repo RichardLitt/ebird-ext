@@ -4,7 +4,7 @@ import GeoJsonGeometriesLookup from 'geojson-geometries-lookup'
 const vermontTowns = new GeoJsonGeometriesLookup(townBoundaries)
 const vermontRegions = new GeoJsonGeometriesLookup(vermontRegionsGeojson)
 import _ from 'lodash'
-import moment from 'moment'
+import { isAfter, parseISO } from 'date-fns'
 import provinces from 'provinces'
 import * as helpers from './helpers.js'
 // Re-exported below; they live in spuh.js, which the site can import without
@@ -201,7 +201,7 @@ function dateFilter (list, opts) {
   // Currently not documented
   if (opts.after) {
     return list.filter(x => {
-      return moment(x.Date, helpers.momentFormat(x.Date)).isAfter(moment(opts.after))
+      return isAfter(helpers.parseDate(x.Date), parseISO(String(opts.after)))
     })
   }
 
@@ -210,7 +210,7 @@ function dateFilter (list, opts) {
     return list
   }
   return list.filter(x => {
-    return moment(x.Date, helpers.momentFormat(x.Date)).format('YYYY') === opts.year.toString()
+    return helpers.formatDate(helpers.parseDate(x.Date), 'yyyy') === opts.year.toString()
   })
 }
 
@@ -229,7 +229,7 @@ function completeChecklistFilter (list, opts) {
 }
 
 function orderByDate (arr) {
-  return _.orderBy(arr, (e) => moment(e.Date, helpers.momentFormat(e.Date)).format())
+  return _.orderBy(arr, (e) => helpers.formatDate(helpers.parseDate(e.Date)))
 }
 
 function createPeriodArray (data) {

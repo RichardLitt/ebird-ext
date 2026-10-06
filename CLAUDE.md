@@ -98,6 +98,6 @@ Don't re-propose these.
 
 - Object keys `'10'`, `'11'`, `'12'` count as integers and sort before
   `'01'`–`'09'`. Iterate months in a fixed list, not `Object.keys`.
-- `moment().week()` puts late-December days in week 1 of the next year.
+- date-fns `getWeek()` (Sunday-start weeks, as moment's were) puts late-December days in week 1 of the next year.
 - npm 11 writes lockfiles that npm 10's `npm ci` rejects. That matters in the
   site, which pins Node 22 and npm 10.

@@ -1,7 +1,12 @@
 // This is a helper library for checking expected dates for VBRC
 
-import moment from 'moment'
-import weekOfMonth from 'moment-weekofmonth'
+import { addMonths, endOfYear, getWeek as weekOfYear, getYear, setDate, setYear, startOfDay, startOfMonth, startOfYear, subMonths } from 'date-fns'
+import { parseDate } from './helpers.js'
+
+// Week of the month, counting Sunday-start weeks from the one with the 1st.
+// Late December gives a large negative number, since its week of the year
+// is week 1 of the next year.
+const weekOfMonth = date => weekOfYear(date) - weekOfYear(startOfMonth(date)) + 1
 
 // const test = [
 //   {
@@ -88,7 +93,7 @@ function getWeek (alphaStr) {
 function findFirstDayOfWeekInMonth (month, week) {
   let date = 1
   while (weekOfMonth(month) !== week) {
-    month = moment(month).date(date)
+    month = setDate(month, date)
     date = date + 1
   }
   return month
@@ -101,7 +106,7 @@ function findLastDayOfWeekInMonth (month, week) {
     if (weekOfMonth(month) === -47) {
       return month
     }
-    month = moment(month).date(date)
+    month = setDate(month, date)
     date = date + 1
   }
   return month
@@ -121,34 +126,34 @@ function calculateTimespan (str, noPadding) {
   }
   // Could probably be simplified
   const start = splitStringAlphanumerically(weeks[0])
-  const startMonth = moment().month(start[0] - 1).date(1)
+  const startMonth = new Date(new Date().getFullYear(), start[0] - 1, 1)
   const startWeek = getWeek(start[1])
   const firstDay = findFirstDayOfWeekInMonth(startMonth, startWeek)
   const end = splitStringAlphanumerically(weeks[1])
-  const endMonth = moment().month(end[0] - 1).date(1)
+  let endMonth = new Date(new Date().getFullYear(), end[0] - 1, 1)
   // For cases like 10B-5B, for winter date ranges
   if (end[0] - 1 < start[0] - 1) {
-    endMonth.add(1, 'years')
+    endMonth = setYear(endMonth, getYear(endMonth) + 1)
   }
   const endWeek = getWeek(end[1])
   const lastDay = findLastDayOfWeekInMonth(endMonth, endWeek)
   // Leave one month on either side
-  let earliestDate = moment(firstDay)
-  if (moment(earliestDate).month() === 0) {
-    earliestDate = moment(earliestDate).startOf('year')
+  let earliestDate
+  if (firstDay.getMonth() === 0) {
+    earliestDate = startOfYear(firstDay)
   } else {
-    earliestDate = moment(earliestDate).subtract(1, 'months').hour(0).minute(0).second(0)
+    earliestDate = subMonths(firstDay, 1)
   }
 
-  let latestDate = moment(lastDay)
+  let latestDate
   // Reminder: 11 is December. Zero-indexing.
-  if (moment(latestDate).month() === 11) {
-    latestDate = moment(latestDate).endOf('year')
+  if (lastDay.getMonth() === 11) {
+    latestDate = endOfYear(lastDay)
   // No padding exists to offset December records for the January spillover weeks
   } else if (noPadding) {
-    latestDate = moment(latestDate).hour(0).minute(0).second(0)
+    latestDate = lastDay
   } else {
-    latestDate = moment(latestDate).add(1, 'months').hour(0).minute(0).second(0)
+    latestDate = addMonths(lastDay, 1)
   }
 
   return [earliestDate, latestDate]
@@ -191,10 +196,11 @@ function getTimespans (occurrence) {
   const carryOverTimespans = []
   if (timespans.length !== 0) {
     timespans.forEach(timespan => {
-      if (moment(timespan[1]).year() !== moment().year()) {
+      const thisYear = new Date().getFullYear()
+      if (getYear(timespan[1]) !== thisYear) {
         const newTimespan = [
-          [timespan[0], moment().endOf('year')],
-          [moment().startOf('year'), moment(timespan[1]).year(moment().year())]
+          [timespan[0], endOfYear(new Date())],
+          [startOfYear(new Date()), setYear(timespan[1], thisYear)]
         ]
         timespans.pop(timespan)
         carryOverTimespans.push(newTimespan)
@@ -221,10 +227,12 @@ function appearsDuringExpectedDates (date, speciesRecord) {
   }
   const timespans = getTimespans(speciesRecord)
   if (timespans.length !== 0) {
+    const day = parseDate(date)
+    const year = getYear(day)
+    // Both ends are whole days, inclusive
     const isInTimespan = timespans.map(x => {
-      // For some reason, need to subtract a day to to how isBetween works. No need to add a day.
-      const start = moment(x[0]).year(moment(date).year()).subtract(1, 'day'); const end = moment(x[1]).year(moment(date).year())
-      return moment(date).isBetween(start, end)
+      const start = startOfDay(setYear(x[0], year)); const end = startOfDay(setYear(x[1], year))
+      return day >= start && day <= end
     })
     return isInTimespan.some(x => x === true)
   } else {

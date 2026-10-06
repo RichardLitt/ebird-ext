@@ -7,7 +7,7 @@ import GeoJsonGeometriesLookup from 'geojson-geometries-lookup'
 const vermontRegions = new GeoJsonGeometriesLookup(vermontRegionsRaw)
 import _ from 'lodash'
 import Papa from 'papaparse'
-import moment from 'moment'
+import { differenceInCalendarDays, format } from 'date-fns'
 import difference from 'compare-latlong'
 import appearsDuringExpectedDates from './appearsDuringExpectedDates.js'
 import * as helpers from './helpers.js'
@@ -91,7 +91,7 @@ async function biggestTime (timespan, opts) {
 
   // Sort by the amount of unique entries per day
   data.forEach((e) => {
-    const period = moment(e.Date, helpers.momentFormat(e.Date)).format(dateFormat)
+    const period = helpers.formatDate(helpers.parseDate(e.Date), dateFormat)
     if (!dataByDate[period]) {
       dataByDate[period] = [e]
     } else {
@@ -110,7 +110,7 @@ async function firstTimes (timespan, opts) {
 
   // Sort by the amount of unique entries per day
   data.forEach((e) => {
-    const period = moment(e.Date, helpers.momentFormat(e.Date)).format(dateFormat)
+    const period = helpers.formatDate(helpers.parseDate(e.Date), dateFormat)
     if (!speciesIndex[e['Scientific Name']]) {
       if (!dataByDate[period]) {
         dataByDate[period] = [e]
@@ -130,7 +130,7 @@ function countUniqueSpecies (data, dateFormat) {
   const speciesIndex = {}
   const dataByDate = {}
   data.forEach((e) => {
-    const period = moment(e.Date, helpers.momentFormat(e.Date)).format(dateFormat)
+    const period = helpers.formatDate(helpers.parseDate(e.Date), dateFormat)
     const specie = e['Scientific Name']
     if (!speciesIndex[specie]) {
       if (!dataByDate[period]) {
@@ -366,19 +366,19 @@ async function quadBirds (opts) {
       }
     }
     if (e['Submission ID'] && !speciesIndex[species].seen) {
-      speciesIndex[species].seen = moment(e.Date, helpers.momentFormat(e.Date)).format('YYYY-MM-DD')
+      speciesIndex[species].seen = helpers.formatDate(helpers.parseDate(e.Date), 'yyyy-MM-dd')
     }
     if (e.Format === 'Photo' && !speciesIndex[species].photo) {
-      speciesIndex[species].photo = moment(e.Date, helpers.momentFormat(e.Date)).format('YYYY-MM-DD')
+      speciesIndex[species].photo = helpers.formatDate(helpers.parseDate(e.Date), 'yyyy-MM-dd')
     }
     if (e.Format === 'Audio' && !speciesIndex[species].audio) {
-      speciesIndex[species].audio = moment(e.Date, helpers.momentFormat(e.Date)).format('YYYY-MM-DD')
+      speciesIndex[species].audio = helpers.formatDate(helpers.parseDate(e.Date), 'yyyy-MM-dd')
     }
     if (!speciesIndex[species].completed &&
       speciesIndex[species].audio &&
       speciesIndex[species].photo &&
       speciesIndex[species].seen) {
-      if (moment(speciesIndex[species].audio, helpers.momentFormat(speciesIndex[species].audio)).isBefore(speciesIndex[species].photo, helpers.momentFormat(speciesIndex[species].audio))) {
+      if (speciesIndex[species].audio < speciesIndex[species].photo) {
         speciesIndex[species].completed = speciesIndex[species].photo
       } else {
         speciesIndex[species].completed = speciesIndex[species].audio
@@ -489,7 +489,7 @@ function couldBeRare (e) {
   return !expectedDatesCache.get(key)
 }
 
-const yearOf = date => /^\d{4}-/.test(date) ? date.slice(0, 4) : moment(date, helpers.momentFormat(date)).format('YYYY')
+const yearOf = date => /^\d{4}-/.test(date) ? date.slice(0, 4) : helpers.formatDate(helpers.parseDate(date), 'yyyy')
 
 // Records for the report year: seen that year, or seen earlier but last edited
 // that year (EBD only), as a checklist uploaded late would be. Those need a
@@ -694,7 +694,7 @@ function groupSightings (records) {
   records.forEach(x => {
     const name = x.record['Common Name']
     const group = open[name]
-    if (group && moment(x.record.Date).diff(moment(_.last(group).record.Date), 'days') <= SAME_BIRD_DAYS) {
+    if (group && differenceInCalendarDays(helpers.parseDate(x.record.Date), helpers.parseDate(_.last(group).record.Date)) <= SAME_BIRD_DAYS) {
       group.push(x)
     } else {
       open[name] = [x]
@@ -947,7 +947,7 @@ async function checklists (opts) {
 /* Used when updating the 251 page */
 async function getLastDate (opts) {
   // Just use the date it is actually updated
-  return moment().format('MMMM Do, YYYY')
+  return format(new Date(), 'MMMM do, yyyy')
 }
 
 async function countTheBirds (opts) {
@@ -1001,7 +1001,7 @@ async function datesSpeciesObserved (opts) {
 
     // Print
     // Object.keys(unbirdedDates).sort((a,b) => Number(a)-Number(b)).forEach(month => {
-    //   console.log(`${moment().month(Number(month)-1).format('MMMM')}: ${unbirdedDates[month].join(', ')}`)
+    //   console.log(`${format(new Date(2000, Number(month) - 1), 'MMMM')}: ${unbirdedDates[month].join(', ')}`)
     // })
   })
 
@@ -1044,8 +1044,8 @@ async function daylistTargets (opts) {
   })
 
   if (opts.today) {
-    const month = moment().format('MM')
-    const date = Number(moment().format('DD'))
+    const month = format(new Date(), 'MM')
+    const date = new Date().getDate()
     // Species never seen on today's month-day: today is still unbirded for them
     return Object.keys(speciesArray).filter(species => speciesArray[species][month].indexOf(date) !== -1)
   }

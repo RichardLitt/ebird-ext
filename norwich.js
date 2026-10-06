@@ -3,7 +3,7 @@
 import meow from 'meow'
 import _ from 'lodash'
 import { promises as fs } from 'node:fs'
-import moment from 'moment'
+import { format } from 'date-fns'
 import * as main from './index.js'
 import * as helpers from './helpers.js'
 import * as hotspots from './hotspots.js'
@@ -62,7 +62,7 @@ async function getNorwichHotspots () {
 // Only usefulf for the Norwich County Quest account
 async function norwich (opts) {
   Object.assign(opts, {
-    year: opts.year || moment().format('YYYY'),
+    year: opts.year || format(new Date(), 'yyyy'),
     state: 'Vermont',
     town: opts.town || 'Norwich',
     all: opts.all || false,

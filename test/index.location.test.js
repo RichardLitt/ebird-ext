@@ -5,7 +5,6 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { mkdtemp, readFile, rm } from 'node:fs/promises'
 import { promises as fsp } from 'node:fs'
-import moment from 'moment'
 import {
   towns,
   counties,
@@ -1046,7 +1045,7 @@ test('quadBirds { year } in the past says "saw" and names the year', async (t) =
 
 test('quadBirds { year } equal to the current year says "have seen"', async (t) => {
   quiet(t)
-  const year = moment().format('YYYY')
+  const year = String(new Date().getFullYear())
   await asCli(quadBirds, { input: QUAD_BOTH, year: Number(year) })
   assert.equal(summaryLine(), `You have seen, photographed, and recorded a total of 0 species in ${year}.`)
 })

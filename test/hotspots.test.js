@@ -5,7 +5,6 @@ import { createHash } from 'node:crypto'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import moment from 'moment'
 import {
   csvToJsonHotspots,
   hotspotsForTown,
@@ -141,7 +140,7 @@ after(async () => {
 })
 
 // 52 Wednesdays in 2023, one in each locale week 1..52.
-const wednesdays2023 = Array.from({ length: 52 }, (_, i) => moment('2023-01-04').add(i * 7, 'days').format('YYYY-MM-DD'))
+const wednesdays2023 = Array.from({ length: 52 }, (_, i) => new Date(2023, 0, 4 + i * 7).toLocaleDateString('sv'))
 
 // ===========================================================================
 // exports
@@ -491,7 +490,7 @@ test('unbirdedHotspots { input } counts a checklist that only recorded a spuh as
 })
 
 test('unbirdedHotspots { currentYear } drops hotspots visited this calendar year', async (t) => {
-  const thisYear = moment().year()
+  const thisYear = new Date().getFullYear()
   const { logs } = await runUnbirded(t, { currentYear: true }, [
     hs('L1', `${thisYear}-01-02 08:00`, 'Visited This Year'),
     hs('L2', `${thisYear - 1}-12-31 08:00`, 'Visited Last Year')
@@ -505,7 +504,7 @@ test('unbirdedHotspots { currentYear } keeps never-visited hotspots', async (t) 
 })
 
 test('unbirdedHotspots { currentYear } understands MM/DD/YYYY dates', async (t) => {
-  const thisYear = moment().year()
+  const thisYear = new Date().getFullYear()
   const { logs } = await runUnbirded(t, { currentYear: true }, [
     hs('L1', `01/02/${thisYear}`, 'US Format This Year')
   ])
@@ -565,7 +564,7 @@ test('unbirdedHotspots combines { sinceYear } with { input }', async (t) => {
 })
 
 test('unbirdedHotspots combines { currentYear } with { sinceYear }', async (t) => {
-  const thisYear = moment().year()
+  const thisYear = new Date().getFullYear()
   const { logs } = await runUnbirded(t, { currentYear: true, sinceYear: thisYear - 5 }, [
     hs('L1', `${thisYear}-01-02 08:00`, 'This Year'),
     hs('L2', `${thisYear - 3}-01-02 08:00`, 'Three Years Ago'),
