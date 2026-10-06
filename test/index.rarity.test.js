@@ -419,17 +419,24 @@ test('rare: Eurasian Whimbrel (now its own species) is a Vermont first, not a su
   assert.deepEqual(bucketsOf(out, e), ['Unknown'])
 })
 
-test('rare: a target subspecies (Red-tailed Hawk abieticola) goes to Subspecies', async () => {
-  const e = sighting({ 'Scientific Name': 'Buteo jamaicensis', Subspecies: 'Buteo jamaicensis abieticola' })
+test('rare: a target subspecies (Red-tailed Hawk harlani) goes to Subspecies', async () => {
+  const e = sighting({ 'Scientific Name': 'Buteo jamaicensis', Subspecies: 'Buteo jamaicensis harlani' })
   const out = await rareManual(e)
   assert.deepEqual(bucketsOf(out, e), ['Subspecies'])
 })
 
 test('rare: flagged subspecies get "Subspecies Notes" set to the subspecies record', async () => {
-  const e = sighting({ 'Scientific Name': 'Buteo jamaicensis', Subspecies: 'Buteo jamaicensis abieticola' })
+  const e = sighting({ 'Scientific Name': 'Buteo jamaicensis', Subspecies: 'Buteo jamaicensis harlani' })
   await rareManual(e)
   const record = VermontSubspecies.find(x => x['Scientific Name'] === 'Buteo jamaicensis')
   assert.equal(e['Subspecies Notes'], record)
+})
+
+test('rare: Red-tailed Hawk abieticola, no longer reviewed by the VBRC, is not flagged', async () => {
+  const e = sighting({ 'Scientific Name': 'Buteo jamaicensis', Subspecies: 'Buteo jamaicensis abieticola' })
+  const out = await rareManual(e)
+  assert.deepEqual(bucketsOf(out, e), [])
+  assert.equal(e['Subspecies Notes'], undefined)
 })
 
 test('rare: a known Vermont subspecies (Red-tailed Hawk borealis) is not flagged', async () => {
@@ -543,7 +550,7 @@ test('rare: a CSV trinomial is split into species "Scientific Name" and a full "
   const out = await rare({ input: VT_CSV })
   const hawk = out.Subspecies.find(x => x['Submission ID'] === 'S900000013')
   assert.equal(hawk['Scientific Name'], 'Buteo jamaicensis')
-  assert.equal(hawk.Subspecies, 'Buteo jamaicensis abieticola')
+  assert.equal(hawk.Subspecies, 'Buteo jamaicensis harlani')
   assert.equal(hawk['Subspecies Notes'].Species, 'Red-tailed Hawk')
 })
 
