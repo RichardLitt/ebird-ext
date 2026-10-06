@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import meow from 'meow'
+import yargs from 'yargs'
+import { hideBin } from 'yargs/helpers'
 import _ from 'lodash'
 import { promises as fs } from 'node:fs'
 import { format } from 'date-fns'
@@ -9,46 +10,29 @@ import * as helpers from './helpers.js'
 import * as hotspots from './hotspots.js'
 import * as f from './filters.js'
 
-const cli = meow(`
+const HELP = `
   Usage
-    $ node cli.js --input=<input> [opts]
-
-  Arguments
-    norwich       Output for the Norwich quest
+    $ node norwich.js --input=<input> [opts]
 
   Options
-    --all       Only use checklists that counted all species
-    --complete  Filter by complete checklists only
-    --input, -i The input file
-    --year      Limit results to a given year
-    --town      Select which town to make the table for
+    --all, -a       Only use checklists that counted all species
+    --complete, -c  Filter by complete checklists only
+    --input, -i     The input file
+    --year          Limit results to a given year
+    --town, -t      Select which town to make the table for (default: Norwich)
+`
 
-  Examples
-    $ node cli.js
-`, {
-  importMeta: import.meta,
-  flags: {
-    input: {
-      type: 'string',
-      shortFlag: 'i'
-    },
-    year: {
-      type: 'string'
-    },
-    all: {
-      type: 'boolean',
-      shortFlag: 'a'
-    },
-    complete: {
-      type: 'boolean',
-      shortFlag: 'c'
-    },
-    town: {
-      type: 'string',
-      shortFlag: 't'
-    }
-  }
-})
+const flags = yargs(hideBin(process.argv))
+  .parserConfiguration({ 'parse-numbers': false, 'strip-aliased': true, 'strip-dashed': true })
+  .options({
+    input: { type: 'string', alias: 'i' },
+    year: { type: 'string' },
+    all: { type: 'boolean', alias: 'a' },
+    complete: { type: 'boolean', alias: 'c' },
+    town: { type: 'string', alias: 't' }
+  })
+  .help(false)
+  .parseSync()
 
 async function getNorwichHotspots () {
   const data = await hotspots.hotspotsForTown({ town: 'Norwich' })
@@ -111,7 +95,11 @@ async function norwich (opts) {
 }
 
 async function run () {
-  await norwich(cli.flags)
+  if (flags.help) {
+    console.log(HELP)
+    return
+  }
+  await norwich(flags)
 }
 
 run()
