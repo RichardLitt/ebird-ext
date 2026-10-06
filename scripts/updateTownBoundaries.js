@@ -21,7 +21,7 @@ const PLACES = 6
 
 // VCGI's name -> this repo's
 const NAMES = {
-  "AVERY'S GORE": 'AVERYS GORE',
+  'BUELS GORE': "BUEL'S GORE",
   'RUTLAND TOWN': 'RUTLAND'
 }
 const townName = name => NAMES[name] || name.replace(/^SAINT /, 'ST. ')

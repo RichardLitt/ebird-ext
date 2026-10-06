@@ -89,8 +89,10 @@ Don't re-propose these.
   store names. Every list is in the order each species was first seen in the
   area, oldest first: the site numbers them that way. `codeToCommonName` gives codes their current eBird name, so
   everything matches `taxonomies/eBird_Taxonomy_VT.json`.
-- Town names keep this repo's style (ST. ALBANS, AVERYS GORE, RUTLAND), not
-  VCGI's (SAINT ALBANS, AVERY'S GORE, RUTLAND TOWN).
+- Town names keep this repo's style (ST. ALBANS, RUTLAND), not VCGI's
+  (SAINT ALBANS, RUTLAND TOWN). The gores and grant keep their apostrophes
+  (AVERY'S GORE, BUEL'S GORE, WARREN'S GORE, WARNER'S GRANT), which VCGI
+  leaves off BUELS GORE.
 - Project 251 runs from EBD downloads, not a shared eBird account.
 - No JSDoc.
 
