@@ -1,18 +1,12 @@
 // This function reads only the eBird database files, requestable from eBird.
 import fs from 'node:fs'
-import { parse as csv } from 'csv-parse'
+import csvStream from './csvStream.js'
 import t from '../taxonomicSort.js'
 import { Transform } from 'node:stream'
-const parser = csv({
+// EBD files are unquoted, but comments can contain stray double quotes: quoting is off
+const parser = () => csvStream({
   delimiter: '\t',
-  record_delimiter: '\n',
-  skip_empty_lines: true,
-  relax_column_count: true, // this will cause a blow up if removed
-  relax: true, // this should allow for the double quotes in individual columns, specifically field notes
-  from: 2, // Skip first line
-  quote: '"', // this also helps to prevent errors on quotes
-  ltrim: true,
-  rtrim: true,
+  quoteChar: '\u0000',
   columns: [
     'GLOBAL UNIQUE IDENTIFIER',
     'LAST EDITED DATE',
@@ -110,7 +104,7 @@ async function runFile (filepath, string) {
     const shimmedData = {}
     let state = ''
     fs.createReadStream(filepath)
-      .pipe(parser)
+      .pipe(parser())
       .pipe(new Filter())
       .on('data', (row) => {
         if (!state) {
