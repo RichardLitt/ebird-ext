@@ -1,129 +1,15 @@
 #!/usr/bin/env node
 
-import meow from 'meow'
+import yargs from 'yargs'
+import { hideBin } from 'yargs/helpers'
 import main from './index.js'
 import * as hotspots from './hotspots.js'
 import * as reports from './reports.js'
 import _ from 'lodash'
 import { format, parseISO } from 'date-fns'
 
-const cli = meow(`
-  Usage
-    $ node cli.js <command> --input=<file> [options]
-
-  --input is a MyEBirdData.csv export (https://ebird.org/downloadMyData) or an
-  eBird Basic Dataset file (ebd_*.txt). Several files can be given, separated
-  by commas. See the README for each command's output.
-
-  Your lists
-    big           Your biggest year, month and day
-    big-year      Your biggest year (--list for the species)
-    big-month     Your biggest month (--list for the species)
-    big-day       Your biggest day (--list for the species)
-    first         The year, month and day with the most new species
-    first-year    The year with the most new species (--list for the species)
-    first-month   The month with the most new species (--list for the species)
-    first-day     The day with the most new species (--list for the species)
-    quad          Species you've seen, photographed and recorded. Give both
-                  MyEBirdData.csv and Macaulay Library export CSVs
-    subspecies    Subspecies, spuhs, slashes, hybrids and other leaf nodes
-    countTheBirds The total of all individual birds counted
-    checklists    Your checklists (with --year, --county, --complete, ...)
-
-  Vermont
-    towns         Species per town. --town=<name> lists one town's species
-    regions       Species per biophysical region
-    counties      Species per county. --county=<name> for one county
-    state         Species in Vermont, by the date you first saw each
-    withinDistance Species within --distance miles (default 10) of
-                  --coordinates=<lat,lng> (default: Montpelier)
-    rare          Records to report to the Vermont Bird Records Committee.
-                  With --year, includes earlier sightings last edited that year
-    issr          Is one sighting reportable? --species, --town and --date
-    datesSpeciesObserved  The 20 species you've seen on the most days of the year
-    daylistTargets        Species you've never seen in Vermont on today's date
-    251           Project 251 town lists for --year (default: this year)
-    getLastDate   Today's date, formatted for the Project 251 page
-
-  Hotspots
-    townHotspots          Hotspots in a --town
-    unbirdedHotspots      Hotspots you've never birded (--input), or not this
-                          year (--currentYear) or since a year (--sinceYear)
-    weeksYouveBirdedAtHotspot  Weeks of the year you haven't birded --id
-    csvToJsonHotspots     Rebuild data/hotspots.json from --input (used by
-                          scripts/updateHotspots.sh)
-
-  Options
-    --input, -i   The input file, or several separated by commas
-    --country     Only records in this country
-    --state       Only records in this state
-    --county      Only records in this county
-    --town        Only records in this Vermont town
-    --region      Only records in this Vermont biophysical region
-    --year        Only records from this year
-    --after       Only records after this date
-    --complete    Only complete checklists
-    --list, -l    List the species
-    --output      Also write the result to this JSON file
-    --slack       With rare: group by county, formatted as Slack messages
-    --verbose     Adds extra logging
-
-  Examples
-    $ node cli.js big-day --input=MyEBirdData.csv --list
-    $ node cli.js towns --input=MyEBirdData.csv --town=Montpelier
-    $ node cli.js rare --input=ebd_US-VT-001_202601_202612.txt --county=Addison --year=2026
-    $ node cli.js rare --input=ebd_US-VT_relAug-2026.txt,ebd_US-VT_relAug-2026_unvetted.txt --year=2026 --slack
-`, {
-  importMeta: import.meta,
-  flags: {
-    input: {
-      type: 'string',
-      shortFlag: 'i'
-    },
-    country: {
-      type: 'string'
-    },
-    county: {
-      type: 'string'
-    },
-    state: {
-      type: 'string'
-    },
-    year: {
-      type: 'string'
-    },
-    town: {
-      type: 'string'
-    },
-    list: {
-      type: 'boolean',
-      shortFlag: 'l'
-    },
-    towns: {
-      type: 'string'
-    },
-    regions: {
-      type: 'string'
-    },
-    verbose: {
-      shortFlag: 'v',
-      type: 'boolean'
-    },
-    slack: {
-      type: 'boolean'
-    },
-    coordinates: {
-      type: 'string'
-    },
-    distance: {
-      type: 'string'
-    }
-  }
-})
-
 // TODO Make Country, State, and County mutually exclusive
 // TODO Make input automatic based on file location
-// TODO This is ugly. Make it better.
 
 function print (lines) {
   lines.forEach(line => console.log(line))
@@ -138,148 +24,324 @@ function printAreaTotals (areas) {
     .forEach(([name, total]) => console.log(`${name}: ${total}`))
 }
 
-async function run () {
-  if (cli.input[0] === 'quad') {
-    print(reports.quadReport(await main.quadBirds(cli.flags), cli.flags))
-  } else if (cli.input[0] === 'towns') {
-    if (cli.flags.town) {
-      print(reports.townReport(await main.towns(cli.flags), cli.flags.town))
-    } else {
-      printAreaTotals(await main.towns({ ...cli.flags, all: true }))
+// How each timespan's Date reads in a sentence
+const PERIOD_NAMES = {
+  year: date => date,
+  month: date => format(parseISO(date), 'MMMM yyyy'),
+  day: date => format(parseISO(date), 'MMMM do, yyyy')
+}
+
+// big-year, first-day and so on: one timespan, with the species if --list
+function oneTimespan (fn, timespan, verb, noun) {
+  return async flags => {
+    const result = await fn(timespan, flags)
+    console.log(`Your ${verb} ${timespan} was ${PERIOD_NAMES[timespan](result.Date)} with ${result.SpeciesTotal} ${noun}.`)
+    if (flags.list) {
+      console.log(`With these species: ${_.map(result.Species, 'Scientific Name').join(', ')}.`)
     }
-  } else if (cli.input[0] === 'regions') {
-    printAreaTotals(await main.regions(cli.flags))
-  } else if (cli.input[0] === 'counties') {
-    const result = await main.counties(cli.flags)
-    if (cli.flags.county) {
-      console.log(result)
-    } else {
-      printAreaTotals(result)
-      if (cli.flags.ticks) console.log(reports.countyTicks(result))
-    }
-  } else if (cli.input[0] === 'state') {
-    print(reports.stateReport(await main.state(cli.flags)))
-  } else if (cli.input[0] === 'rare') {
-    const output = await main.rare(cli.flags)
-    if (cli.flags.slack) {
-      const messages = main.splitSlackMessages(main.rareSlackReport(output, cli.flags))
-      messages.forEach((message, i) => {
-        if (messages.length > 1) console.log(`${i ? '\n' : ''}----- Slack message ${i + 1} of ${messages.length} -----\n`)
-        console.log(message)
-      })
-    } else {
-      console.log(main.rareReport(output).join('\n'))
-    }
-  } else if (cli.input[0] === 'big') {
-    cli.flags.list = undefined
-    let timespan = 'year'
-    let biggest = await main.biggestTime(timespan, cli.flags)
-    console.log(`Your biggest ${timespan} was ${biggest.Date} with ${biggest.SpeciesTotal} new species.`)
-    timespan = 'month'
-    biggest = await main.biggestTime(timespan, cli.flags)
-    console.log(`Your biggest ${timespan} was ${format(parseISO(biggest.Date), 'MMMM yyyy')} with ${biggest.SpeciesTotal} new species.`)
-    timespan = 'day'
-    biggest = await main.biggestTime(timespan, cli.flags)
-    console.log(`Your biggest ${timespan} was ${format(parseISO(biggest.Date), 'MMMM do, yyyy')} with ${biggest.SpeciesTotal} new species.`)
-  } else if (cli.input[0] === 'first') {
-    cli.flags.list = undefined
-    let timespan = 'year'
-    let biggest = await main.firstTimes(timespan, cli.flags)
-    console.log(`Your newest ${timespan} was ${biggest.Date} with ${biggest.SpeciesTotal} new species.`)
-    timespan = 'month'
-    biggest = await main.firstTimes(timespan, cli.flags)
-    console.log(`Your newest ${timespan} was ${format(parseISO(biggest.Date), 'MMMM yyyy')} with ${biggest.SpeciesTotal} new species.`)
-    timespan = 'day'
-    biggest = await main.firstTimes(timespan, cli.flags)
-    console.log(`Your newest ${timespan} was ${format(parseISO(biggest.Date), 'MMMM do, yyyy')} with ${biggest.SpeciesTotal} new species.`)
-  } else if (cli.input[0] === 'big-year') {
-    const timespan = 'year'
-    const biggest = await main.biggestTime(timespan, cli.flags)
-    console.log(`Your biggest ${timespan} was ${biggest.Date} with ${biggest.SpeciesTotal} species.`)
-    if (cli.flags.list) {
-      console.log(`With these species: ${_.map(biggest.Species, 'Scientific Name').join(', ')}.`)
-    }
-  } else if (cli.input[0] === 'big-month') {
-    const timespan = 'month'
-    const biggest = await main.biggestTime(timespan, cli.flags)
-    console.log(`Your biggest ${timespan} was ${format(parseISO(biggest.Date), 'MMMM yyyy')} with ${biggest.SpeciesTotal} species.`)
-    if (cli.flags.list) {
-      console.log(`With these species: ${_.map(biggest.Species, 'Scientific Name').join(', ')}.`)
-    }
-  } else if (cli.input[0] === 'big-day') {
-    const timespan = 'day'
-    const biggest = await main.biggestTime(timespan, cli.flags)
-    console.log(`Your biggest ${timespan} was ${format(parseISO(biggest.Date), 'MMMM do, yyyy')} with ${biggest.SpeciesTotal} species.`)
-    if (cli.flags.list) {
-      console.log(`With these species: ${_.map(biggest.Species, 'Scientific Name').join(', ')}.`)
-    }
-  } else if (cli.input[0] === 'first-year') {
-    const timespan = 'year'
-    const biggest = await main.firstTimes(timespan, cli.flags)
-    console.log(`Your newest ${timespan} was ${biggest.Date} with ${biggest.SpeciesTotal} new species.`)
-    if (cli.flags.list) {
-      console.log(`With these species: ${_.map(biggest.Species, 'Scientific Name').join(', ')}.`)
-    }
-  } else if (cli.input[0] === 'first-month') {
-    const timespan = 'month'
-    const biggest = await main.firstTimes(timespan, cli.flags)
-    console.log(`Your newest ${timespan} was ${format(parseISO(biggest.Date), 'MMMM yyyy')} with ${biggest.SpeciesTotal} new species.`)
-    if (cli.flags.list) {
-      console.log(`With these species: ${_.map(biggest.Species, 'Scientific Name').join(', ')}.`)
-    }
-  } else if (cli.input[0] === 'first-day') {
-    const timespan = 'day'
-    const biggest = await main.firstTimes(timespan, cli.flags)
-    console.log(`Your newest ${timespan} was ${format(parseISO(biggest.Date), 'MMMM do, yyyy')} with ${biggest.SpeciesTotal} new species.`)
-    if (cli.flags.list) {
-      console.log(`With these species: ${_.map(biggest.Species, 'Scientific Name').join(', ')}.`)
-    }
-  } else if (cli.input[0] === 'withinDistance') {
-    // Default: Montpelier
-    const coordinates = (cli.flags.coordinates || '44.2581012,-72.5766799').split(',').map(Number)
-    const distance = cli.flags.distance ? Number(cli.flags.distance) : 10
-    const result = await main.radialSearch({ ...cli.flags, coordinates, distance })
-    console.log(`${result.speciesTotal} species within ${distance} miles of ${coordinates.join(', ')}${result.speciesTotal ? ': ' + result.species.join(', ') + '.' : '.'}`)
-  } else if (cli.input[0] === '251') {
-    await main.vt251(cli.flags.input, { year: cli.flags.year && Number(cli.flags.year), output: cli.flags.output, release: cli.flags.release })
-  } else if (cli.input[0] === 'subspecies') {
-    console.log(await main.subspecies(cli.flags))
-  } else if (cli.input[0] === 'checklists') {
-    const checklists = await main.checklists(cli.flags)
-    checklists.forEach(c => console.log(`${c.Date} ${c.Time || ''} | ${c.Location} | https://ebird.org/checklist/${c['Submission ID']}`))
-    console.log(`${checklists.length} checklists.`)
-  } else if (cli.input[0] === 'getLastDate') {
-    console.log(await main.getLastDate(cli.flags))
-  } else if (cli.input[0] === 'countTheBirds') {
-    console.log(await main.countTheBirds(cli.flags))
-  } else if (cli.input[0] === 'townHotspots') {
-    const result = await hotspots.townHotspots(cli.flags)
-    if (cli.flags.noVisits && cli.flags.print) {
-      print(reports.unvisitedHotspotsByTown(result, hotspots.allTowns()))
-    } else if (cli.flags.all) {
-      print(reports.townHotspotCounts(result, hotspots.allTowns()))
-    } else {
-      console.log(result)
-    }
-  } else if (cli.input[0] === 'unbirdedHotspots') {
-    console.log((await hotspots.unbirdedHotspots(cli.flags)).map(x => `${x.Name}, ${x['Last visited']}`))
-  } else if (cli.input[0] === 'csvToJsonHotspots') {
-    await hotspots.csvToJsonHotspots(cli.flags)
-  } else if (cli.input[0] === 'weeksYouveBirdedAtHotspot') {
-    print(reports.weeksReport(await hotspots.weeksYouveBirdedAtHotspot(cli.flags)))
-  } else if (cli.input[0] === 'datesSpeciesObserved') {
-    console.log(await main.datesSpeciesObserved(cli.flags))
-  } else if (cli.input[0] === 'daylistTargets') {
-    print(await main.daylistTargets({ ...cli.flags, today: true }))
-  } else if (cli.input[0] === 'issr') {
-    const output = await main.isSpeciesSightingRare(cli.flags)
-    console.log(main.rareReport(output).join('\n'))
-  } else {
-    console.log(cli.showHelp())
   }
 }
 
-run().catch(error => {
+// big and first: every timespan, without the species
+function everyTimespan (fn, verb) {
+  return async flags => {
+    for (const timespan of ['year', 'month', 'day']) {
+      const result = await fn(timespan, { ...flags, list: undefined })
+      console.log(`Your ${verb} ${timespan} was ${PERIOD_NAMES[timespan](result.Date)} with ${result.SpeciesTotal} new species.`)
+    }
+  }
+}
+
+// Every command, in the order --help lists them. A command's flags are all
+// the options given, so the library functions see flags this file doesn't
+// declare, like --id or --sinceYear.
+const COMMANDS = [
+  {
+    group: 'Your lists',
+    name: 'big',
+    describe: 'Your biggest year, month and day',
+    run: everyTimespan(main.biggestTime, 'biggest')
+  },
+  {
+    group: 'Your lists',
+    name: 'big-year',
+    describe: 'Your biggest year (--list for the species)',
+    run: oneTimespan(main.biggestTime, 'year', 'biggest', 'species')
+  },
+  {
+    group: 'Your lists',
+    name: 'big-month',
+    describe: 'Your biggest month (--list for the species)',
+    run: oneTimespan(main.biggestTime, 'month', 'biggest', 'species')
+  },
+  {
+    group: 'Your lists',
+    name: 'big-day',
+    describe: 'Your biggest day (--list for the species)',
+    run: oneTimespan(main.biggestTime, 'day', 'biggest', 'species')
+  },
+  {
+    group: 'Your lists',
+    name: 'first',
+    describe: 'The year, month and day with the most new species',
+    run: everyTimespan(main.firstTimes, 'newest')
+  },
+  {
+    group: 'Your lists',
+    name: 'first-year',
+    describe: 'The year with the most new species (--list for the species)',
+    run: oneTimespan(main.firstTimes, 'year', 'newest', 'new species')
+  },
+  {
+    group: 'Your lists',
+    name: 'first-month',
+    describe: 'The month with the most new species (--list for the species)',
+    run: oneTimespan(main.firstTimes, 'month', 'newest', 'new species')
+  },
+  {
+    group: 'Your lists',
+    name: 'first-day',
+    describe: 'The day with the most new species (--list for the species)',
+    run: oneTimespan(main.firstTimes, 'day', 'newest', 'new species')
+  },
+  {
+    group: 'Your lists',
+    name: 'quad',
+    describe: "Species you've seen, photographed and recorded. Give both\nMyEBirdData.csv and Macaulay Library export CSVs",
+    run: async flags => print(reports.quadReport(await main.quadBirds(flags), flags))
+  },
+  {
+    group: 'Your lists',
+    name: 'subspecies',
+    describe: 'Subspecies, spuhs, slashes, hybrids and other leaf nodes',
+    run: async flags => console.log(await main.subspecies(flags))
+  },
+  {
+    group: 'Your lists',
+    name: 'countTheBirds',
+    describe: 'The total of all individual birds counted',
+    run: async flags => console.log(await main.countTheBirds(flags))
+  },
+  {
+    group: 'Your lists',
+    name: 'checklists',
+    describe: 'Your checklists (with --year, --county, --complete, ...)',
+    run: async flags => {
+      const checklists = await main.checklists(flags)
+      checklists.forEach(c => console.log(`${c.Date} ${c.Time || ''} | ${c.Location} | https://ebird.org/checklist/${c['Submission ID']}`))
+      console.log(`${checklists.length} checklists.`)
+    }
+  },
+  {
+    group: 'Vermont',
+    name: 'towns',
+    describe: "Species per town. --town=<name> lists one town's species",
+    run: async flags => {
+      if (flags.town) {
+        print(reports.townReport(await main.towns(flags), flags.town))
+      } else {
+        printAreaTotals(await main.towns({ ...flags, all: true }))
+      }
+    }
+  },
+  {
+    group: 'Vermont',
+    name: 'regions',
+    describe: 'Species per biophysical region',
+    run: async flags => printAreaTotals(await main.regions(flags))
+  },
+  {
+    group: 'Vermont',
+    name: 'counties',
+    describe: 'Species per county. --county=<name> for one county',
+    run: async flags => {
+      const result = await main.counties(flags)
+      if (flags.county) {
+        console.log(result)
+      } else {
+        printAreaTotals(result)
+        if (flags.ticks) console.log(reports.countyTicks(result))
+      }
+    }
+  },
+  {
+    group: 'Vermont',
+    name: 'state',
+    describe: 'Species in Vermont, by the date you first saw each',
+    run: async flags => print(reports.stateReport(await main.state(flags)))
+  },
+  {
+    group: 'Vermont',
+    name: 'withinDistance',
+    describe: 'Species within --distance miles (default 10) of\n--coordinates=<lat,lng> (default: Montpelier)',
+    run: async flags => {
+      // Default: Montpelier
+      const coordinates = (flags.coordinates || '44.2581012,-72.5766799').split(',').map(Number)
+      const distance = flags.distance ? Number(flags.distance) : 10
+      const result = await main.radialSearch({ ...flags, coordinates, distance })
+      console.log(`${result.speciesTotal} species within ${distance} miles of ${coordinates.join(', ')}${result.speciesTotal ? ': ' + result.species.join(', ') + '.' : '.'}`)
+    }
+  },
+  {
+    group: 'Vermont',
+    name: 'rare',
+    describe: 'Records to report to the Vermont Bird Records Committee.\nWith --year, includes earlier sightings last edited that year',
+    run: async flags => {
+      const output = await main.rare(flags)
+      if (flags.slack) {
+        const messages = main.splitSlackMessages(main.rareSlackReport(output, flags))
+        messages.forEach((message, i) => {
+          if (messages.length > 1) console.log(`${i ? '\n' : ''}----- Slack message ${i + 1} of ${messages.length} -----\n`)
+          console.log(message)
+        })
+      } else {
+        console.log(main.rareReport(output).join('\n'))
+      }
+    }
+  },
+  {
+    group: 'Vermont',
+    name: 'issr',
+    describe: 'Is one sighting reportable? --species, --town and --date',
+    run: async flags => console.log(main.rareReport(await main.isSpeciesSightingRare(flags)).join('\n'))
+  },
+  {
+    group: 'Vermont',
+    name: 'datesSpeciesObserved',
+    describe: "The 20 species you've seen on the most days of the year",
+    run: async flags => console.log(await main.datesSpeciesObserved(flags))
+  },
+  {
+    group: 'Vermont',
+    name: 'daylistTargets',
+    describe: "Species you've never seen in Vermont on today's date",
+    run: async flags => print(await main.daylistTargets({ ...flags, today: true }))
+  },
+  {
+    group: 'Vermont',
+    name: '251',
+    describe: 'Project 251 town lists for --year (default: this year)',
+    run: flags => main.vt251(flags.input, { year: flags.year && Number(flags.year), output: flags.output, release: flags.release })
+  },
+  {
+    group: 'Vermont',
+    name: 'getLastDate',
+    describe: "Today's date, formatted for the Project 251 page",
+    run: async flags => console.log(await main.getLastDate(flags))
+  },
+  {
+    group: 'Hotspots',
+    name: 'townHotspots',
+    describe: 'Hotspots in a --town',
+    run: async flags => {
+      const result = await hotspots.townHotspots(flags)
+      if (flags.noVisits && flags.print) {
+        print(reports.unvisitedHotspotsByTown(result, hotspots.allTowns()))
+      } else if (flags.all) {
+        print(reports.townHotspotCounts(result, hotspots.allTowns()))
+      } else {
+        console.log(result)
+      }
+    }
+  },
+  {
+    group: 'Hotspots',
+    name: 'unbirdedHotspots',
+    describe: "Hotspots you've never birded (--input), or not this\nyear (--currentYear) or since a year (--sinceYear)",
+    run: async flags => console.log((await hotspots.unbirdedHotspots(flags)).map(x => `${x.Name}, ${x['Last visited']}`))
+  },
+  {
+    group: 'Hotspots',
+    name: 'weeksYouveBirdedAtHotspot',
+    describe: "Weeks of the year you haven't birded --id",
+    run: async flags => print(reports.weeksReport(await hotspots.weeksYouveBirdedAtHotspot(flags)))
+  },
+  {
+    group: 'Hotspots',
+    name: 'csvToJsonHotspots',
+    describe: 'Rebuild data/hotspots.json from --input (used by\nscripts/updateHotspots.sh)',
+    run: flags => hotspots.csvToJsonHotspots(flags)
+  }
+]
+
+const OPTIONS = {
+  input: { type: 'string', alias: 'i', describe: 'The input file, or several separated by commas' },
+  country: { type: 'string', describe: 'Only records in this country' },
+  state: { type: 'string', describe: 'Only records in this state' },
+  county: { type: 'string', describe: 'Only records in this county' },
+  town: { type: 'string', describe: 'Only records in this Vermont town' },
+  region: { type: 'string', describe: 'Only records in this Vermont biophysical region' },
+  year: { type: 'string', describe: 'Only records from this year' },
+  after: { type: 'string', describe: 'Only records after this date' },
+  complete: { type: 'boolean', describe: 'Only complete checklists' },
+  list: { type: 'boolean', alias: 'l', describe: 'List the species' },
+  output: { type: 'string', describe: 'Also write the result to this JSON file' },
+  slack: { type: 'boolean', describe: 'With rare: group by county, formatted as Slack messages' },
+  verbose: { type: 'boolean', alias: 'v', describe: 'Adds extra logging' },
+  coordinates: { type: 'string', hidden: true },
+  distance: { type: 'string', hidden: true }
+}
+
+// Lines of a name-and-description list, with descriptions in one column
+function columns (rows, minWidth) {
+  const width = Math.max(minWidth, ...rows.map(([name]) => name.length + 1))
+  return rows.flatMap(([name, describe]) => describe.split('\n').map((line, i) => `    ${(i ? '' : name).padEnd(width)}${line}`))
+}
+
+function helpText () {
+  const commands = Object.entries(_.groupBy(COMMANDS, 'group'))
+    .map(([group, list]) => [`  ${group}`, ...columns(list.map(c => [c.name, c.describe]), 14)].join('\n'))
+  const options = columns(Object.entries(OPTIONS)
+    .filter(([, option]) => !option.hidden)
+    .map(([name, option]) => [`--${name}${option.alias ? `, -${option.alias}` : ''}`, option.describe]), 14)
+  return `
+  Usage
+    $ node cli.js <command> --input=<file> [options]
+
+  --input is a MyEBirdData.csv export (https://ebird.org/downloadMyData) or an
+  eBird Basic Dataset file (ebd_*.txt). Several files can be given, separated
+  by commas. See the README for each command's output.
+
+${commands.join('\n\n')}
+
+  Options
+${options.join('\n')}
+
+  Examples
+    $ node cli.js big-day --input=MyEBirdData.csv --list
+    $ node cli.js towns --input=MyEBirdData.csv --town=Montpelier
+    $ node cli.js rare --input=ebd_US-VT-001_202601_202612.txt --county=Addison --year=2026
+    $ node cli.js rare --input=ebd_US-VT_relAug-2026.txt,ebd_US-VT_relAug-2026_unvetted.txt --year=2026 --slack`
+}
+
+// The parsed options, as the library functions take them
+const flagsOf = argv => _.omit(argv, ['_', '$0'])
+
+function showHelp () {
+  console.log(helpText())
+}
+
+const cli = yargs(hideBin(process.argv))
+  // Like meow: values stay strings, and each flag appears once, camelCased
+  .parserConfiguration({ 'parse-numbers': false, 'parse-positional-numbers': false, 'strip-aliased': true, 'strip-dashed': true })
+  .options(OPTIONS)
+  .help(false)
+  .fail(false)
+  .middleware(argv => {
+    if (argv.help) {
+      showHelp()
+      process.exit(0)
+    }
+  })
+
+COMMANDS.forEach(command => cli.command(command.name, command.describe, {}, argv => command.run(flagsOf(argv))))
+// No command, or one this file doesn't know
+cli.command('$0', false, {}, () => {
+  showHelp()
+  process.exitCode = 2
+})
+
+cli.parseAsync().catch(error => {
   console.error(`Error: ${error.message}`)
   process.exitCode = 1
 })

@@ -50,7 +50,7 @@ async function cliFails (...args) {
 
 test('every command the CLI handles is in its --help', async () => {
   const source = await fs.readFile(path.join(root, 'cli.js'), 'utf8')
-  const commands = [...source.matchAll(/cli\.input\[0\] === '([^']+)'/g)].map(m => m[1])
+  const commands = [...source.matchAll(/^ {4}name: '([^']+)',$/gm)].map(m => m[1])
   const help = await cli('--help')
   for (const command of commands) {
     assert.match(help, new RegExp(`\\n\\s+${command}\\s`), `${command} is missing from --help`)
