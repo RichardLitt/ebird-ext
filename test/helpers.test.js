@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { capitalizeFirstLetters, parseDateFormat, momentFormat, monthAndDay, leapYearDaysInMonth, skipInvalidDates } from '../helpers.js'
+import { capitalizeFirstLetters, parseDateFormat, parseDate, monthAndDay, leapYearDaysInMonth, skipInvalidDates } from '../helpers.js'
 
 test('capitalizeFirstLetters title-cases lowercase words', () => {
   assert.equal(capitalizeFirstLetters('hello world'), 'Hello World')
@@ -29,15 +29,15 @@ test('capitalizeFirstLetters on a single word capitalizes it', () => {
 })
 
 test('parseDateFormat maps year to YYYY', () => {
-  assert.equal(parseDateFormat('year'), 'YYYY')
+  assert.equal(parseDateFormat('year'), 'yyyy')
 })
 
 test('parseDateFormat maps month to YYYY-MM', () => {
-  assert.equal(parseDateFormat('month'), 'YYYY-MM')
+  assert.equal(parseDateFormat('month'), 'yyyy-MM')
 })
 
 test('parseDateFormat maps day to YYYY-MM-DD', () => {
-  assert.equal(parseDateFormat('day'), 'YYYY-MM-DD')
+  assert.equal(parseDateFormat('day'), 'yyyy-MM-dd')
 })
 
 test('parseDateFormat returns undefined for undefined input', () => {
@@ -63,16 +63,25 @@ test('parseDateFormat throws on uppercase YEAR', () => {
   assert.throws(() => parseDateFormat('YEAR'), /Unable to parse timespan/)
 })
 
-test('momentFormat detects dash-delimited ISO dates', () => {
-  assert.equal(momentFormat('2024-01-15'), 'YYYY-MM-DD')
+test('parseDate reads a YYYY-MM-DD date as local midnight', () => {
+  assert.deepEqual(parseDate('2024-01-15'), new Date(2024, 0, 15))
 })
 
-test('momentFormat detects slash-delimited US dates', () => {
-  assert.equal(momentFormat('01/15/2024'), 'MM/DD/YYYY')
+test('parseDate reads an MM/DD/YYYY date', () => {
+  assert.deepEqual(parseDate('01/15/2024'), new Date(2024, 0, 15))
 })
 
-test('momentFormat throws on undelimited input', () => {
-  assert.throws(() => momentFormat('nodelim'), /Invalid Date String/)
+test('parseDate ignores a time after the date', () => {
+  assert.deepEqual(parseDate('2026-09-06 11:47'), new Date(2026, 8, 6))
+})
+
+test('parseDate gives an Invalid Date for an impossible or malformed date', () => {
+  assert.ok(Number.isNaN(parseDate('2023-02-29').getTime()))
+  assert.ok(Number.isNaN(parseDate('2023-ab-01').getTime()))
+})
+
+test('parseDate throws on undelimited input', () => {
+  assert.throws(() => parseDate('nodelim'), /Invalid Date String/)
 })
 
 test('monthAndDay reads a YYYY-MM-DD date', () => {
@@ -94,7 +103,7 @@ test('monthAndDay returns undefined for an impossible date', () => {
   assert.equal(monthAndDay('13/01/2023'), undefined)
 })
 
-test('monthAndDay throws on undelimited input (via momentFormat)', () => {
+test('monthAndDay throws on undelimited input (via parseDate)', () => {
   assert.throws(() => monthAndDay('20231001'), /Invalid Date String/)
 })
 
@@ -141,7 +150,7 @@ test('skipInvalidDates returns [] for [] without warning', (t) => {
   assert.equal(warn.mock.calls.length, 0)
 })
 
-test('skipInvalidDates still throws on an undelimited date (via momentFormat)', (t) => {
+test('skipInvalidDates still throws on an undelimited date (via parseDate)', (t) => {
   t.mock.method(console, 'warn', () => {})
   assert.throws(() => skipInvalidDates([{ Date: '20240601' }]), /Invalid Date String/)
 })

@@ -5,7 +5,7 @@ import main from './index.js'
 import * as hotspots from './hotspots.js'
 import * as reports from './reports.js'
 import _ from 'lodash'
-import moment from 'moment'
+import { format, parseISO } from 'date-fns'
 
 const cli = meow(`
   Usage
@@ -177,10 +177,10 @@ async function run () {
     console.log(`Your biggest ${timespan} was ${biggest.Date} with ${biggest.SpeciesTotal} new species.`)
     timespan = 'month'
     biggest = await main.biggestTime(timespan, cli.flags)
-    console.log(`Your biggest ${timespan} was ${moment(biggest.Date, 'YYYY-MM-DD').format('MMMM YYYY')} with ${biggest.SpeciesTotal} new species.`)
+    console.log(`Your biggest ${timespan} was ${format(parseISO(biggest.Date), 'MMMM yyyy')} with ${biggest.SpeciesTotal} new species.`)
     timespan = 'day'
     biggest = await main.biggestTime(timespan, cli.flags)
-    console.log(`Your biggest ${timespan} was ${moment(biggest.Date, 'YYYY-MM-DD').format('MMMM Do, YYYY')} with ${biggest.SpeciesTotal} new species.`)
+    console.log(`Your biggest ${timespan} was ${format(parseISO(biggest.Date), 'MMMM do, yyyy')} with ${biggest.SpeciesTotal} new species.`)
   } else if (cli.input[0] === 'first') {
     cli.flags.list = undefined
     let timespan = 'year'
@@ -188,10 +188,10 @@ async function run () {
     console.log(`Your newest ${timespan} was ${biggest.Date} with ${biggest.SpeciesTotal} new species.`)
     timespan = 'month'
     biggest = await main.firstTimes(timespan, cli.flags)
-    console.log(`Your newest ${timespan} was ${moment(biggest.Date, 'YYYY-MM-DD').format('MMMM YYYY')} with ${biggest.SpeciesTotal} new species.`)
+    console.log(`Your newest ${timespan} was ${format(parseISO(biggest.Date), 'MMMM yyyy')} with ${biggest.SpeciesTotal} new species.`)
     timespan = 'day'
     biggest = await main.firstTimes(timespan, cli.flags)
-    console.log(`Your newest ${timespan} was ${moment(biggest.Date, 'YYYY-MM-DD').format('MMMM Do, YYYY')} with ${biggest.SpeciesTotal} new species.`)
+    console.log(`Your newest ${timespan} was ${format(parseISO(biggest.Date), 'MMMM do, yyyy')} with ${biggest.SpeciesTotal} new species.`)
   } else if (cli.input[0] === 'big-year') {
     const timespan = 'year'
     const biggest = await main.biggestTime(timespan, cli.flags)
@@ -202,14 +202,14 @@ async function run () {
   } else if (cli.input[0] === 'big-month') {
     const timespan = 'month'
     const biggest = await main.biggestTime(timespan, cli.flags)
-    console.log(`Your biggest ${timespan} was ${moment(biggest.Date, 'YYYY-MM-DD').format('MMMM YYYY')} with ${biggest.SpeciesTotal} species.`)
+    console.log(`Your biggest ${timespan} was ${format(parseISO(biggest.Date), 'MMMM yyyy')} with ${biggest.SpeciesTotal} species.`)
     if (cli.flags.list) {
       console.log(`With these species: ${_.map(biggest.Species, 'Scientific Name').join(', ')}.`)
     }
   } else if (cli.input[0] === 'big-day') {
     const timespan = 'day'
     const biggest = await main.biggestTime(timespan, cli.flags)
-    console.log(`Your biggest ${timespan} was ${moment(biggest.Date, 'YYYY-MM-DD').format('MMMM Do, YYYY')} with ${biggest.SpeciesTotal} species.`)
+    console.log(`Your biggest ${timespan} was ${format(parseISO(biggest.Date), 'MMMM do, yyyy')} with ${biggest.SpeciesTotal} species.`)
     if (cli.flags.list) {
       console.log(`With these species: ${_.map(biggest.Species, 'Scientific Name').join(', ')}.`)
     }
@@ -223,14 +223,14 @@ async function run () {
   } else if (cli.input[0] === 'first-month') {
     const timespan = 'month'
     const biggest = await main.firstTimes(timespan, cli.flags)
-    console.log(`Your newest ${timespan} was ${moment(biggest.Date, 'YYYY-MM-DD').format('MMMM YYYY')} with ${biggest.SpeciesTotal} new species.`)
+    console.log(`Your newest ${timespan} was ${format(parseISO(biggest.Date), 'MMMM yyyy')} with ${biggest.SpeciesTotal} new species.`)
     if (cli.flags.list) {
       console.log(`With these species: ${_.map(biggest.Species, 'Scientific Name').join(', ')}.`)
     }
   } else if (cli.input[0] === 'first-day') {
     const timespan = 'day'
     const biggest = await main.firstTimes(timespan, cli.flags)
-    console.log(`Your newest ${timespan} was ${moment(biggest.Date, 'YYYY-MM-DD').format('MMMM Do, YYYY')} with ${biggest.SpeciesTotal} new species.`)
+    console.log(`Your newest ${timespan} was ${format(parseISO(biggest.Date), 'MMMM do, yyyy')} with ${biggest.SpeciesTotal} new species.`)
     if (cli.flags.list) {
       console.log(`With these species: ${_.map(biggest.Species, 'Scientific Name').join(', ')}.`)
     }

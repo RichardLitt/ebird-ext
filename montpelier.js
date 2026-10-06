@@ -26,10 +26,11 @@ import path from 'node:path'
 import readline from 'node:readline'
 import { fileURLToPath } from 'node:url'
 import _ from 'lodash'
-import moment from 'moment'
+import { format, getDaysInMonth, getWeek } from 'date-fns'
 import difference from 'compare-latlong'
 import VermontHotspots from './data/hotspots.json' with { type: 'json' }
 import hotspotDates from './data/hotspotsDates.json' with { type: 'json' }
+import * as helpers from './helpers.js'
 
 const HOTSPOT_DATES = path.join(path.dirname(fileURLToPath(import.meta.url)), 'data/hotspotsDates.json')
 const MONTHS = Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0'))
@@ -89,7 +90,7 @@ function unbirdedDays (id, data = hotspotDates) {
   const birded = data[id] ? data[id]['Dates Birded'] : {}
   const unbirded = {}
   MONTHS.forEach(month => {
-    const daysInMonth = moment().month(Number(month) - 1).daysInMonth()
+    const daysInMonth = getDaysInMonth(new Date(new Date().getFullYear(), Number(month) - 1))
     unbirded[month] = _.difference(Array.from({ length: daysInMonth }, (_, i) => i + 1), birded[month] || [])
   })
   return unbirded
@@ -102,7 +103,7 @@ function daysYouveBirdedAtHotspot (id) {
   console.log(`\nNobody has birded ${name} on:`)
   const unbirded = unbirdedDays(id)
   MONTHS.forEach(month => {
-    console.log(`${moment().month(Number(month) - 1).format('MMMM')}: ${unbirded[month].join(', ')}`)
+    console.log(`${format(new Date(2000, Number(month) - 1), 'MMMM')}: ${unbirded[month].join(', ')}`)
   })
 }
 
@@ -114,7 +115,7 @@ function dataForThisWeekInHistory (opts, data = hotspotDates) {
     Object.keys(data[opts.id]['Dates Birded'])
       .forEach(month => {
         data[opts.id]['Dates Birded'][month].forEach(date => {
-          const week = moment(new Date(moment().format('YYYY'), Number(month) - 1, date)).week()
+          const week = getWeek(new Date(new Date().getFullYear(), Number(month) - 1, date))
           if (observedWeeks.indexOf(week) === -1) {
             observedWeeks.push(week)
           }
@@ -124,7 +125,7 @@ function dataForThisWeekInHistory (opts, data = hotspotDates) {
 
   // The latest checklist is probably newer than the EBD download. It may be
   // incidental, but there's no way to tell from the hotspot list.
-  const lastBirdedWeek = (opts.latestObsDt) ? moment(opts.latestObsDt.split(' ')[0]).week() : null
+  const lastBirdedWeek = (opts.latestObsDt) ? getWeek(helpers.parseDate(opts.latestObsDt.split(' ')[0])) : null
   if (lastBirdedWeek && !observedWeeks.includes(lastBirdedWeek)) {
     observedWeeks.push(lastBirdedWeek)
   }
@@ -134,7 +135,7 @@ function dataForThisWeekInHistory (opts, data = hotspotDates) {
     nextUnbirdedWeek: '',
     coveragePercentage: (52 - unbirdedWeeks.length) / 52 * 100
   }
-  if (unbirdedWeeks.includes(moment().week())) {
+  if (unbirdedWeeks.includes(getWeek(new Date()))) {
     obj.nextUnbirdedWeek = 'No data'
   }
   return obj
@@ -156,8 +157,8 @@ async function getIdsFromRegion (opts) {
   those hotspots? With no opts, every hotspot in Washington County.
 */
 async function findMontpelierHotspotNeedsToday (opts) {
-  const month = moment().format('MM')
-  const todayDate = Number(moment().format('DD'))
+  const month = format(new Date(), 'MM')
+  const todayDate = new Date().getDate()
 
   const body = await eBirdApi(opts
     ? `https://api.ebird.org/v2/ref/hotspot/geo?lat=${opts.lat}&lng=${opts.lng}&dist=${opts.miles}&fmt=json`

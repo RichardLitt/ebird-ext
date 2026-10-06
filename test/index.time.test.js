@@ -134,7 +134,7 @@ test('biggestTime rejects the timespan before touching the input file', async ()
 
 test('biggestTime with no timespan groups by full local ISO timestamp (per day)', async () => {
   // parseDateFormat returns undefined for a falsy timespan, and
-  // moment#format(undefined) emits an ISO-8601 string with the local offset.
+  // formatDate emits an ISO-8601 string with the local offset.
   const result = await biggestTime(undefined, { input: BASIC })
   assert.match(result.Date, /^2024-01-01T00:00:00[+-]\d{2}:\d{2}$/)
   assert.equal(result.SpeciesTotal, 6)
@@ -727,7 +727,7 @@ test('firstTimeList is no longer exported (it was an empty stub)', () => {
 //
 // With opts.today, daylistTargets logs one line per Vermont species that has
 // NOT been recorded in Vermont on today's month + day in any year. "Today" is controlled by
-// mocking Date with t.mock.timers (moment() reads the mocked clock).
+// mocking Date with t.mock.timers (new Date() reads the mocked clock).
 
 function today (t, year, monthIndex, day) {
   t.mock.timers.enable({ apis: ['Date'], now: new Date(year, monthIndex, day, 12) })

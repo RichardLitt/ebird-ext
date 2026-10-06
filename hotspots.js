@@ -1,7 +1,7 @@
 import VermontHotspots from './data/hotspots.json' with { type: 'json' }
 import townBoundaries from './geojson/vt_towns.json' with { type: 'json' }
 import _ from 'lodash'
-import moment from 'moment'
+import { format, getWeek, getWeekYear, parseISO, setWeek, startOfWeek } from 'date-fns'
 import Papa from 'papaparse'
 import * as main from './index.js'
 import * as helpers from './helpers.js'
@@ -62,11 +62,11 @@ async function unbirdedHotspots (opts) {
 
   // If the opts are not this year
   if (opts.currentYear) {
-    const year = moment().year()
+    const year = new Date().getFullYear()
     // Return all of the ones we haven't gone to
     hotspots = hotspots.filter(x => {
       if (x['Last visited']) {
-        const visitedthisYear = moment(x['Last visited'], helpers.momentFormat(x['Last visited'])).format('YYYY') === year.toString()
+        const visitedthisYear = helpers.formatDate(helpers.parseDate(x['Last visited']), 'yyyy') === year.toString()
         return !visitedthisYear
       } else {
         return true
@@ -80,7 +80,7 @@ async function unbirdedHotspots (opts) {
     // Return all of the ones we haven't gone to
     hotspots = hotspots.filter(x => {
       if (x['Last visited']) {
-        const visitedthisYear = moment(x['Last visited'], helpers.momentFormat(x['Last visited'])).format('YYYY') > year
+        const visitedthisYear = helpers.formatDate(helpers.parseDate(x['Last visited']), 'yyyy') > year
         return !visitedthisYear
       } else {
         return true
@@ -101,7 +101,7 @@ async function unbirdedHotspots (opts) {
   // Never-visited hotspots first, then oldest visit first
   return hotspots.sort((a, b) => {
     if (a['Last visited'] && b['Last visited']) {
-      const check = moment(a['Last visited']).diff(moment(b['Last visited']))
+      const check = parseISO(a['Last visited']) - parseISO(b['Last visited'])
       return check
     } else if (a['Last visited']) {
       return 1
@@ -156,7 +156,7 @@ async function weeksYouveBirdedAtHotspot (opts) {
   // Filter and add all days observed to the chart
   data.filter(x => x['Location ID'] === opts.id).forEach(x => {
     // Fold locale week 53 (the last few days of some years) into week 52
-    const week = Math.min(moment(x.Date).week(), 52)
+    const week = Math.min(getWeek(helpers.parseDate(x.Date)), 52)
     if (observedDates.indexOf(week) === -1) {
       observedDates.push(week)
     }
@@ -168,14 +168,15 @@ async function weeksYouveBirdedAtHotspot (opts) {
 
   if (unbirdedWeeks.length) {
     // The next unbirded week after this one, wrapping to next year if needed
-    let weekYear = moment().weekYear()
-    let nextWeek = unbirdedWeeks.find(w => w > moment().week())
+    const today = new Date()
+    let weekYear = getWeekYear(today)
+    let nextWeek = unbirdedWeeks.find(w => w > getWeek(today))
     if (!nextWeek) {
       nextWeek = unbirdedWeeks[0]
       weekYear += 1
     }
     result.nextWeek = nextWeek
-    result.nextWeekStart = moment().year(weekYear).startOf('year').week(nextWeek).startOf('week').format('YYYY-MM-DD')
+    result.nextWeekStart = format(startOfWeek(setWeek(new Date(weekYear, 0, 1), nextWeek)), 'yyyy-MM-dd')
   }
   return result
 }

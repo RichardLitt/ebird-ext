@@ -65,7 +65,7 @@ const row = (sci, date, extra = {}) => ({ 'Scientific Name': sci, 'Common Name':
 // Silence console.log and return the mock so calls can be inspected.
 const muteLog = (t) => t.mock.method(console, 'log', () => {})
 
-// Pin "now" so functions that call moment() are deterministic. Local-time
+// Pin "now" so functions that read today's date are deterministic. Local-time
 // noon avoids any timezone rollover.
 const freezeNow = (t, y, m, d) => t.mock.timers.enable({ apis: ['Date'], now: new Date(y, m - 1, d, 12) })
 
@@ -234,7 +234,7 @@ test('countUniqueSpecies groups first sightings by period', () => {
     row('Poecile atricapillus', '2022-05-01'),
     row('Cyanocitta cristata', '2022-05-02')
   ]
-  const result = countUniqueSpecies(data, 'YYYY-MM-DD')
+  const result = countUniqueSpecies(data, 'yyyy-MM-dd')
   assert.deepEqual(Object.keys(result), ['2022-05-01', '2022-05-02'])
   assert.equal(result['2022-05-01'].length, 2)
   assert.equal(result['2022-05-02'].length, 1)
@@ -246,7 +246,7 @@ test('countUniqueSpecies records each species only once (its first appearance)',
     row('Turdus migratorius', '2022-05-01'),
     row('Turdus migratorius', '2022-06-01')
   ]
-  const result = countUniqueSpecies(data, 'YYYY-MM-DD')
+  const result = countUniqueSpecies(data, 'yyyy-MM-dd')
   assert.deepEqual(Object.keys(result), ['2022-05-01'])
   assert.equal(result['2022-05-01'].length, 1)
 })
@@ -257,71 +257,71 @@ test('countUniqueSpecies keys uniqueness on Scientific Name, not Common Name', (
     { 'Scientific Name': 'Columba livia', 'Common Name': 'Rock Pigeon (Feral Pigeon)', Date: '2022-05-02' },
     { 'Scientific Name': 'Columba palumbus', 'Common Name': 'Rock Pigeon', Date: '2022-05-03' }
   ]
-  const result = countUniqueSpecies(data, 'YYYY-MM-DD')
+  const result = countUniqueSpecies(data, 'yyyy-MM-dd')
   assert.deepEqual(Object.keys(result), ['2022-05-01', '2022-05-03'])
 })
 
-test('countUniqueSpecies with "YYYY" groups by year', () => {
+test('countUniqueSpecies with "yyyy" groups by year', () => {
   const data = [
     row('A a', '2022-01-01'),
     row('B b', '2022-12-31'),
     row('C c', '2023-01-01')
   ]
-  const result = countUniqueSpecies(data, 'YYYY')
+  const result = countUniqueSpecies(data, 'yyyy')
   assert.deepEqual(Object.keys(result), ['2022', '2023'])
   assert.equal(result['2022'].length, 2)
 })
 
-test('countUniqueSpecies with "YYYY-MM" groups by month', () => {
+test('countUniqueSpecies with "yyyy-MM" groups by month', () => {
   const data = [row('A a', '2022-01-01'), row('B b', '2022-01-31'), row('C c', '2022-02-01')]
-  const result = countUniqueSpecies(data, 'YYYY-MM')
+  const result = countUniqueSpecies(data, 'yyyy-MM')
   assert.deepEqual(Object.keys(result), ['2022-01', '2022-02'])
 })
 
 test('countUniqueSpecies accepts MM/DD/YYYY dates', () => {
   const data = [row('A a', '05/01/2022'), row('B b', '05/01/2022')]
-  const result = countUniqueSpecies(data, 'YYYY-MM-DD')
+  const result = countUniqueSpecies(data, 'yyyy-MM-dd')
   assert.deepEqual(Object.keys(result), ['2022-05-01'])
   assert.equal(result['2022-05-01'].length, 2)
 })
 
 test('countUniqueSpecies handles a leap day', () => {
-  const result = countUniqueSpecies([row('A a', '2024-02-29')], 'YYYY-MM-DD')
+  const result = countUniqueSpecies([row('A a', '2024-02-29')], 'yyyy-MM-dd')
   assert.deepEqual(Object.keys(result), ['2024-02-29'])
 })
 
 test('countUniqueSpecies keeps the first sighting in INPUT order, not date order', () => {
   // The function doesn't sort; callers are expected to orderByDate first.
   const data = [row('A a', '2022-06-01'), row('A a', '2022-01-01')]
-  const result = countUniqueSpecies(data, 'YYYY-MM-DD')
+  const result = countUniqueSpecies(data, 'yyyy-MM-dd')
   assert.deepEqual(Object.keys(result), ['2022-06-01'])
 })
 
 test('countUniqueSpecies returns {} for empty input', () => {
-  assert.deepEqual(countUniqueSpecies([], 'YYYY-MM-DD'), {})
+  assert.deepEqual(countUniqueSpecies([], 'yyyy-MM-dd'), {})
 })
 
 test('countUniqueSpecies stores the original row objects (by reference)', () => {
   const a = row('A a', '2022-05-01')
-  const result = countUniqueSpecies([a], 'YYYY-MM-DD')
+  const result = countUniqueSpecies([a], 'yyyy-MM-dd')
   assert.equal(result['2022-05-01'][0], a)
 })
 
 test('countUniqueSpecies does not mutate its input', () => {
   const data = [row('A a', '2022-05-01'), row('A a', '2022-05-02')]
   const before = structuredClone(data)
-  countUniqueSpecies(data, 'YYYY-MM-DD')
+  countUniqueSpecies(data, 'yyyy-MM-dd')
   assert.deepEqual(data, before)
 })
 
-test('countUniqueSpecies with no dateFormat keys by moment\'s default ISO string', () => {
+test('countUniqueSpecies with no dateFormat keys by an ISO string', () => {
   const result = countUniqueSpecies([row('A a', '2022-05-01')])
   const [key] = Object.keys(result)
   assert.match(key, /^2022-05-01T00:00:00/)
 })
 
 test('countUniqueSpecies throws on a date with no - or / separator', () => {
-  assert.throws(() => countUniqueSpecies([row('A a', '20220501')], 'YYYY'), /Invalid Date String/)
+  assert.throws(() => countUniqueSpecies([row('A a', '20220501')], 'yyyy'), /Invalid Date String/)
 })
 
 // ===========================================================================
