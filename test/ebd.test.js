@@ -60,7 +60,7 @@ const ROWS = [
   // A comment with a stray double quote must not swallow the rows after it
   ebdRow({ 'COMMON NAME': 'American Robin', 'SCIENTIFIC NAME': 'Turdus migratorius', 'SAMPLING EVENT IDENTIFIER': 'S1', 'GROUP IDENTIFIER': 'G1', 'SPECIES COMMENTS': '"Singing by the barn' }),
   // A target subspecies, recorded the EBD way (species plus subspecies columns)
-  ebdRow({ 'COMMON NAME': 'Red-tailed Hawk', 'SCIENTIFIC NAME': 'Buteo jamaicensis', 'SUBSPECIES COMMON NAME': 'Red-tailed Hawk (abieticola)', 'SUBSPECIES SCIENTIFIC NAME': 'Buteo jamaicensis abieticola', CATEGORY: 'issf', 'SAMPLING EVENT IDENTIFIER': 'S3', 'OBSERVER ID': 'obsr3' }),
+  ebdRow({ 'COMMON NAME': 'Red-tailed Hawk', 'SCIENTIFIC NAME': 'Buteo jamaicensis', 'SUBSPECIES COMMON NAME': 'Red-tailed Hawk (harlani)', 'SUBSPECIES SCIENTIFIC NAME': 'Buteo jamaicensis harlani', CATEGORY: 'issf', 'SAMPLING EVENT IDENTIFIER': 'S3', 'OBSERVER ID': 'obsr3' }),
   // Same rarity, wrong year
   ebdRow({ 'COMMON NAME': 'Barnacle Goose', 'SCIENTIFIC NAME': 'Branta leucopsis', 'SAMPLING EVENT IDENTIFIER': 'S4', 'OBSERVATION DATE': '2025-11-02' }),
   // Same rarity, wrong county
@@ -134,8 +134,8 @@ test('fromEBDRow maps EBD columns onto MyEBirdData names', () => {
 
 test('fromEBDRow puts the subspecies on the name fields, as MyEBirdData does', () => {
   const row = fromEBDRow(ROWS[3])
-  assert.equal(row['Common Name'], 'Red-tailed Hawk (abieticola)')
-  assert.equal(row['Scientific Name'], 'Buteo jamaicensis abieticola')
+  assert.equal(row['Common Name'], 'Red-tailed Hawk (harlani)')
+  assert.equal(row['Scientific Name'], 'Buteo jamaicensis harlani')
 })
 
 test('fromEBDRow trims padded values such as breeding codes', () => {
@@ -209,7 +209,7 @@ test('rare on an EBD file finds the county rarity for the year, once', async () 
 
 test('rare on an EBD file flags a target subspecies', async () => {
   const out = await rare({ input: ebdFile, county: 'Addison', year: '2026' })
-  assert.deepEqual(out.Subspecies.map(r => r.Subspecies), ['Buteo jamaicensis abieticola'])
+  assert.deepEqual(out.Subspecies.map(r => r.Subspecies), ['Buteo jamaicensis harlani'])
 })
 
 test('rare on an EBD file honours the county and year filters', async () => {
@@ -227,7 +227,7 @@ test('rareReport prints a heading per non-empty bucket and one line per record',
   const goose = lines.find(l => l.includes('Barnacle Goose'))
   assert.match(goose, /^ {2}2026-03-10 \| Barnacle Goose \| Test Marsh, Middlebury, Addison \| https:\/\/ebird\.org\/checklist\/S1$/)
   assert.ok(lines.includes('Subspecies (1)'))
-  assert.ok(lines.some(l => l.includes('[Buteo jamaicensis abieticola]')))
+  assert.ok(lines.some(l => l.includes('[Buteo jamaicensis harlani]')))
   assert.ok(!lines.some(l => /\(0\)$/.test(l)))
 })
 
@@ -264,7 +264,7 @@ test('rareSlackReport groups records by county, alphabetically, with checklist l
     '',
     '*Addison County* (2)',
     '• Barnacle Goose · Test Marsh, Middlebury · 2026-03-10 · VBRC review species · https://ebird.org/checklist/S1',
-    '• Red-tailed Hawk (abieticola) · Test Marsh, Middlebury · 2026-03-10 · subspecies · https://ebird.org/checklist/S3',
+    '• Red-tailed Hawk (harlani) · Test Marsh, Middlebury · 2026-03-10 · subspecies · https://ebird.org/checklist/S3',
     '',
     '*Chittenden County* (1)',
     '• Barnacle Goose · Test Waterfront, Burlington · 2026-03-10 · VBRC review species · https://ebird.org/checklist/S5'
