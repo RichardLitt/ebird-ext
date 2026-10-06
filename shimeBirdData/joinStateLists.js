@@ -6,18 +6,11 @@
 import fs from 'node:fs'
 import t from '../taxonomicSort.js'
 import * as f from '../filters.js'
-import { parse as csv } from 'csv-parse'
+import csvStream from './csvStream.js'
 import _ from 'lodash'
-const parser = csv({
+const parser = () => csvStream({
   delimiter: ',',
-  record_delimiter: '\n',
-  skip_empty_lines: true,
-  relax_column_count: true, // this will cause a blow up if removed
-  relax: true, // this should allow for the double quotes in individual columns, specifically field notes
-  from: 2, // Skip first line
-  quote: '"', // this also helps to prevent errors on quotes
-  ltrim: true,
-  rtrim: true,
+  quoteChar: '"',
   columns: [
     'Common Name',
     'Scientific Name',
@@ -42,7 +35,7 @@ async function analyzeFiles () {
 async function runFile (filepath) {
   return new Promise(function (resolve, reject) {
     return fs.createReadStream(filepath)
-      .pipe(parser)
+      .pipe(parser())
       .on('data', (row) => {
         if (!allRows[row['Scientific Name']]) {
           allRows[row['Scientific Name']] = {

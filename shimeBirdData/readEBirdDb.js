@@ -6,21 +6,15 @@
 import fs from 'node:fs'
 import stream from 'node:stream'
 import JSONStream from 'JSONStream' // Make sure to install this package: 'npm install JSONStream'
-import { parse as csv } from 'csv-parse'
+import csvStream from './csvStream.js'
 import * as f from '../filters.js'
 import * as helpers from '../helpers.js'
 import * as banding from '../bandingCodes.js'
 import _ from 'lodash'
-const parser = csv({
+// EBD files are unquoted, but comments can contain stray double quotes: quoting is off
+const parser = () => csvStream({
   delimiter: '\t',
-  record_delimiter: '\n',
-  skip_empty_lines: true,
-  relax_column_count: true, // this will cause a blow up if removed
-  relax: true, // this should allow for the double quotes in individual columns, specifically field notes
-  from: 2, // Skip first line
-  quote: '"', // this also helps to prevent errors on quotes
-  ltrim: true,
-  rtrim: true,
+  quoteChar: '\u0000',
   columns: [
     'GLOBAL UNIQUE IDENTIFIER',
     'LAST EDITED DATE',
@@ -204,7 +198,7 @@ async function rowsToJSON(file, opts) {
 
     // Read and process the file content in a streaming manner
     fs.createReadStream(file)
-      .pipe(parser) // Assuming 'parser' is defined in your code to parse your input file
+      .pipe(parser()) // Assuming 'parser' is defined in your code to parse your input file
       .on('data', (row) => {
         // Process the row here as needed
         let processedRow = row;
@@ -243,7 +237,7 @@ async function runFile (file, string) {
     // const dirty = fs.createWriteStream('dirty_entries.txt', { flags: 'a' })
 
     fs.createReadStream(file)
-      .pipe(parser)
+      .pipe(parser())
       .on('data', (row) => {
         // Note: This check has to be turned on manually. Perhaps there should be opts for that, instead?
         // TODO There should be a way to turn on this automatically using args
@@ -368,7 +362,7 @@ async function run250Query (file, string) {
   return new Promise(function (resolve, reject) {
     const region250 = {}
     fs.createReadStream(file)
-      .pipe(parser)
+      .pipe(parser())
       .on('data', (row) => {
         // Define some variables that won't be in the output but help you sort
         const year = row['OBSERVATION DATE'].split('-')[0]
@@ -456,7 +450,7 @@ async function run150Query (file, string) {
   return new Promise(function (resolve, reject) {
     const region150 = {}
     fs.createReadStream(file)
-      .pipe(parser)
+      .pipe(parser())
       .on('data', (row) => {
         // Define some variables that won't be in the output but help you sort
         const year = row['OBSERVATION DATE'].split('-')[0]
