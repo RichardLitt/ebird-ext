@@ -2,7 +2,6 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   mergeCodes,
-  mergeCounty,
   mergeLists,
   encodeGrid,
   decodeGrid,
@@ -20,16 +19,8 @@ test('mergeCodes: an area missing from the old file takes the new list', () => {
   assert.deepEqual(mergeCodes(undefined, ['AMRO']), ['AMRO'])
 })
 
-test('mergeCounty: appends new species and recounts taxa', () => {
-  const old = { taxa: '2', species: { 'Blue Jay': { 'Scientific Name': 'Cyanocitta cristata' }, 'Anatinae sp.': { 'Scientific Name': 'Anatinae sp.' } } }
-  const fresh = { taxa: '2', species: { 'Snow Bunting': { 'Scientific Name': 'Plectrophenax nivalis' }, 'Blue Jay': { 'Scientific Name': 'Cyanocitta cristata' } } }
-  const merged = mergeCounty(old, fresh)
-  assert.deepEqual(Object.keys(merged.species), ['Blue Jay', 'Anatinae sp.', 'Snow Bunting'])
-  assert.equal(merged.taxa, '3')
-})
-
 test('mergeLists: merges every area on the map', () => {
-  const merged = mergeLists('towns', { MONTPELIER: ['AMRO'] }, { MONTPELIER: ['BLJA'], CALAIS: ['SNBU'] })
+  const merged = mergeLists({ MONTPELIER: ['AMRO'] }, { MONTPELIER: ['BLJA'], CALAIS: ['SNBU'] })
   assert.deepEqual(merged, { MONTPELIER: ['AMRO', 'BLJA'], CALAIS: ['SNBU'] })
 })
 

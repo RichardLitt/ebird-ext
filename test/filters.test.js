@@ -8,7 +8,6 @@ import {
   durationFilter,
   createPeriodArray,
   removeSpuh,
-  removeSpuhFromCounties,
   pointLookup,
   getPoint,
   getTownCentroids
@@ -17,7 +16,6 @@ import GeoJsonGeometriesLookup from 'geojson-geometries-lookup'
 import vtTowns from '../geojson/vt_towns.json' with { type: 'json' }
 import vtRegions from '../geojson/Polygon_VT_Biophysical_Regions.json' with { type: 'json' }
 import fixture from './fixtures/checklists.js'
-import CountyBarcharts from '../data/countyBarcharts.json' with { type: 'json' }
 
 // Many of these functions mutate their input. Each test gets a fresh deep clone.
 const clone = () => structuredClone(fixture)
@@ -363,40 +361,6 @@ test('removeSpuh in reverse mode keeps everything (deduped, no truncation)', () 
 test('removeSpuh skips records with no Scientific Name field', () => {
   const result = removeSpuh([{ 'Common Name': 'Black-capped Chickadee' }])
   assert.equal(result.length, 0)
-})
-
-// ===========================================================================
-// removeSpuhFromCounties
-// ===========================================================================
-
-test('removeSpuhFromCounties returns an object keyed by county', () => {
-  const result = removeSpuhFromCounties(CountyBarcharts)
-  assert.ok(typeof result === 'object')
-  // Vermont has 14 counties.
-  assert.ok(Object.keys(result).length > 0)
-})
-
-test('removeSpuhFromCounties yields a non-empty species list for Washington county', () => {
-  const result = removeSpuhFromCounties(CountyBarcharts)
-  assert.ok(Array.isArray(result.Washington))
-  assert.ok(result.Washington.length > 0)
-})
-
-test('removeSpuhFromCounties uses the counties it is given, and leaves them unchanged', () => {
-  const counties = {
-    Testshire: { species: { 'Blue Jay': { 'Scientific Name': 'Cyanocitta cristata' }, 'duck sp.': { 'Scientific Name': 'Anatinae sp.' }, 'Dark-eyed Junco (Slate-colored)': { 'Scientific Name': 'Junco hyemalis hyemalis' } } }
-  }
-  const before = structuredClone(counties)
-  assert.deepEqual(removeSpuhFromCounties(counties), { Testshire: ['Blue Jay', 'Dark-eyed Junco (Slate-colored)'] })
-  assert.deepEqual(counties, before)
-})
-
-test('removeSpuhFromCounties species lists contain no sp./hybrid markers', () => {
-  const result = removeSpuhFromCounties(CountyBarcharts)
-  // Sample one county and assert no entry retains a spuh marker.
-  const sample = result.Washington || Object.values(result)[0]
-  assert.ok(!sample.some(name => name.includes('sp.')))
-  assert.ok(!sample.some(name => name.includes(' x ')))
 })
 
 // ===========================================================================

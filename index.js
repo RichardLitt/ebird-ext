@@ -1,7 +1,7 @@
 import townBoundaries from './geojson/vt_towns.json' with { type: 'json' }
 import vermontRegionsRaw from './geojson/Polygon_VT_Biophysical_Regions.json' with { type: 'json' }
 import VermontRecords from './data/vermont_records.json' with { type: 'json' }
-import CountyBarcharts from './data/countyBarcharts.json' with { type: 'json' }
+import CountySightings from './data/countysightings.json' with { type: 'json' }
 import VermontSubspecies from './data/vermont_records_subspecies.json' with { type: 'json' }
 import GeoJsonGeometriesLookup from 'geojson-geometries-lookup'
 const vermontRegions = new GeoJsonGeometriesLookup(vermontRegionsRaw)
@@ -208,16 +208,14 @@ async function counties (opts) {
   const dateFormat = helpers.parseDateFormat('day')
   const data = f.orderByDate(f.dateFilter(f.locationFilter(await getData(opts.input), opts), opts), opts)
 
-  const countySpecies = f.removeSpuhFromCounties(CountyBarcharts)
-
-  const counties = Object.keys(CountyBarcharts).map(county => {
+  const counties = Object.keys(CountySightings).map(county => {
     const speciesByDate = countUniqueSpecies(data.filter(x => x.County === county), dateFormat)
     const species = _.sortBy(f.createPeriodArray(speciesByDate), 'Date').map(period => {
       return period.Species.map(species => species['Common Name'])
     }).flat()
     return {
       county,
-      collectiveTotal: countySpecies[county].length,
+      collectiveTotal: CountySightings[county].length,
       species,
       speciesTotal: species.length
     }
