@@ -7,6 +7,7 @@ import {
   decodeGrid,
   mergeGrid
 } from '../scripts/updateAreaSightings.js'
+import { isBandingCode } from '../bandingCodes.js'
 
 // --merge in scripts/updateAreaSightings.js: the current lists keep their
 // species and order, and gain new species after them.
@@ -39,3 +40,18 @@ test('mergeGrid: unions squares without changing the old grid', () => {
   assert.deepEqual(merged, new Map([['1,1', new Set(['AMRO', 'BLJA'])], ['1,2', new Set(['SNBU'])]]))
   assert.deepEqual(old, new Map([['1,1', new Set(['AMRO'])]]))
 })
+
+// The committed lists: every entry a banding code (so no spuhs, slashes or
+// hybrids, which have none) and none twice
+
+for (const [file, areas] of [['townsightings', 256], ['regionssightings', 9], ['countysightings', 14]]) {
+  test(`${file}.json: ${areas} areas, each a list of distinct banding codes`, async () => {
+    const lists = (await import(`../data/${file}.json`, { with: { type: 'json' } })).default
+    assert.equal(Object.keys(lists).length, areas)
+    for (const [area, codes] of Object.entries(lists)) {
+      assert.ok(codes.length > 0, `${area} is empty`)
+      assert.equal(new Set(codes).size, codes.length, `${area} has a code twice`)
+      assert.deepEqual(codes.filter(code => !isBandingCode(code)), [], area)
+    }
+  })
+}
