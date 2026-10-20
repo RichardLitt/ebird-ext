@@ -19,7 +19,7 @@ It prints the species added, removed, renamed and changed compared with the curr
 
 ## Update Town, Region and County Sightings
 
-[updateAreaSightings.js](updateAreaSightings.js) regenerates `data/townsightings.json`, `data/regionssightings.json` and `data/countyBarcharts.json`, the all-time species lists behind the website's `/towns`, `/regions` and `/counties` maps, from a statewide eBird Basic Dataset download (request `ebd_US-VT_*` at <https://ebird.org/data/download>). It reads the multi-gigabyte file a line at a time and takes a few minutes.
+[updateAreaSightings.js](updateAreaSightings.js) regenerates `data/townsightings.json`, `data/regionssightings.json` and `data/countysightings.json`, the all-time species lists behind the website's `/towns`, `/regions` and `/counties` maps, from a statewide eBird Basic Dataset download (request `ebd_US-VT_*` at <https://ebird.org/data/download>). It reads the multi-gigabyte file a line at a time and takes a few minutes.
 
 ```sh
 node scripts/updateAreaSightings.js ~/data/ebd_US-VT_smp_relAug-2026/ebd_US-VT_smp_relAug-2026.txt --dry-run
@@ -35,7 +35,15 @@ node scripts/updateAreaSightings.js ~/data/ebd_US-VT_202501_202612_unv_smp_relSe
 
 New species go after those already in each list, and into the grid squares. A merge never removes a species, even one whose only record eBird has since rejected, so rebuild from an all-time download now and then. Without `--merge`, the download must be all-time: anything not in it is removed.
 
-It prints, for every town and region, how many species were added and which were removed compared with the current file. Escapees (exotic code X) are left out, as eBird leaves them out of counts; pass `--include-escapees` to keep them. eBird omits sensitive species (Spruce Grouse, Long-eared Owl) from the EBD, so the script keeps them wherever the current file already has them. Lists are stored as 2021 banding codes; if the script reports names without a code after an eBird taxonomy update, add them to `EBIRD_NAME_TO_CODE` in `bandingCodes.js`. `countyBarcharts.json` keeps the shape of the eBird county bar charts it was first made from, but holds only species names, not the weekly frequencies. It also writes `data/grid_sightings.json`, the species recorded in each square of a grid about 2 km across (stored as one bitmap per square over a single species list, about 170 kB gzipped), for the site's 5- and 10-mile radius page; and `data/area_sightings_meta.json` with the EBD release (read from the file name, or pass `--release="Aug 2026"`), which the site's Towns, Bioregions and Counties pages show.
+It prints, for every town and region, how many species were added and which were removed compared with the current file. Escapees (exotic code X) are left out, as eBird leaves them out of counts; pass `--include-escapees` to keep them. eBird omits sensitive species (Spruce Grouse, Long-eared Owl) from the EBD, so the script keeps them wherever the current file already has them. Lists are stored as 2021 banding codes; if the script reports names without a code after an eBird taxonomy update, add them to `EBIRD_NAME_TO_CODE` in `bandingCodes.js`. It also writes `data/grid_sightings.json`, the species recorded in each square of a grid about 2 km across (stored as one bitmap per square over a single species list, about 170 kB gzipped), for the site's 5- and 10-mile radius page; and `data/area_sightings_meta.json` with the EBD release (read from the file name, or pass `--release="Aug 2026"`), which the site's Towns, Bioregions and Counties pages show. Last, it runs `updateSiteCodes.js` (below).
+
+## Update the Site's Banding Codes
+
+[updateSiteCodes.js](updateSiteCodes.js) writes `data/siteBandingCodes.json`: the entries of `data/ibpAlphaCodes2021.json` for every code in the town, region, county, Project 251 and grid lists and every species in `taxonomies/eBird_Taxonomy_VT.json`, with only the code, common name and scientific name. The site's build uses it in place of the full table, which covers every North American bird (330 kB, against about 36 kB). `updateAreaSightings.js` runs it; run it yourself after Project 251 or `updateTaxonomy.js`. `npm test` fails if it is out of date.
+
+```sh
+node scripts/updateSiteCodes.js
+```
 
 ## Update the eBird Taxonomy
 
@@ -46,7 +54,7 @@ EBIRD_API_TOKEN=... node scripts/updateTaxonomy.js --dry-run
 EBIRD_API_TOKEN=... node scripts/updateTaxonomy.js
 ```
 
-It prints the taxa added and removed, and any Vermont species whose name doesn't survive the trip to a banding code and back. Add those to `EBIRD_NAME_TO_CODE` in `bandingCodes.js`, then rerun `updateAreaSightings.js` so the lists use the new names.
+It prints the taxa added and removed, and any Vermont species whose name doesn't survive the trip to a banding code and back. Add those to `EBIRD_NAME_TO_CODE` in `bandingCodes.js`, then rerun `updateAreaSightings.js` so the lists use the new names, or `updateSiteCodes.js` if only the taxonomy changed.
 
 ## Update Town Boundaries
 

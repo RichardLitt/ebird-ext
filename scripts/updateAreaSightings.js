@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Regenerate data/townsightings.json, data/regionssightings.json and
-// data/countyBarcharts.json, the all-time species lists for every Vermont
+// data/countysightings.json, the all-time species lists for every Vermont
 // town, biophysical region and county that the website's /towns, /regions and
 // /counties maps show, from a statewide eBird Basic Dataset (EBD) download:
 // https://ebird.org/data/download
@@ -16,7 +16,8 @@
 //                        replacing them, so a download limited to recent dates
 //                        will do (see below).
 //
-// Also writes data/grid_sightings.json, the species recorded in each square
+// Also writes data/siteBandingCodes.json (see updateSiteCodes.js);
+// data/grid_sightings.json, the species recorded in each square
 // of a grid of about 2 km, for the site's radius page; and
 // data/area_sightings_meta.json, { release, updated }, so the site
 // can say which EBD release the maps come from. The release is read from the
@@ -34,11 +35,6 @@
 // the names that have changed since then to their old code (and
 // codeToCommonName back to the current name). The script lists any name it
 // still can't map; add those to that map.
-//
-// countyBarcharts.json began as eBird's county bar charts, and keeps their
-// shape, { County: { taxa, species: { 'Common Name': { 'Scientific Name' } } } },
-// without the weekly frequencies, which nothing used. It holds the EBD's
-// (current eBird) names, not codes.
 //
 // eBird leaves sensitive species out of the EBD entirely. SENSITIVE_CODES are
 // kept wherever the file being replaced already had them, so an update doesn't
@@ -61,12 +57,13 @@ import * as banding from '../bandingCodes.js'
 import { releaseFromFileName } from '../ebd.js'
 import * as f from '../filters.js'
 import * as helpers from '../helpers.js'
+import { updateSiteCodes } from './updateSiteCodes.js'
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..')
 const OUTPUTS = {
   towns: path.join(root, 'data/townsightings.json'),
   regions: path.join(root, 'data/regionssightings.json'),
-  counties: path.join(root, 'data/countyBarcharts.json')
+  counties: path.join(root, 'data/countysightings.json')
 }
 const KINDS = Object.keys(OUTPUTS)
 const META = path.join(root, 'data/area_sightings_meta.json')
@@ -112,7 +109,6 @@ async function readEBD (file, opts) {
   // A locality has one set of coordinates, so look each one up once
   const places = new Map()
   const unplaced = new Set()
-  const scientificNames = new Map()
   const grid = new Map()
   // The regions map has gaps (the East Bay marshes in West Haven, for one).
   // Records there go to whichever region the rest of their town is in.
@@ -161,7 +157,6 @@ async function readEBD (file, opts) {
 
     const order = Number(row[col['TAXONOMIC ORDER']])
     const date = row[col['OBSERVATION DATE']]
-    if (!scientificNames.has(commonName)) scientificNames.set(commonName, row[col['SCIENTIFIC NAME']])
     // A few localities on the Connecticut River have no county, or one in New
     // Hampshire; use the county of the town they were placed in
     const county = row[col.COUNTY]
@@ -199,7 +194,7 @@ async function readEBD (file, opts) {
     for (const [name, seen] of species) note(region, name, seen)
     console.error(`${species.size} species from outside the regions map in ${town} counted in ${votes[0][0]}`)
   }
-  return { areas, grid, stats, unplaced, scientificNames, localities: places.size }
+  return { areas, grid, stats, unplaced, localities: places.size }
 }
 
 // Record a species in an area: { order, first }, its taxonomic order and the
@@ -224,25 +219,6 @@ function toCodes (species) {
   return [...new Set(inSeenOrder(species).map(toCode))]
 }
 
-// Species names -> a county bar chart entry
-function toCounty (species, scientificNames) {
-  const entries = {}
-  for (const name of inSeenOrder(species)) {
-    if (!entries[name]) entries[name] = { 'Scientific Name': scientificNames.get(name) }
-  }
-  return { taxa: String(Object.keys(entries).length), species: entries }
-}
-
-// What report() compares: the codes, or the county's names less the spuhs,
-// hybrids and domestic types the old bar charts had and the site filters out
-function speciesOf (kind, list) {
-  if (!list) return []
-  if (kind !== 'counties') return list
-  return Object.entries(list.species)
-    .filter(([, s]) => f.removeSpuh([{ 'Scientific Name': s['Scientific Name'] }]).length)
-    .map(([name]) => name)
-}
-
 // --merge: the old list, then the new list's species it lacks, in their order
 function mergeCodes (old, fresh) {
   if (!old) return fresh
@@ -250,18 +226,8 @@ function mergeCodes (old, fresh) {
   return [...old, ...fresh.filter(code => !known.has(code))]
 }
 
-function mergeCounty (old, fresh) {
-  if (!old) return fresh
-  const species = { ...old.species }
-  for (const [name, entry] of Object.entries(fresh.species)) {
-    if (!species[name]) species[name] = entry
-  }
-  return { taxa: String(Object.keys(species).length), species }
-}
-
-function mergeLists (kind, old, lists) {
-  const merge = kind === 'counties' ? mergeCounty : mergeCodes
-  return Object.fromEntries(Object.entries(lists).map(([area, list]) => [area, merge(old[area], list)]))
+function mergeLists (old, lists) {
+  return Object.fromEntries(Object.entries(lists).map(([area, list]) => [area, mergeCodes(old[area], list)]))
 }
 
 // grid_sightings.json <-> Map of square -> Set of banding codes
@@ -314,19 +280,10 @@ async function readOld (kind) {
   }
 }
 
-function keepSensitive (kind, lists, old) {
+function keepSensitive (lists, old) {
   for (const area of Object.keys(lists)) {
     for (const code of SENSITIVE_CODES) {
-      if (kind !== 'counties') {
-        if ((old[area] || []).includes(code) && !lists[area].includes(code)) lists[area].push(code)
-        continue
-      }
-      const name = banding.codeToCommonName(code)
-      const before = old[area]?.species?.[name]
-      if (before && !lists[area].species[name]) {
-        lists[area].species[name] = { 'Scientific Name': before['Scientific Name'] }
-        lists[area].taxa = String(Object.keys(lists[area].species).length)
-      }
+      if ((old[area] || []).includes(code) && !lists[area].includes(code)) lists[area].push(code)
     }
   }
 }
@@ -334,8 +291,8 @@ function keepSensitive (kind, lists, old) {
 function report (kind, lists, old) {
   console.error(`\n${kind}: ${Object.keys(lists).length} areas`)
   for (const area of Object.keys(lists).sort()) {
-    const before = new Set(speciesOf(kind, old[area]))
-    const after = new Set(speciesOf(kind, lists[area]))
+    const before = new Set(old[area] || [])
+    const after = new Set(lists[area])
     const added = [...after].filter(x => !before.has(x))
     const removed = [...before].filter(x => !after.has(x))
     console.error(`  ${area}: ${before.size} -> ${after.size} (+${added.length}, -${removed.length})${removed.length ? ' removed: ' + removed.join(' ') : ''}`)
@@ -360,7 +317,7 @@ async function main () {
     process.exit(1)
   }
 
-  const { areas, grid, stats, unplaced, scientificNames, localities } = await readEBD(file, opts)
+  const { areas, grid, stats, unplaced, localities } = await readEBD(file, opts)
   console.error(`${stats.rows} rows, ${stats.kept} countable records kept, ${stats.escapees} escapee records skipped, ${localities} localities`)
 
   const unmapped = new Set()
@@ -368,18 +325,14 @@ async function main () {
   for (const kind of KINDS) {
     let lists = {}
     for (const [area, species] of areas[kind]) {
-      if (kind === 'counties') {
-        lists[area] = toCounty(species, scientificNames)
-        continue
-      }
       lists[area] = toCodes(species)
       for (const name of species.keys()) {
         if (!banding.isBandingCode(toCode(name))) unmapped.add(name)
       }
     }
     const old = await readOld(kind)
-    if (opts.merge) lists = mergeLists(kind, old, lists)
-    keepSensitive(kind, lists, old)
+    if (opts.merge) lists = mergeLists(old, lists)
+    keepSensitive(lists, old)
     report(kind, lists, old)
     if (!opts.dryRun) {
       await fs.writeFile(OUTPUTS[kind], format(lists), 'utf8')
@@ -409,6 +362,7 @@ async function main () {
     const meta = { release, updated: new Date().toLocaleDateString('en-CA') }
     await fs.writeFile(META, JSON.stringify(meta, null, 2) + '\n', 'utf8')
     console.error(`Wrote ${path.relative(root, META)}: ${release}`)
+    console.error(`Wrote data/siteBandingCodes.json: ${await updateSiteCodes()} codes`)
   }
 
   if (unplaced.size) {
@@ -421,7 +375,7 @@ async function main () {
   }
 }
 
-export { mergeCodes, mergeCounty, mergeLists, encodeGrid, decodeGrid, mergeGrid }
+export { mergeCodes, mergeLists, encodeGrid, decodeGrid, mergeGrid }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch(error => {

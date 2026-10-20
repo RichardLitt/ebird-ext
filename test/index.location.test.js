@@ -15,7 +15,7 @@ import {
 } from '../index.js'
 import { townReport, stateReport, quadReport, countyTicks } from '../reports.js'
 import vtTowns from '../geojson/vt_towns.json' with { type: 'json' }
-import CountyBarcharts from '../data/countyBarcharts.json' with { type: 'json' }
+import CountySightings from '../data/countysightings.json' with { type: 'json' }
 
 // Fixtures live in test/fixtures/index-location/ and are hand-made CSVs in the
 // "My eBird Data" shape (parsed by getData with Papa, header: true).
@@ -55,7 +55,7 @@ const BURLINGTON = [44.4759, -73.2121]
 const HANOVER_NH = [43.7022, -72.2896]
 const NEW_YORK_CITY = [40.7831, -73.9712]
 
-const COUNTY_NAMES = Object.keys(CountyBarcharts)
+const COUNTY_NAMES = Object.keys(CountySightings)
 const REGION_NAMES = [
   'Northeastern Highlands',
   'Champlain Valley',

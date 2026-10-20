@@ -75,9 +75,13 @@ behind eBird.
 2. Run `node cli.js 251 --input=<file> --year=<year>` in ebird-ext.
 3. Check the result: the number of towns covered should only go up between
    updates, and the empty towns should look plausible.
-4. Commit `data/vt_town_counts.json` in ebird-ext and merge it.
-5. In the site, run `npm run update-ebird-ext`, build, and merge the PR.
-6. Post the new count and the towns still needed, wherever the project is
+4. Run `node scripts/updateSiteCodes.js`, in case a town list has a species
+   no other list has.
+5. Commit `data/vt_town_counts.json`, `vt_town_counts_meta.json` and
+   `siteBandingCodes.json` in ebird-ext and merge them.
+6. Merge the site PR Dependabot opens to move the submodule pointer, once CI
+   passes.
+7. Post the new count and the towns still needed, wherever the project is
    announced.
 
 ## Limits

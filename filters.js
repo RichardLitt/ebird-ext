@@ -9,7 +9,7 @@ import provinces from 'provinces'
 import * as helpers from './helpers.js'
 // Re-exported below; they live in spuh.js, which the site can import without
 // this file's town and region boundaries
-import { removeSpuh, removeSpuhFromCounties } from './spuh.js'
+import { removeSpuh } from './spuh.js'
 import nearestPoint from '@turf/nearest-point'
 import turfCenter from '@turf/center'
 import { point as turfPoint, featureCollection } from '@turf/helpers'
@@ -252,7 +252,6 @@ export {
   createPeriodArray,
   locationFilter,
   removeSpuh,
-  removeSpuhFromCounties,
   pointLookup,
   getPoint,
   getTownCentroids

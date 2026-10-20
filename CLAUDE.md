@@ -29,9 +29,9 @@ CI runs lint, tests and `node cli.js --help` on Node 22 and 24.
 - `reports.js`: turns what the library returns into the lines the CLI prints.
 - `io.js`: all file reading and writing. The library loads it with `import('./io.js')` only when given a file path or an output file, so the site's bundle never runs it.
 - `filters.js`: date, location, completeness and duration filters; `getPoint` (which town or region a point is in).
-- `spuh.js`: `removeSpuh` and `removeSpuhFromCounties`, without the boundaries `filters.js` imports, so the site's maps can use them cheaply.
+- `spuh.js`: `removeSpuh`, without the boundaries `filters.js` imports, so the site's maps can use it cheaply.
 - `ebd.js`: EBD support: renames EBD columns to MyEBirdData names, collapses shared checklists, `releaseFromFileName`.
-- `bandingCodes.js`: common name ↔ four-letter banding code, from `data/ibpAlphaCodes2021.json`, plus `EBIRD_NAME_TO_CODE` for birds eBird renamed after 2021.
+- `bandingCodes.js`: common name ↔ four-letter banding code, from `data/ibpAlphaCodes2021.json`, plus `EBIRD_NAME_TO_CODE` for birds eBird renamed after 2021. The site's build swaps in `data/siteBandingCodes.json`, the Vermont codes only.
 - `hotspots.js`, `helpers.js`, `appearsDuringExpectedDates.js`, `taxonomicSort.js`, `readHistogram.js`: what they say.
 - `montpelier.js`, `norwich.js`: standalone local tools; both stay.
 - `scripts/`: data refresh scripts (see `scripts/README.md`).
@@ -43,9 +43,10 @@ CI runs lint, tests and `node cli.js --help` on Node 22 and 24.
 
 | File | Refreshed by | Used by the site |
 |---|---|---|
-| `data/townsightings.json`, `regionssightings.json`, `countyBarcharts.json`, `area_sightings_meta.json` | `node scripts/updateAreaSightings.js <statewide EBD>` (all-time; or recent months with `--merge`) | /towns, /regions, /counties |
+| `data/townsightings.json`, `regionssightings.json`, `countysightings.json`, `area_sightings_meta.json` | `node scripts/updateAreaSightings.js <statewide EBD>` (all-time; or recent months with `--merge`) | /towns, /regions, /counties |
 | `data/grid_sightings.json` (species per ~2 km square, as bitmaps) | `node scripts/updateAreaSightings.js <statewide EBD>` | /radius |
 | `data/vt_town_counts.json`, `vt_town_counts_meta.json` | `node cli.js 251 --input=<EBD for the year> --year=<year>` | /251 |
+| `data/siteBandingCodes.json` (the site's code table) | `node scripts/updateSiteCodes.js`, after any other data update (`updateAreaSightings.js` runs it); a test fails if it's stale | every page with species names |
 | `data/vermont_records.json` | `scripts/updateVermontRecords.js` (VCE's VBRC list PDF) | /vbrc-checker |
 | `data/hotspots.json`, `hotspots.csv`, `hotspotsList.md`, `novisits-hotspots.json` | `scripts/updateHotspots.sh` (needs `EBIRD_API_TOKEN`) | /hotspots |
 | `data/hotspotsDates.json` | `node montpelier.js hotspotDates <EBD sampling file>` | no |
@@ -85,8 +86,7 @@ Don't re-propose these.
 - The area lists leave out escapees (exotic code X). eBird omits sensitive
   species from the EBD, so `SENSITIVE_CODES` are carried forward from the
   current files.
-- Town, region and Project 251 lists store 2021 banding codes; county lists
-  store names. Every list is in the order each species was first seen in the
+- Town, region, county and Project 251 lists store 2021 banding codes. Every list is in the order each species was first seen in the
   area, oldest first: the site numbers them that way. `codeToCommonName` gives codes their current eBird name, so
   everything matches `taxonomies/eBird_Taxonomy_VT.json`.
 - Town names keep this repo's style (ST. ALBANS, RUTLAND), not VCGI's

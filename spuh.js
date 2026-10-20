@@ -1,6 +1,6 @@
 // Telling species apart from spuhs, slashes, hybrids and domestic types. Kept
 // apart from filters.js, which imports the town and region boundaries, so the
-// website's maps can use these without downloading the precise boundaries.
+// website's maps can use it without downloading the precise boundaries.
 
 import _ from 'lodash'
 
@@ -38,19 +38,6 @@ function removeSpuh (arr, reverse) {
   return _.uniq(newArr)
 }
 
-// The species in each county of countyBarcharts.json, without spuhs, slashes,
-// hybrids and domestic types
-function removeSpuhFromCounties (countyBarcharts) {
-  const newObj = {}
-  Object.keys(countyBarcharts).forEach(county => {
-    // Copies: removeSpuh rewrites scientific names, and this is shared data
-    newObj[county] = removeSpuh(Object.entries(countyBarcharts[county].species).map(([name, species]) => ({ ...species, name })))
-      .map(s => s.name)
-  })
-  return newObj
-}
-
 export {
-  removeSpuh,
-  removeSpuhFromCounties
+  removeSpuh
 }
