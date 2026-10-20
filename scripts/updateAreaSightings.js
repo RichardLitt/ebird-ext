@@ -12,6 +12,9 @@
 //   --include-escapees   Keep records marked as escapees (exotic code X). eBird
 //                        doesn't count them, so by default neither do we.
 //   --release="Aug 2026" The EBD release, if the file name doesn't say (see below).
+//   --merge              Add the EBD's species to the current files instead of
+//                        replacing them, so a download limited to recent dates
+//                        will do (see below).
 //
 // Also writes data/grid_sightings.json, the species recorded in each square
 // of a grid of about 2 km, for the site's radius page; and
@@ -41,10 +44,16 @@
 // kept wherever the file being replaced already had them, so an update doesn't
 // erase them; new sightings of them can't be added from the EBD.
 //
+// With --merge, each list keeps what it has and gains the species the EBD adds,
+// after the ones already there; grid squares gain them too. A statewide
+// all-time EBD is gigabytes, while a download of the months since the last
+// update is a fraction of that. A merge never removes anything (a record eBird
+// has since rejected, say), so rebuild from an all-time download now and then.
+//
 // The EBD is gigabytes, so it is read a line at a time. It is tab-separated
 // and does not quote fields, so lines are split on tabs and nothing else.
 
-import { createReadStream, promises as fs } from 'node:fs'
+import { createReadStream, promises as fs, realpathSync } from 'node:fs'
 import path from 'node:path'
 import readline from 'node:readline'
 import { fileURLToPath } from 'node:url'
@@ -234,6 +243,63 @@ function speciesOf (kind, list) {
     .map(([name]) => name)
 }
 
+// --merge: the old list, then the new list's species it lacks, in their order
+function mergeCodes (old, fresh) {
+  if (!old) return fresh
+  const known = new Set(old)
+  return [...old, ...fresh.filter(code => !known.has(code))]
+}
+
+function mergeCounty (old, fresh) {
+  if (!old) return fresh
+  const species = { ...old.species }
+  for (const [name, entry] of Object.entries(fresh.species)) {
+    if (!species[name]) species[name] = entry
+  }
+  return { taxa: String(Object.keys(species).length), species }
+}
+
+function mergeLists (kind, old, lists) {
+  const merge = kind === 'counties' ? mergeCounty : mergeCodes
+  return Object.fromEntries(Object.entries(lists).map(([area, list]) => [area, merge(old[area], list)]))
+}
+
+// grid_sightings.json <-> Map of square -> Set of banding codes
+function encodeGrid (grid) {
+  const species = [...new Set([...grid.values()].flatMap(codes => [...codes]))].sort()
+  const index = new Map(species.map((code, i) => [code, i]))
+  const squares = [...grid].sort(([a], [b]) => a.localeCompare(b)).map(([square, codes]) => {
+    const bits = Buffer.alloc(Math.ceil(species.length / 8))
+    for (const code of codes) {
+      const i = index.get(code)
+      bits[i >> 3] |= 1 << (i & 7)
+    }
+    return `${JSON.stringify(square)}:"${bits.toString('base64')}"`
+  })
+  return { count: squares.length, species, json: `{"lat":${GRID.lat},"lng":${GRID.lng},"species":${JSON.stringify(species)},"squares":{\n${squares.join(',\n')}\n}}\n` }
+}
+
+function decodeGrid (file) {
+  if (file.lat !== GRID.lat || file.lng !== GRID.lng) {
+    throw new Error(`grid_sightings.json has squares of ${file.lat} by ${file.lng}, not ${GRID.lat} by ${GRID.lng}; rebuild it without --merge`)
+  }
+  const grid = new Map()
+  for (const [square, base64] of Object.entries(file.squares)) {
+    const bits = Buffer.from(base64, 'base64')
+    grid.set(square, new Set(file.species.filter((code, i) => bits[i >> 3] & (1 << (i & 7)))))
+  }
+  return grid
+}
+
+function mergeGrid (old, fresh) {
+  const grid = new Map([...old].map(([square, codes]) => [square, new Set(codes)]))
+  for (const [square, codes] of fresh) {
+    if (!grid.has(square)) grid.set(square, new Set())
+    for (const code of codes) grid.get(square).add(code)
+  }
+  return grid
+}
+
 // One area per line, so a later update diffs one line per changed area
 function format (lists) {
   const lines = Object.keys(lists).sort().map(area => `${JSON.stringify(area)}:${JSON.stringify(lists[area])}`)
@@ -283,10 +349,10 @@ async function main () {
   const args = process.argv.slice(2)
   const file = args.find(a => !a.startsWith('--'))
   if (!file) {
-    console.error('Usage: node scripts/updateAreaSightings.js <ebd_US-VT_*.txt> [--dry-run] [--include-escapees] [--release="Aug 2026"]')
+    console.error('Usage: node scripts/updateAreaSightings.js <ebd_US-VT_*.txt> [--dry-run] [--merge] [--include-escapees] [--release="Aug 2026"]')
     process.exit(1)
   }
-  const opts = { dryRun: args.includes('--dry-run'), includeEscapees: args.includes('--include-escapees') }
+  const opts = { dryRun: args.includes('--dry-run'), merge: args.includes('--merge'), includeEscapees: args.includes('--include-escapees') }
   const releaseArg = args.find(a => a.startsWith('--release='))
   const release = releaseArg ? releaseArg.slice('--release='.length) : releaseFromFileName(path.basename(file))
   if (!release) {
@@ -298,8 +364,9 @@ async function main () {
   console.error(`${stats.rows} rows, ${stats.kept} countable records kept, ${stats.escapees} escapee records skipped, ${localities} localities`)
 
   const unmapped = new Set()
+  if (opts.merge) console.error('Merging into the current files')
   for (const kind of KINDS) {
-    const lists = {}
+    let lists = {}
     for (const [area, species] of areas[kind]) {
       if (kind === 'counties') {
         lists[area] = toCounty(species, scientificNames)
@@ -311,6 +378,7 @@ async function main () {
       }
     }
     const old = await readOld(kind)
+    if (opts.merge) lists = mergeLists(kind, old, lists)
     keepSensitive(kind, lists, old)
     report(kind, lists, old)
     if (!opts.dryRun) {
@@ -322,19 +390,17 @@ async function main () {
   // { lat, lng, species: [banding codes], squares: { 'i,j': bitmap } }: each
   // square's bitmap (base64) has bit n set if species[n] was seen there. A
   // list of codes per square would be four times the size.
-  const species = [...new Set([...grid.values()].flatMap(names => [...names].map(toCode)))].sort()
-  const index = new Map(species.map((code, i) => [code, i]))
-  const squares = [...grid].sort(([a], [b]) => a.localeCompare(b)).map(([square, names]) => {
-    const bits = Buffer.alloc(Math.ceil(species.length / 8))
-    for (const name of names) {
-      const i = index.get(toCode(name))
-      bits[i >> 3] |= 1 << (i & 7)
-    }
-    return `${JSON.stringify(square)}:"${bits.toString('base64')}"`
-  })
-  console.error(`\ngrid: ${squares.length} squares with sightings, ${species.length} species`)
+  let codes = new Map([...grid].map(([square, names]) => [square, new Set([...names].map(toCode))]))
+  if (opts.merge) {
+    const before = decodeGrid(JSON.parse(await fs.readFile(GRID_OUTPUT, 'utf8')))
+    codes = mergeGrid(before, codes)
+    const added = [...codes].reduce((n, [square, set]) => n + set.size - (before.get(square)?.size || 0), 0)
+    console.error(`\ngrid: ${codes.size - before.size} new squares, ${added} species added to squares`)
+  }
+  const encoded = encodeGrid(codes)
+  console.error(`\ngrid: ${encoded.count} squares with sightings, ${encoded.species.length} species`)
   if (!opts.dryRun) {
-    await fs.writeFile(GRID_OUTPUT, `{"lat":${GRID.lat},"lng":${GRID.lng},"species":${JSON.stringify(species)},"squares":{\n${squares.join(',\n')}\n}}\n`, 'utf8')
+    await fs.writeFile(GRID_OUTPUT, encoded.json, 'utf8')
     console.error(`Wrote ${path.relative(root, GRID_OUTPUT)}`)
   }
 
@@ -355,7 +421,11 @@ async function main () {
   }
 }
 
-main().catch(error => {
-  console.error(error)
-  process.exit(1)
-})
+export { mergeCodes, mergeCounty, mergeLists, encodeGrid, decodeGrid, mergeGrid }
+
+if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch(error => {
+    console.error(error)
+    process.exit(1)
+  })
+}

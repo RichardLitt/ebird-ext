@@ -26,6 +26,15 @@ node scripts/updateAreaSightings.js ~/data/ebd_US-VT_smp_relAug-2026/ebd_US-VT_s
 node scripts/updateAreaSightings.js ~/data/ebd_US-VT_smp_relAug-2026/ebd_US-VT_smp_relAug-2026.txt
 ```
 
+Between full rebuilds, `--merge` adds a smaller download's species to the current files instead of replacing them, so you can request only the months since the last update (say, `ebd_US-VT_202501_202612_smp_relSep-2026`):
+
+```sh
+node scripts/updateAreaSightings.js ~/data/ebd_US-VT_202501_202612_unv_smp_relSep-2026/ebd_US-VT_202501_202612_unv_smp_relSep-2026.txt --merge --dry-run
+node scripts/updateAreaSightings.js ~/data/ebd_US-VT_202501_202612_unv_smp_relSep-2026/ebd_US-VT_202501_202612_unv_smp_relSep-2026.txt --merge
+```
+
+New species go after those already in each list, and into the grid squares. A merge never removes a species, even one whose only record eBird has since rejected, so rebuild from an all-time download now and then. Without `--merge`, the download must be all-time: anything not in it is removed.
+
 It prints, for every town and region, how many species were added and which were removed compared with the current file. Escapees (exotic code X) are left out, as eBird leaves them out of counts; pass `--include-escapees` to keep them. eBird omits sensitive species (Spruce Grouse, Long-eared Owl) from the EBD, so the script keeps them wherever the current file already has them. Lists are stored as 2021 banding codes; if the script reports names without a code after an eBird taxonomy update, add them to `EBIRD_NAME_TO_CODE` in `bandingCodes.js`. `countyBarcharts.json` keeps the shape of the eBird county bar charts it was first made from, but holds only species names, not the weekly frequencies. It also writes `data/grid_sightings.json`, the species recorded in each square of a grid about 2 km across (stored as one bitmap per square over a single species list, about 170 kB gzipped), for the site's 5- and 10-mile radius page; and `data/area_sightings_meta.json` with the EBD release (read from the file name, or pass `--release="Aug 2026"`), which the site's Towns, Bioregions and Counties pages show.
 
 ## Update the eBird Taxonomy
