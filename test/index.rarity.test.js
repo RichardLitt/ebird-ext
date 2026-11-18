@@ -20,14 +20,14 @@ import VermontSubspecies from '../data/vermont_records_subspecies.json' with { t
 //
 // Species used below (and why):
 //   Canada Goose       Branta canadensis        common breeder, never rare
-//   King Eider         Somateria spectabilis    'V', no occurrence limit
-//   Harlequin Duck     Histrionicus histrionicus 'C', occurrence 10D-5B
-//   Tufted Duck        Aythya fuligula          'C', occurrence 12B-4B
+//   Garganey           Spatula querquedula      'V', no occurrence limit
+//   Harlequin Duck     Histrionicus histrionicus 'C', occurrence 11A-5A
+//   Tufted Duck        Aythya fuligula          'C', occurrence 11C-4C
 //   Spruce Grouse      Canachites canadensis    'K', resident
 //   Black-backed Wpkr  Picoides arcticus        'K', resident
 //   Mute Swan          Cygnus olor              'N', confirmed breeder
 //   Trumpeter Swan     Cygnus buccinator        'N', not a confirmed breeder
-//   Common Nighthawk   Chordeiles minor         summer only (5C-9B)
+//   Common Nighthawk   Chordeiles minor         summer only (5B-6B, 8A-9B)
 //   Snow Goose         Anser caerulescens       two migration windows
 //   Gadwall            Mareca strepera          open-ended ("+") occurrence
 //
@@ -128,14 +128,14 @@ test('rare sets opts.state to "Vermont" on the caller\'s opts object', async () 
 })
 
 test('rare returns the same entry objects it was given, not copies', async () => {
-  const e = sighting({ 'Scientific Name': 'Somateria spectabilis' })
+  const e = sighting({ 'Scientific Name': 'Spatula querquedula' })
   const out = await rareManual(e)
   assert.equal(out.Vermont[0], e)
 })
 
 test('rare does not console.log anything', async (t) => {
   t.mock.method(console, 'log', () => {})
-  await rareManual(sighting({ 'Scientific Name': 'Somateria spectabilis' }))
+  await rareManual(sighting({ 'Scientific Name': 'Spatula querquedula' }))
   assert.equal(console.log.mock.calls.length, 0)
 })
 
@@ -168,49 +168,49 @@ test('rare: an open-ended ("+") occurrence (Gadwall) is never outside expected d
 // Reporting 'V': anywhere in Vermont
 // ---------------------------------------------------------------------------
 
-test('rare: a "V" species (King Eider) goes to the Vermont bucket', async () => {
-  const e = sighting({ 'Scientific Name': 'Somateria spectabilis' })
+test('rare: a "V" species (Garganey) goes to the Vermont bucket', async () => {
+  const e = sighting({ 'Scientific Name': 'Spatula querquedula' })
   const out = await rareManual(e)
   assert.deepEqual(bucketsOf(out, e), ['Vermont'])
 })
 
 test('rare: a "V" species with no Occurrence limit is reportable in any month', async () => {
   const dates = ['2024-01-15', '2024-04-15', '2024-07-15', '2024-10-15']
-  const entries = dates.map(Date => sighting({ 'Scientific Name': 'Somateria spectabilis', Date }))
+  const entries = dates.map(Date => sighting({ 'Scientific Name': 'Spatula querquedula', Date }))
   const out = await rareManual(...entries)
   assert.equal(out.Vermont.length, 4)
   assert.equal(out.OutsideExpectedDates.length, 0)
 })
 
 test('rare: a "V" species is reported regardless of town, county or region', async () => {
-  const a = sighting({ 'Scientific Name': 'Somateria spectabilis', Town: 'Brighton', County: 'Essex', Region: 'Northeastern Highlands' })
-  const b = sighting({ 'Scientific Name': 'Somateria spectabilis', Town: 'Burlington', County: 'Chittenden', Region: 'Champlain Valley' })
+  const a = sighting({ 'Scientific Name': 'Spatula querquedula', Town: 'Brighton', County: 'Essex', Region: 'Northeastern Highlands' })
+  const b = sighting({ 'Scientific Name': 'Spatula querquedula', Town: 'Burlington', County: 'Chittenden', Region: 'Champlain Valley' })
   const out = await rareManual(a, b)
   assert.deepEqual(out.Vermont, [a, b])
 })
 
 test('rare: a non-breeder "V" species with a confirmed breeding code goes to Breeding, not Vermont', async () => {
-  const e = sighting({ 'Scientific Name': 'Somateria spectabilis', 'Breeding Code': 'NY Nest with Young (Confirmed)' })
+  const e = sighting({ 'Scientific Name': 'Spatula querquedula', 'Breeding Code': 'NY Nest with Young (Confirmed)' })
   const out = await rareManual(e)
   assert.deepEqual(bucketsOf(out, e), ['Breeding'])
 })
 
 test('rare: an ignored long-form breeding code ("F Flyover") does not trigger Breeding', async () => {
-  const e = sighting({ 'Scientific Name': 'Somateria spectabilis', 'Breeding Code': 'F Flyover' })
+  const e = sighting({ 'Scientific Name': 'Spatula querquedula', 'Breeding Code': 'F Flyover' })
   const out = await rareManual(e)
   assert.deepEqual(bucketsOf(out, e), ['Vermont'])
 })
 
 test('rare: every ignored short breeding code (S H F S7 M P T C N A B) is ignored', async () => {
   const codes = ['S', 'H', 'F', 'S7', 'M', 'P', 'T', 'C', 'N', 'A', 'B']
-  const entries = codes.map(code => sighting({ 'Scientific Name': 'Somateria spectabilis', 'Breeding Code': code }))
+  const entries = codes.map(code => sighting({ 'Scientific Name': 'Spatula querquedula', 'Breeding Code': code }))
   const out = await rareManual(...entries)
   assert.equal(out.Breeding.length, 0)
   assert.equal(out.Vermont.length, codes.length)
 })
 
 test('rare: an empty-string breeding code is treated as no code', async () => {
-  const e = sighting({ 'Scientific Name': 'Somateria spectabilis', 'Breeding Code': '' })
+  const e = sighting({ 'Scientific Name': 'Spatula querquedula', 'Breeding Code': '' })
   const out = await rareManual(e)
   assert.deepEqual(bucketsOf(out, e), ['Vermont'])
 })
@@ -336,7 +336,7 @@ test('rare: OutsideExpectedDates takes precedence over the Champlain check', asy
 })
 
 test('rare: OutsideExpectedDates takes precedence over Breeding', async () => {
-  const e = sighting({ 'Scientific Name': 'Cygnus buccinator', Date: '2024-01-15', 'Breeding Code': 'NY Nest with Young (Confirmed)' })
+  const e = sighting({ 'Scientific Name': 'Setophaga citrina', Date: '2024-01-15', 'Breeding Code': 'NY Nest with Young (Confirmed)' })
   const out = await rareManual(e)
   assert.deepEqual(bucketsOf(out, e), ['OutsideExpectedDates'])
 })
@@ -364,7 +364,7 @@ test('rare: an entry with no Scientific Name goes to Unknown', async () => {
 })
 
 test('rare: Scientific Name matching is exact (a trinomial is not the species)', async () => {
-  const e = sighting({ 'Scientific Name': 'Somateria spectabilis spectabilis' })
+  const e = sighting({ 'Scientific Name': 'Spatula querquedula spectabilis' })
   const out = await rareManual(e)
   assert.deepEqual(bucketsOf(out, e), ['Unknown'])
 })
@@ -406,7 +406,7 @@ test('rare: subspecies Vermont expects are not flagged; the rest are', async () 
   const flagged = [
     s('Ammospiza nelsoni', 'Ammospiza nelsoni subvirgata'),
     s('Eremophila alpestris', 'Eremophila alpestris [alpestris Group]'),
-    s('Tringa semipalmata', 'Tringa semipalmata inornata'),
+    s('Buteo jamaicensis', 'Buteo jamaicensis harlani'),
     s('Anser albifrons', 'Anser albifrons gambelli/sponsa')
   ]
   const out = await rareManual(...expected, ...flagged)
@@ -458,14 +458,14 @@ test('rare: the Vermont Slate-colored Junco slash is not flagged', async () => {
   assert.deepEqual(bucketsOf(out, e), [])
 })
 
-test('rare: a subspecies on both the target and Vermont lists (Willet) is flagged once', async () => {
-  const e = sighting({ 'Scientific Name': 'Tringa semipalmata', Date: '2024-07-30', Subspecies: 'Tringa semipalmata inornata' })
+test('rare: a subspecies on both the target and Vermont lists (Northern Wheatear) is flagged once', async () => {
+  const e = sighting({ 'Scientific Name': 'Oenanthe oenanthe', Date: '2024-09-15', Subspecies: 'Oenanthe oenanthe leucorhoa' })
   const out = await rareManual(e)
   assert.equal(out.Subspecies.filter(x => x === e).length, 1)
 })
 
 test('rare: a subspecies of a species with no subspecies record is ignored by the Subspecies check', async () => {
-  const e = sighting({ 'Scientific Name': 'Somateria spectabilis', Subspecies: 'Somateria spectabilis fictus' })
+  const e = sighting({ 'Scientific Name': 'Spatula querquedula', Subspecies: 'Spatula querquedula fictus' })
   const out = await rareManual(e)
   assert.deepEqual(bucketsOf(out, e), ['Vermont'])
 })
@@ -562,39 +562,39 @@ test('rare: a missing input file rejects with ENOENT', async () => {
 // isSpeciesSightingRare
 // ===========================================================================
 
-test('isSpeciesSightingRare: a King Eider in Burlington is reported in Vermont', async (t) => {
+test('isSpeciesSightingRare: a Garganey in Burlington is reported in Vermont', async (t) => {
   t.mock.method(console, 'log', () => {})
-  const out = await isSpeciesSightingRare({ species: 'King Eider', town: 'Burlington', date: '2024-01-15' })
+  const out = await isSpeciesSightingRare({ species: 'Garganey', town: 'Burlington', date: '2024-01-15' })
   assert.deepEqual(Object.keys(out), BUCKETS)
   assert.equal(out.Vermont.length, 1)
 })
 
 test('isSpeciesSightingRare builds a full sighting record from the town', async (t) => {
   t.mock.method(console, 'log', () => {})
-  const opts = { species: 'King Eider', town: 'Burlington', date: '2024-01-15' }
+  const opts = { species: 'Garganey', town: 'Burlington', date: '2024-01-15' }
   await isSpeciesSightingRare(opts)
   assert.deepEqual(opts.data, [{
     County: 'Chittenden',
     Date: '2024-01-15',
     Region: 'Champlain Valley',
-    'Scientific Name': 'Somateria spectabilis',
-    Species: 'King Eider',
+    'Scientific Name': 'Spatula querquedula',
+    Species: 'Garganey',
     Subspecies: undefined,
     Town: 'Burlington',
-    'Common Name': 'King Eider',
+    'Common Name': 'Garganey',
     Location: 'Burlington'
   }])
 })
 
 test('isSpeciesSightingRare logs nothing', async (t) => {
   t.mock.method(console, 'log', () => {})
-  await isSpeciesSightingRare({ species: 'King Eider', town: 'Burlington', date: '2024-01-15' })
+  await isSpeciesSightingRare({ species: 'Garganey', town: 'Burlington', date: '2024-01-15' })
   assert.equal(console.log.mock.calls.length, 0)
 })
 
 test('isSpeciesSightingRare sets manual, data and state on the caller\'s opts', async (t) => {
   t.mock.method(console, 'log', () => {})
-  const opts = { species: 'King Eider', town: 'Burlington', date: '2024-01-15' }
+  const opts = { species: 'Garganey', town: 'Burlington', date: '2024-01-15' }
   await isSpeciesSightingRare(opts)
   assert.equal(opts.manual, true)
   assert.equal(opts.state, 'Vermont')
@@ -603,18 +603,18 @@ test('isSpeciesSightingRare sets manual, data and state on the caller\'s opts', 
 
 test('isSpeciesSightingRare looks species up case-insensitively by common name', async (t) => {
   t.mock.method(console, 'log', () => {})
-  const opts = { species: 'kInG eIdEr', town: 'Burlington', date: '2024-01-15' }
+  const opts = { species: 'gArGaNeY', town: 'Burlington', date: '2024-01-15' }
   const out = await isSpeciesSightingRare(opts)
-  assert.equal(opts.data[0]['Scientific Name'], 'Somateria spectabilis')
-  assert.equal(opts.data[0].Species, 'King Eider')
+  assert.equal(opts.data[0]['Scientific Name'], 'Spatula querquedula')
+  assert.equal(opts.data[0].Species, 'Garganey')
   assert.equal(out.Vermont.length, 1)
 })
 
 test('isSpeciesSightingRare accepts a scientific name, case-insensitively', async (t) => {
   t.mock.method(console, 'log', () => {})
-  const opts = { species: 'somateria spectabilis', town: 'Burlington', date: '2024-01-15' }
+  const opts = { species: 'spatula querquedula', town: 'Burlington', date: '2024-01-15' }
   const out = await isSpeciesSightingRare(opts)
-  assert.equal(opts.data[0].Species, 'King Eider')
+  assert.equal(opts.data[0].Species, 'Garganey')
   assert.equal(out.Vermont.length, 1)
 })
 
@@ -677,7 +677,7 @@ test('isSpeciesSightingRare passes opts.subspecies through to the Subspecies che
 
 test('isSpeciesSightingRare resolves a lower-case town, capitalizing only the Location field', async (t) => {
   t.mock.method(console, 'log', () => {})
-  const opts = { species: 'King Eider', town: 'rutland city', date: '2024-01-15' }
+  const opts = { species: 'Garganey', town: 'rutland city', date: '2024-01-15' }
   await isSpeciesSightingRare(opts)
   assert.equal(opts.data[0].County, 'Rutland')
   assert.equal(opts.data[0].Region, 'Vermont Valley')
@@ -688,7 +688,7 @@ test('isSpeciesSightingRare resolves a lower-case town, capitalizing only the Lo
 test('isSpeciesSightingRare rejects with a clear Error naming a town not in Vermont', async (t) => {
   t.mock.method(console, 'log', () => {})
   await assert.rejects(
-    isSpeciesSightingRare({ species: 'King Eider', town: 'Atlantis', date: '2024-01-15' }),
+    isSpeciesSightingRare({ species: 'Garganey', town: 'Atlantis', date: '2024-01-15' }),
     (err) => {
       assert.ok(!(err instanceof TypeError), 'not a TypeError')
       assert.ok(err instanceof Error)
@@ -702,14 +702,14 @@ test('isSpeciesSightingRare rejects with a clear Error naming a town not in Verm
 test('isSpeciesSightingRare rejects with a clear Error when no town is given', async (t) => {
   t.mock.method(console, 'log', () => {})
   await assert.rejects(
-    isSpeciesSightingRare({ species: 'King Eider', date: '2024-01-15' }),
+    isSpeciesSightingRare({ species: 'Garganey', date: '2024-01-15' }),
     (err) => !(err instanceof TypeError) && /Unknown town/.test(err.message)
   )
 })
 
 test('isSpeciesSightingRare does not build opts.data for an unknown town', async (t) => {
   t.mock.method(console, 'log', () => {})
-  const opts = { species: 'King Eider', town: 'Atlantis', date: '2024-01-15' }
+  const opts = { species: 'Garganey', town: 'Atlantis', date: '2024-01-15' }
   await assert.rejects(isSpeciesSightingRare(opts))
   assert.equal(opts.data, undefined)
 })

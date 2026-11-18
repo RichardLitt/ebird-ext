@@ -51,13 +51,14 @@ import { fileURLToPath } from 'node:url'
 
 const STATUS = ['E', 'H', 'I', 'X']
 const REPORTING = ['C', 'K', 'N', 'V']
-// AOS (as printed by VBRC) -> eBird/Clements v2025
+// AOS (as printed by VBRC) -> eBird/Clements v2025. Only for taxa where the two
+// differ: a stale entry can map a name eBird now uses for another species.
 export const EBIRD_SCIENTIFIC_NAMES = {
-  // eBird split Whimbrel; the Vermont bird is Hudsonian Whimbrel
-  'Numenius phaeopus': 'Numenius hudsonicus',
+  // VBRC prints martinicus; eBird uses martinica
+  'Porphyrio martinicus': 'Porphyrio martinica',
+  // AOS split Great Egret; eBird hasn't, and still calls the Vermont bird Ardea alba
+  'Ardea egretta': 'Ardea alba',
   'Dryobates villosus': 'Leuconotopicus villosus',
-  // eBird split Yellow Warbler; the Vermont bird is Northern Yellow Warbler
-  'Setophaga petechia': 'Setophaga aestiva',
   'Coccothraustes vespertinus': 'Hesperiphona vespertina'
 }
 const KEYS = ['Breeding', 'Occurrence', 'Reporting', 'Scientific Name', 'Species', 'Status']
