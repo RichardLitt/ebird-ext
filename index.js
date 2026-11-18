@@ -475,9 +475,15 @@ const IGNORED_BREEDING_CODES = [
 // lookups. Only rules out a species the VBRC never asks about, seen inside its
 // expected dates, with no nesting code and no reportable subspecies.
 const expectedDatesCache = new Map()
-const VermontRecordsByName = new Map(VermontRecords.map(x => [x['Scientific Name'], x]))
-function couldBeRare (e) {
-  const recordEntry = VermontRecordsByName.get(e['Scientific Name'])
+// records: a VBRC list in the shape of data/vermont_records.json (default: that
+// file), so a list can be checked against another, as scripts/compareVermontRecords.js does.
+const recordsByName = new WeakMap()
+function byName (records) {
+  if (!recordsByName.has(records)) recordsByName.set(records, new Map(records.map(x => [x['Scientific Name'], x])))
+  return recordsByName.get(records)
+}
+function couldBeRare (e, records = VermontRecords) {
+  const recordEntry = byName(records).get(e['Scientific Name'])
   if (!recordEntry || ['V', 'C', 'K'].includes(recordEntry.Reporting)) return true
   if (e['Breeding Code'] && !IGNORED_BREEDING_CODES.includes(e['Breeding Code'])) return true
   if (e.Subspecies && VermontSubspecies.some(x => x['Scientific Name'] === e['Scientific Name'])) return true
@@ -503,7 +509,8 @@ async function rare (opts) {
   // Use only data from this year, from Vermont
   if (!opts.manual) {
     const year = opts.year && opts.year.toString()
-    const keep = year ? e => inReportYear(e, year) && couldBeRare(e) : couldBeRare
+    const list = opts.records || VermontRecords
+    const keep = year ? e => inReportYear(e, year) && couldBeRare(e, list) : e => couldBeRare(e, list)
     // The year is handled by keep, which dateFilter would undo; it still applies --after
     data = f.orderByDate(f.dateFilter(f.locationFilter(await getData(opts.input, { keep }), opts), _.omit(opts, 'year')), opts).reverse()
     if (year) data.forEach(e => { if (yearOf(e.Date) !== year) e['Edited Late'] = true })
@@ -523,8 +530,7 @@ async function rare (opts) {
       data = spoof
     }
   }
-  const allSpecies = VermontRecords.map(x => x['Scientific Name'])
-  const speciesToReport = VermontRecords.map(x => x['Scientific Name'])
+  const records = byName(opts.records || VermontRecords)
   // TODO Update needs JSON file
   const output = {
     Breeding: [],
@@ -565,8 +571,8 @@ async function rare (opts) {
 
   data.forEach(e => {
     const species = e['Scientific Name']
-    if (speciesToReport.includes(species)) {
-      const recordEntry = VermontRecords.find(x => x['Scientific Name'] === species)
+    const recordEntry = records.get(species)
+    if (recordEntry) {
       // TODO Document this. Could also check Observation Details or Checklist Comments
       if (!appearsDuringExpectedDates(e.Date, recordEntry.Occurrence)) {
         output.OutsideExpectedDates.push(e)
@@ -589,7 +595,7 @@ async function rare (opts) {
           output.NEK.push(e)
         }
       }
-    } else if (!allSpecies.includes(species)) {
+    } else {
       output.Unknown.push(e)
     }
 
@@ -1067,6 +1073,7 @@ export {
   quadBirds,
   radialSearch,
   rare,
+  couldBeRare,
   rareReport,
   rareByCounty,
   rareSlackReport,
@@ -1097,6 +1104,7 @@ export default {
   quadBirds,
   radialSearch,
   rare,
+  couldBeRare,
   rareReport,
   rareByCounty,
   rareSlackReport,

@@ -17,6 +17,16 @@ node scripts/updateVermontRecords.js /tmp/VTStateList.pdf --taxonomy /tmp/ebird_
 
 It prints the species added, removed, renamed and changed compared with the current file; check those against the PDF before committing. The VBRC list uses AOS scientific names, but `rare()` matches eBird exports by scientific name, so the script swaps in eBird's name where the two differ (the `EBIRD_SCIENTIFIC_NAMES` map in the script; pass `--aos-names` to skip it). `--taxonomy` warns about any name eBird doesn't know, which is how to find new entries for that map. Then run `npm test`.
 
+## Compare Vermont Records Lists
+[compareVermontRecords.js](compareVermontRecords.js) shows what a new VBRC list changes in practice: the sightings in an EBD file that the new list flags and the old one didn't, and the reverse. Both lists go through `rare()`, the check behind `cli.js rare` and the site's VBRC checker. A list is a `vermont_records.json` file or a git ref in this repo, such as the commit before the list update. The EBD file is read once, so a statewide download is fine.
+
+```sh
+node scripts/compareVermontRecords.js ebd_US-VT_relNov-2026.txt --old 772d504 --since 2022-01-01
+node scripts/compareVermontRecords.js ebd_US-VT_relNov-2026.txt --old 772d504 --since 2022-01-01 --details --csv /tmp/vbrc-changes.csv
+```
+
+It prints a count per species and reason, with the date range; `--details` adds a line per sighting with its checklist link, and `--csv` writes every changed sighting to a file. `--new` (default: the current `data/vermont_records.json`) and `--county` are also available. A species whose scientific name changed between the lists is matched under either name, so an EBD from before eBird's taxonomy update works too.
+
 ## Update Town, Region and County Sightings
 
 [updateAreaSightings.js](updateAreaSightings.js) regenerates `data/townsightings.json`, `data/regionssightings.json` and `data/countysightings.json`, the all-time species lists behind the website's `/towns`, `/regions` and `/counties` maps, from a statewide eBird Basic Dataset download (request `ebd_US-VT_*` at <https://ebird.org/data/download>). It reads the multi-gigabyte file a line at a time and takes a few minutes.
