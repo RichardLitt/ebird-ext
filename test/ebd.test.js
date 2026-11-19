@@ -55,16 +55,16 @@ function ebdRow (fields) {
 
 const ROWS = [
   // A shared checklist: two observers, one sighting
-  ebdRow({ 'COMMON NAME': 'Barnacle Goose', 'SCIENTIFIC NAME': 'Branta leucopsis', 'SAMPLING EVENT IDENTIFIER': 'S1', 'GROUP IDENTIFIER': 'G1', 'OBSERVER ID': 'obsr1', REVIEWED: '1', 'SPECIES COMMENTS': 'Photos taken' }),
-  ebdRow({ 'COMMON NAME': 'Barnacle Goose', 'SCIENTIFIC NAME': 'Branta leucopsis', 'SAMPLING EVENT IDENTIFIER': 'S2', 'GROUP IDENTIFIER': 'G1', 'OBSERVER ID': 'obsr2', REVIEWED: '1' }),
+  ebdRow({ 'COMMON NAME': 'Garganey', 'SCIENTIFIC NAME': 'Spatula querquedula', 'SAMPLING EVENT IDENTIFIER': 'S1', 'GROUP IDENTIFIER': 'G1', 'OBSERVER ID': 'obsr1', REVIEWED: '1', 'SPECIES COMMENTS': 'Photos taken' }),
+  ebdRow({ 'COMMON NAME': 'Garganey', 'SCIENTIFIC NAME': 'Spatula querquedula', 'SAMPLING EVENT IDENTIFIER': 'S2', 'GROUP IDENTIFIER': 'G1', 'OBSERVER ID': 'obsr2', REVIEWED: '1' }),
   // A comment with a stray double quote must not swallow the rows after it
   ebdRow({ 'COMMON NAME': 'American Robin', 'SCIENTIFIC NAME': 'Turdus migratorius', 'SAMPLING EVENT IDENTIFIER': 'S1', 'GROUP IDENTIFIER': 'G1', 'SPECIES COMMENTS': '"Singing by the barn' }),
   // A target subspecies, recorded the EBD way (species plus subspecies columns)
   ebdRow({ 'COMMON NAME': 'Red-tailed Hawk', 'SCIENTIFIC NAME': 'Buteo jamaicensis', 'SUBSPECIES COMMON NAME': 'Red-tailed Hawk (harlani)', 'SUBSPECIES SCIENTIFIC NAME': 'Buteo jamaicensis harlani', CATEGORY: 'issf', 'SAMPLING EVENT IDENTIFIER': 'S3', 'OBSERVER ID': 'obsr3' }),
   // Same rarity, wrong year
-  ebdRow({ 'COMMON NAME': 'Barnacle Goose', 'SCIENTIFIC NAME': 'Branta leucopsis', 'SAMPLING EVENT IDENTIFIER': 'S4', 'OBSERVATION DATE': '2025-11-02' }),
+  ebdRow({ 'COMMON NAME': 'Garganey', 'SCIENTIFIC NAME': 'Spatula querquedula', 'SAMPLING EVENT IDENTIFIER': 'S4', 'OBSERVATION DATE': '2025-11-02' }),
   // Same rarity, wrong county
-  ebdRow({ 'COMMON NAME': 'Barnacle Goose', 'SCIENTIFIC NAME': 'Branta leucopsis', 'SAMPLING EVENT IDENTIFIER': 'S5', ...BURLINGTON })
+  ebdRow({ 'COMMON NAME': 'Garganey', 'SCIENTIFIC NAME': 'Spatula querquedula', 'SAMPLING EVENT IDENTIFIER': 'S5', ...BURLINGTON })
 ]
 
 // Real EBD files are tab-separated, unquoted, with a trailing tab on every line
@@ -118,8 +118,8 @@ test('isEBDRows spots rows that were parsed elsewhere (the site uploader)', () =
 test('fromEBDRow maps EBD columns onto MyEBirdData names', () => {
   const row = fromEBDRow(ROWS[0])
   assert.equal(row['Submission ID'], 'S1')
-  assert.equal(row['Common Name'], 'Barnacle Goose')
-  assert.equal(row['Scientific Name'], 'Branta leucopsis')
+  assert.equal(row['Common Name'], 'Garganey')
+  assert.equal(row['Scientific Name'], 'Spatula querquedula')
   assert.equal(row['State/Province'], 'US-VT')
   assert.equal(row.County, 'Addison')
   assert.equal(row.Location, 'Test Marsh')
@@ -152,7 +152,7 @@ test('collapseSharedChecklists keeps one copy of each taxon per group', () => {
   const rows = ROWS.map(fromEBDRow)
   const collapsed = collapseSharedChecklists(rows)
   assert.equal(collapsed.length, rows.length - 1)
-  assert.equal(collapsed.filter(r => r['Group Identifier'] === 'G1' && r['Common Name'] === 'Barnacle Goose').length, 1)
+  assert.equal(collapsed.filter(r => r['Group Identifier'] === 'G1' && r['Common Name'] === 'Garganey').length, 1)
   // Rows without a group are never merged, even if they look the same
   const lone = [rows[4], { ...rows[4] }]
   assert.equal(collapseSharedChecklists(lone).length, 2)
@@ -203,8 +203,8 @@ test('rare accepts parseEBD rows, as the site passes them', async () => {
 test('rare on an EBD file finds the county rarity for the year, once', async () => {
   const out = await rare({ input: ebdFile, county: 'Addison', year: '2026' })
   const flagged = Object.values(out).flat()
-  const geese = flagged.filter(r => r['Common Name'] === 'Barnacle Goose')
-  assert.deepEqual(geese.map(r => r['Submission ID']), ['S1'])
+  const ducks = flagged.filter(r => r['Common Name'] === 'Garganey')
+  assert.deepEqual(ducks.map(r => r['Submission ID']), ['S1'])
 })
 
 test('rare on an EBD file flags a target subspecies', async () => {
@@ -224,8 +224,8 @@ test('rare on an EBD file honours the county and year filters', async () => {
 
 test('rareReport prints a heading per non-empty bucket and one line per record', async () => {
   const lines = rareReport(await rare({ input: ebdFile, county: 'Addison', year: '2026' }))
-  const goose = lines.find(l => l.includes('Barnacle Goose'))
-  assert.match(goose, /^ {2}2026-03-10 \| Barnacle Goose \| Test Marsh, Middlebury, Addison \| https:\/\/ebird\.org\/checklist\/S1$/)
+  const duck = lines.find(l => l.includes('Garganey'))
+  assert.match(duck, /^ {2}2026-03-10 \| Garganey \| Test Marsh, Middlebury, Addison \| https:\/\/ebird\.org\/checklist\/S1$/)
   assert.ok(lines.includes('Subspecies (1)'))
   assert.ok(lines.some(l => l.includes('[Buteo jamaicensis harlani]')))
   assert.ok(!lines.some(l => /\(0\)$/.test(l)))
@@ -263,11 +263,11 @@ test('rareSlackReport groups records by county, alphabetically, with checklist l
     '*VBRC reportable records, Vermont, 2026: 3 checklists, 3 sightings*',
     '',
     '*Addison County* (2)',
-    '• Barnacle Goose · Test Marsh, Middlebury · 2026-03-10 · VBRC review species · https://ebird.org/checklist/S1',
+    '• Garganey · Test Marsh, Middlebury · 2026-03-10 · VBRC review species · https://ebird.org/checklist/S1',
     '• Red-tailed Hawk (harlani) · Test Marsh, Middlebury · 2026-03-10 · subspecies · https://ebird.org/checklist/S3',
     '',
     '*Chittenden County* (1)',
-    '• Barnacle Goose · Test Waterfront, Burlington · 2026-03-10 · VBRC review species · https://ebird.org/checklist/S5'
+    '• Garganey · Test Waterfront, Burlington · 2026-03-10 · VBRC review species · https://ebird.org/checklist/S5'
   ])
 })
 
@@ -298,11 +298,11 @@ test('rareSlackReport says so when there is nothing to report', () => {
 
 // Like the _unvetted.txt file in an EBD download: records no reviewer has approved
 const UNVETTED_ROWS = [
-  ebdRow({ 'COMMON NAME': 'Barnacle Goose', 'SCIENTIFIC NAME': 'Branta leucopsis', 'SAMPLING EVENT IDENTIFIER': 'S20', 'OBSERVATION DATE': '2026-04-01', 'LAST EDITED DATE': '2026-04-01 10:00:00', APPROVED: '0' }),
+  ebdRow({ 'COMMON NAME': 'Garganey', 'SCIENTIFIC NAME': 'Spatula querquedula', 'SAMPLING EVENT IDENTIFIER': 'S20', 'OBSERVATION DATE': '2026-04-01', 'LAST EDITED DATE': '2026-04-01 10:00:00', APPROVED: '0' }),
   // Seen in 2019 but last edited in 2026: an old checklist uploaded late
-  ebdRow({ 'COMMON NAME': 'Barnacle Goose', 'SCIENTIFIC NAME': 'Branta leucopsis', 'SAMPLING EVENT IDENTIFIER': 'S21', 'OBSERVATION DATE': '2019-05-04', 'LAST EDITED DATE': '2026-02-11 09:30:00', APPROVED: '0' }),
+  ebdRow({ 'COMMON NAME': 'Garganey', 'SCIENTIFIC NAME': 'Spatula querquedula', 'SAMPLING EVENT IDENTIFIER': 'S21', 'OBSERVATION DATE': '2019-05-04', 'LAST EDITED DATE': '2026-02-11 09:30:00', APPROVED: '0' }),
   // Seen in 2019, last edited in 2020: not this year's business
-  ebdRow({ 'COMMON NAME': 'Barnacle Goose', 'SCIENTIFIC NAME': 'Branta leucopsis', 'SAMPLING EVENT IDENTIFIER': 'S22', 'OBSERVATION DATE': '2019-05-04', 'LAST EDITED DATE': '2020-01-01 09:30:00' }),
+  ebdRow({ 'COMMON NAME': 'Garganey', 'SCIENTIFIC NAME': 'Spatula querquedula', 'SAMPLING EVENT IDENTIFIER': 'S22', 'OBSERVATION DATE': '2019-05-04', 'LAST EDITED DATE': '2020-01-01 09:30:00' }),
   // A common species in its expected dates, which rare() never reports
   ebdRow({ 'COMMON NAME': 'Canada Goose', 'SCIENTIFIC NAME': 'Branta canadensis', 'SAMPLING EVENT IDENTIFIER': 'S23', 'OBSERVATION DATE': '2026-04-01', APPROVED: '0' })
 ]
@@ -336,8 +336,8 @@ test('rare with a year keeps earlier sightings last edited that year, and marks 
 test('rareSlackReport marks unreviewed and late-edited records', async () => {
   const lines = rareSlackReport(await rare({ input: await twoFiles(), county: 'Addison', year: '2026' }), { county: 'Addison', year: '2026' })
   assert.equal(lines[0], '*VBRC reportable records, Addison County, 2026: 4 checklists, 4 sightings, 2 unreviewed, 1 from earlier years, edited in 2026*')
-  assert.ok(lines.includes('• Barnacle Goose · Test Marsh, Middlebury · 2019-05-04 · VBRC review species · https://ebird.org/checklist/S21 (unreviewed) (last edited 2026-02-11)'))
-  assert.ok(lines.includes('• Barnacle Goose · Test Marsh, Middlebury · 2026-04-01 · VBRC review species · https://ebird.org/checklist/S20 (unreviewed)'))
+  assert.ok(lines.includes('• Garganey · Test Marsh, Middlebury · 2019-05-04 · VBRC review species · https://ebird.org/checklist/S21 (unreviewed) (last edited 2026-02-11)'))
+  assert.ok(lines.includes('• Garganey · Test Marsh, Middlebury · 2026-04-01 · VBRC review species · https://ebird.org/checklist/S20 (unreviewed)'))
 })
 
 // ===========================================================================

@@ -15,7 +15,7 @@ const run = promisify(execFile)
 const HEADER = 'Submission ID,Common Name,Scientific Name,Count,State/Province,County,Location ID,Location,Latitude,Longitude,Date,Time,Protocol,Duration (Min),All Obs Reported,Breeding Code'
 const ROWS = [
   'S1,Snow Bunting,Plectrophenax nivalis,40,US-VT,Chittenden,L1,Burlington Waterfront,44.4759,-73.2121,2025-01-15,09:00 AM,eBird - Traveling Count,30,1,',
-  'S1,King Eider,Somateria spectabilis,1,US-VT,Chittenden,L1,Burlington Waterfront,44.4759,-73.2121,2025-01-15,09:00 AM,eBird - Traveling Count,30,1,',
+  'S1,Garganey,Spatula querquedula,1,US-VT,Chittenden,L1,Burlington Waterfront,44.4759,-73.2121,2025-01-15,09:00 AM,eBird - Traveling Count,30,1,',
   'S2,Blue Jay,Cyanocitta cristata,2,US-VT,Chittenden,L1,Burlington Waterfront,44.4759,-73.2121,2025-03-01,10:00 AM,eBird - Stationary Count,15,1,',
   'S3,Blue Jay,Cyanocitta cristata,1,US-VT,Washington,L2,Hubbard Park,44.2650,-72.5730,2025-03-02,08:00 AM,eBird - Traveling Count,45,1,',
   'S3,Barred Owl,Strix varia,1,US-VT,Washington,L2,Hubbard Park,44.2650,-72.5730,2025-03-02,08:00 AM,eBird - Traveling Count,45,1,',
@@ -64,7 +64,7 @@ test('towns prints each town with species, most first', async () => {
 test('towns --town lists that town\'s species, with no output for out-of-state rows', async () => {
   assert.equal(await cli('towns', `--input=${input}`, '--town=Burlington'), [
     '1 | Snow Bunting - Plectrophenax nivalis | Burlington, Chittenden, Vermont | 2025-01-15',
-    '2 | King Eider - Somateria spectabilis | Burlington, Chittenden, Vermont | 2025-01-15',
+    '2 | Garganey - Spatula querquedula | Burlington, Chittenden, Vermont | 2025-01-15',
     '3 | Blue Jay - Cyanocitta cristata | Burlington, Chittenden, Vermont | 2025-03-01',
     ''
   ].join('\n'))
@@ -73,7 +73,7 @@ test('towns --town lists that town\'s species, with no output for out-of-state r
 test('state prints the species total, then the species first seen each day', async () => {
   assert.equal(await cli('state', `--input=${input}`), [
     '4',
-    '2025-01-15: Snow Bunting, King Eider.',
+    '2025-01-15: Snow Bunting, Garganey.',
     '2025-03-01: Blue Jay.',
     '2025-03-02: Barred Owl.',
     ''
@@ -117,9 +117,9 @@ test('checklists prints one line per checklist, with its link', async () => {
 })
 
 test('issr prints the report for a reportable sighting', async () => {
-  const out = await cli('issr', '--species=King Eider', '--town=Burlington', '--date=2025-01-15')
+  const out = await cli('issr', '--species=Garganey', '--town=Burlington', '--date=2025-01-15')
   assert.match(out, /Vermont Records/)
-  assert.match(out, /King Eider/)
+  assert.match(out, /Garganey/)
 })
 
 test('issr says so when a sighting is not reportable', async () => {
