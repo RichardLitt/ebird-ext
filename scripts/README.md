@@ -68,7 +68,15 @@ It prints the taxa added and removed, and any Vermont species whose name doesn't
 
 ## Update Town Boundaries
 
-[updateTownBoundaries.js](updateTownBoundaries.js) rebuilds `geojson/vt_towns.json` from the Vermont Center for Geographic Information's [town boundaries](https://geodata.vermont.gov/datasets/VCGI::vt-data-town-boundaries). It keeps this repo's town names where VCGI's differ (ST. ALBANS, not SAINT ALBANS) and rounds coordinates to 6 decimal places. It prints the towns added and removed; `--dry-run` only prints. After a change, run `simplifyForDisplay.js`, then rerun `updateAreaSightings.js` and Project 251.
+[updateTownBoundaries.js](updateTownBoundaries.js) rebuilds `geojson/vt_towns.json` from the Vermont Center for Geographic Information's [town boundaries](https://geodata.vermont.gov/datasets/VCGI::vt-data-town-boundaries). It keeps this repo's town names where VCGI's differ (ST. ALBANS, not SAINT ALBANS) and rounds coordinates to 6 decimal places. It prints the towns added and removed; `--dry-run` only prints. After a change, run `simplifyForDisplay.js` and `updateTownInfo.js`, then rerun `updateAreaSightings.js` and Project 251.
+
+## Update the Town Table
+
+[updateTownInfo.js](updateTownInfo.js) writes `data/vt_town_info.json`: each town's county and the biophysical region holding a point inside the town. `isSpeciesSightingRare` (in `rarity.js`) reads it, so the site's single-sighting VBRC check doesn't load the town and region boundaries, over 1 MB. Run it after any change to `geojson/vt_towns.json` or the region boundaries; `npm test` fails if it is out of date.
+
+```sh
+node scripts/updateTownInfo.js
+```
 
 ## Simplify Boundaries for Display
 
