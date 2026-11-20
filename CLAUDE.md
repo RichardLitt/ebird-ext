@@ -7,7 +7,7 @@ Guidance for working in ebird-ext.
 Node tools for eBird data, mostly Vermont, plus the data behind
 [birdinginvermont.com](https://birdinginvermont.com). The site
 (github.com/RichardLitt/birdinginvermont.com) includes this repo as the git
-submodule `src/ebird-ext` and imports `index.js`, `bandingCodes.js` and files in
+submodule `src/ebird-ext` and imports `index.js`, `rarity.js`, `bandingCodes.js` and files in
 `data/` and `geojson/` directly into its browser bundle. The README documents
 every CLI command.
 
@@ -25,6 +25,7 @@ CI runs lint, tests and `node cli.js --help` on Node 22 and 24.
 ## Layout
 
 - `index.js`: the analysis functions (towns, counties, regions, rare, vt251, …) and `getData`, which reads MyEBirdData.csv, EBD files or parsed rows.
+- `rarity.js`: the VBRC check (`couldBeRare`, the buckets `rare()` sorts sightings into, `isSpeciesSightingRare`). It imports no boundaries, so the site's single-sighting checker loads it without them; town counties and regions come from `data/vt_town_info.json`.
 - `cli.js`: the CLI. It only parses flags, calls the library and prints, using `reports.js`.
 - `reports.js`: turns what the library returns into the lines the CLI prints.
 - `io.js`: all file reading and writing. The library loads it with `import('./io.js')` only when given a file path or an output file, so the site's bundle never runs it.
@@ -52,6 +53,7 @@ CI runs lint, tests and `node cli.js --help` on Node 22 and 24.
 | `data/hotspotsDates.json` | `node montpelier.js hotspotDates <EBD sampling file>` | no |
 | `taxonomies/eBird_Taxonomy_VT.json` | `scripts/updateTaxonomy.js` (eBird API; after eBird's autumn taxonomy update) | "not seen" lists on the maps |
 | `geojson/vt_towns.json` | `scripts/updateTownBoundaries.js` (VCGI's town boundaries) | town lookups (on upload) |
+| `data/vt_town_info.json` (each town's county and region) | `node scripts/updateTownInfo.js`, after any boundary change; a test fails if it's stale | /vbrc-checker (single sighting) |
 | `geojson/display/*.json` | `scripts/simplifyForDisplay.js`, after any boundary change | every map (drawing only) |
 
 The data is refreshed about quarterly, from an EBD download. After an
